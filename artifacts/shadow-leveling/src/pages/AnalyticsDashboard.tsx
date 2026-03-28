@@ -286,6 +286,8 @@ export default function AnalyticsDashboard() {
                           color: "#e4e4e7",
                           fontSize: 13,
                         }}
+                        labelStyle={{ color: "#e4e4e7" }}
+                        itemStyle={{ color: "#ffffff" }}
                       />
                     </PieChart>
                   </ResponsiveContainer>

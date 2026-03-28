@@ -392,6 +392,8 @@ export default function ShadowDashboard() {
                         color: "#fca5a5",
                         fontSize: 13,
                       }}
+                      labelStyle={{ color: "#fca5a5" }}
+                      itemStyle={{ color: "#ffffff" }}
                     />
                   </PieChart>
                   <div className="w-full grid grid-cols-2 gap-x-6 gap-y-2">
