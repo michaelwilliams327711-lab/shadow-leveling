@@ -258,6 +258,9 @@ export default function Dashboard() {
                     <span className="text-sm text-muted-foreground flex items-center gap-1"><TrendingDown className="w-3 h-3" /> XP/Gold Penalty</span>
                     <span className={`font-bold ${failStreakColors[failStreakTier]}`}>{penaltyMultiplier}x</span>
                   </div>
+                  <p className="text-xs text-muted-foreground/70 text-center">
+                    Caused by manually failing a quest or letting a deadline expire.
+                  </p>
                   <div className={`text-xs text-center py-2 px-3 rounded-lg ${
                     failStreakTier === "max" ? "bg-red-950/60 text-red-300" :
                     failStreakTier === "high" ? "bg-red-900/40 text-red-400" :
