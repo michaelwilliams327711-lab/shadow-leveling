@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateQuestRequestDifficulty } from "./createQuestRequestDifficulty";
+import type { RecurrenceConfig } from "./recurrenceConfig";
 import type { StatBoost } from "./statBoost";
 
 export interface CreateQuestRequest {
@@ -17,4 +18,7 @@ export interface CreateQuestRequest {
   description?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
 }

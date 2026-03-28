@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -19,6 +19,10 @@ export const questsTable = pgTable("quests", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
   statBoost: text("stat_boost"),
+  targetAmount: integer("target_amount"),
+  amountUnit: text("amount_unit"),
+  isPaused: boolean("is_paused").notNull().default(false),
+  recurrence: jsonb("recurrence"),
 });
 
 export const questLogTable = pgTable("quest_log", {
@@ -44,8 +48,19 @@ export const penaltyLogTable = pgTable("penalty_log", {
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
 });
 
+export const questDailyLogTable = pgTable("quest_daily_log", {
+  id: serial("id").primaryKey(),
+  questId: integer("quest_id").notNull().references(() => questsTable.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  currentAmount: integer("current_amount").notNull().default(0),
+  isCompleted: boolean("is_completed").notNull().default(false),
+}, (table) => [
+  unique("quest_daily_log_quest_id_date_unique").on(table.questId, table.date),
+]);
+
 export const insertQuestSchema = createInsertSchema(questsTable).omit({ id: true, createdAt: true, completedAt: true });
 export type InsertQuest = z.infer<typeof insertQuestSchema>;
 export type Quest = typeof questsTable.$inferSelect;
 export type QuestLog = typeof questLogTable.$inferSelect;
 export type PenaltyLog = typeof penaltyLogTable.$inferSelect;
+export type QuestDailyLog = typeof questDailyLogTable.$inferSelect;

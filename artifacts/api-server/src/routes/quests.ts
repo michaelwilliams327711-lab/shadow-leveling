@@ -1,12 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable, penaltyLogTable } from "@workspace/db";
+import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
 import { eq, and, isNotNull, lt } from "drizzle-orm";
 import {
   CreateQuestBody,
   UpdateQuestBody,
   CompleteQuestResponse,
   FailQuestResponse,
+  UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity } from "./character.js";
 
@@ -78,16 +79,280 @@ function getStreakStatMultiplier(streak: number): number {
   return 1.0;
 }
 
+function serializeQuest(q: typeof questsTable.$inferSelect) {
+  return {
+    ...q,
+    createdAt: q.createdAt.toISOString(),
+    completedAt: q.completedAt?.toISOString() ?? null,
+    deadline: q.deadline?.toISOString() ?? null,
+  };
+}
+
+type RecurrenceConfig = {
+  type: "none" | "daily" | "weekly" | "monthly" | "yearly";
+  intervalDays?: number | null;
+  daysOfWeek?: number[] | null;
+  dayOfMonth?: number | null;
+  month?: number | null;
+  day?: number | null;
+};
+
+function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Date | null {
+  const next = new Date(fromDate);
+  next.setHours(0, 0, 0, 0);
+
+  switch (recurrence.type) {
+    case "daily": {
+      const interval = recurrence.intervalDays ?? 1;
+      next.setDate(next.getDate() + interval);
+      return next;
+    }
+    case "weekly": {
+      const days = recurrence.daysOfWeek ?? [];
+      if (days.length === 0) {
+        next.setDate(next.getDate() + 7);
+        return next;
+      }
+      const currentDay = next.getDay();
+      const futureDays = days.filter(d => d > currentDay);
+      if (futureDays.length > 0) {
+        next.setDate(next.getDate() + (futureDays[0] - currentDay));
+      } else {
+        const minDay = Math.min(...days);
+        next.setDate(next.getDate() + (7 - currentDay + minDay));
+      }
+      return next;
+    }
+    case "monthly": {
+      const dom = recurrence.dayOfMonth ?? 1;
+      next.setMonth(next.getMonth() + 1);
+      next.setDate(dom);
+      return next;
+    }
+    case "yearly": {
+      const month = recurrence.month ?? 1;
+      const day = recurrence.day ?? 1;
+      next.setFullYear(next.getFullYear() + 1);
+      next.setMonth(month - 1);
+      next.setDate(day);
+      return next;
+    }
+    default:
+      return null;
+  }
+}
+
+function isRecurringQuestDueToday(recurrence: RecurrenceConfig, completedAt: Date | null, createdAt: Date): boolean {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (recurrence.type === "none") return false;
+
+  const baseDate = completedAt ?? createdAt;
+  const next = getNextOccurrenceDate(recurrence, baseDate);
+  if (!next) return false;
+
+  return next <= today;
+}
+
+router.post("/quests/process-overdue", async (req, res) => {
+  try {
+    const now = new Date();
+
+    const allActiveQuests = await db
+      .select()
+      .from(questsTable)
+      .where(eq(questsTable.status, "active"));
+
+    const allCompletedQuests = await db
+      .select()
+      .from(questsTable)
+      .where(eq(questsTable.status, "completed"));
+
+    const recurringToReset = allCompletedQuests.filter(q => {
+      if (q.isPaused) return false;
+      const recurrence = q.recurrence as RecurrenceConfig | null;
+      if (!recurrence || recurrence.type === "none") return false;
+      return isRecurringQuestDueToday(recurrence, q.completedAt, q.createdAt);
+    });
+
+    for (const quest of recurringToReset) {
+      await db.update(questsTable)
+        .set({ status: "active", completedAt: null })
+        .where(eq(questsTable.id, quest.id));
+    }
+
+    const overdueQuests = allActiveQuests.filter(q => {
+      if (q.isPaused) return false;
+      const recurrence = q.recurrence as RecurrenceConfig | null;
+      if (recurrence && recurrence.type !== "none") return false;
+      if (q.deadline && new Date(q.deadline) < now) {
+        return true;
+      }
+      return false;
+    });
+
+    if (overdueQuests.length === 0) {
+      const char = await getOrCreateCharacter();
+      return res.json({
+        penalties: [],
+        autoFailedQuests: [],
+        character: {
+          ...char,
+          xpToNextLevel: XP_PER_LEVEL(char.level),
+          lastCheckin: char.lastCheckin?.toISOString() ?? null,
+        },
+      });
+    }
+
+    const char = await getOrCreateCharacter();
+
+    const penalties: Array<{
+      type: string;
+      description: string;
+      xpDeducted: number;
+      goldDeducted: number;
+      occurredAt: string;
+    }> = [];
+    const failedQuestsSerialized: object[] = [];
+
+    const updatedChar = await db.transaction(async (tx) => {
+      let totalXpDeducted = 0;
+      let totalGoldDeducted = 0;
+      let runningFailStreak = char.failStreak;
+      const statAccum: Record<string, number> = {
+        strength: char.strength,
+        intellect: char.intellect,
+        endurance: char.endurance,
+        agility: char.agility,
+        discipline: char.discipline,
+      };
+
+      for (const quest of overdueQuests) {
+        runningFailStreak += 1;
+        const xpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
+        const attrMult = getAttributePenaltyMultiplier(runningFailStreak);
+
+        const xpDeducted = Math.min(
+          Math.max(0, char.xp - totalXpDeducted),
+          Math.floor(quest.xpPenalty * xpGoldMult)
+        );
+        const goldDeducted = Math.min(
+          Math.max(0, char.gold - totalGoldDeducted),
+          Math.floor(quest.goldPenalty * xpGoldMult)
+        );
+        totalXpDeducted += xpDeducted;
+        totalGoldDeducted += goldDeducted;
+
+        const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+        const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
+        const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
+        const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
+        statAccum[statField] = Math.max(1, statAccum[statField] - catStatPenalty);
+        statAccum.discipline = Math.max(1, statAccum.discipline - discPenalty);
+
+        await tx
+          .update(questsTable)
+          .set({ status: "failed" })
+          .where(eq(questsTable.id, quest.id));
+
+        await tx.insert(questLogTable).values({
+          questName: quest.name,
+          category: quest.category,
+          difficulty: quest.difficulty,
+          outcome: "failed",
+          xpChange: -xpDeducted,
+          goldChange: -goldDeducted,
+          multiplierApplied: xpGoldMult,
+          actionType: "MISSED_DAY",
+          statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
+        });
+
+        const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
+
+        const [penaltyLog] = await tx.insert(penaltyLogTable).values({
+          type: "quest_overdue",
+          description: penaltyDesc,
+          xpDeducted,
+          goldDeducted,
+        }).returning();
+
+        penalties.push({
+          type: "quest_overdue",
+          description: penaltyDesc,
+          xpDeducted,
+          goldDeducted,
+          occurredAt: penaltyLog.occurredAt.toISOString(),
+        });
+
+        failedQuestsSerialized.push(serializeQuest({ ...quest, status: "failed" }));
+      }
+
+      const finalXpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
+
+      const [updated] = await tx
+        .update(characterTable)
+        .set({
+          xp: Math.max(0, char.xp - totalXpDeducted),
+          gold: Math.max(0, char.gold - totalGoldDeducted),
+          strength: statAccum.strength,
+          intellect: statAccum.intellect,
+          endurance: statAccum.endurance,
+          agility: statAccum.agility,
+          discipline: statAccum.discipline,
+          totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
+          failStreak: runningFailStreak,
+          penaltyMultiplier: finalXpGoldMult,
+        })
+        .where(eq(characterTable.id, char.id))
+        .returning();
+
+      return updated;
+    });
+
+    res.json({
+      penalties,
+      autoFailedQuests: failedQuestsSerialized,
+      character: {
+        ...updatedChar,
+        xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
+        lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error processing overdue quests");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/quests/recalculate-rewards", async (req, res) => {
+  try {
+    const activeQuests = await db
+      .select()
+      .from(questsTable)
+      .where(eq(questsTable.status, "active"));
+
+    let updatedCount = 0;
+    for (const quest of activeQuests) {
+      const rewards = calculateRewards(quest.difficulty, quest.durationMinutes);
+      await db
+        .update(questsTable)
+        .set(rewards)
+        .where(eq(questsTable.id, quest.id));
+      updatedCount++;
+    }
+
+    res.json({ success: true, updatedCount });
+  } catch (err) {
+    req.log.error({ err }, "Error recalculating quest rewards");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/quests", async (req, res) => {
   try {
     const quests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
-    const mapped = quests.map((q) => ({
-      ...q,
-      createdAt: q.createdAt.toISOString(),
-      completedAt: q.completedAt?.toISOString() ?? null,
-      deadline: q.deadline?.toISOString() ?? null,
-    }));
-    res.json(mapped);
+    res.json(quests.map(serializeQuest));
   } catch (err) {
     req.log.error({ err }, "Error listing quests");
     res.status(500).json({ error: "Internal server error" });
@@ -109,16 +374,15 @@ router.post("/quests", async (req, res) => {
         description: body.description ?? null,
         deadline: body.deadline ? new Date(body.deadline as string) : null,
         statBoost: body.statBoost ?? null,
+        targetAmount: body.targetAmount ?? null,
+        amountUnit: body.amountUnit ?? null,
+        recurrence: (body.recurrence as RecurrenceConfig) ?? null,
+        isPaused: false,
         ...rewards,
         status: "active",
       })
       .returning();
-    res.status(201).json({
-      ...quest,
-      createdAt: quest.createdAt.toISOString(),
-      completedAt: quest.completedAt?.toISOString() ?? null,
-      deadline: quest.deadline?.toISOString() ?? null,
-    });
+    res.status(201).json(serializeQuest(quest));
   } catch (err) {
     req.log.error({ err }, "Error creating quest");
     res.status(500).json({ error: "Internal server error" });
@@ -130,7 +394,7 @@ router.get("/quests/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest) return res.status(404).json({ error: "Quest not found" });
-    res.json({ ...quest, createdAt: quest.createdAt.toISOString(), completedAt: quest.completedAt?.toISOString() ?? null, deadline: quest.deadline?.toISOString() ?? null });
+    res.json(serializeQuest(quest));
   } catch (err) {
     req.log.error({ err }, "Error getting quest");
     res.status(500).json({ error: "Internal server error" });
@@ -155,12 +419,16 @@ router.patch("/quests/:id", async (req, res) => {
       if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
     }
     if (body.isDaily !== undefined) updates.isDaily = body.isDaily;
+    if (body.isPaused !== undefined) updates.isPaused = body.isPaused;
     if (body.description !== undefined) updates.description = body.description;
     if (body.statBoost !== undefined) updates.statBoost = body.statBoost ?? null;
+    if (body.targetAmount !== undefined) updates.targetAmount = body.targetAmount ?? null;
+    if (body.amountUnit !== undefined) updates.amountUnit = body.amountUnit ?? null;
+    if (body.recurrence !== undefined) updates.recurrence = body.recurrence ?? null;
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Quest not found" });
-    res.json({ ...updated, createdAt: updated.createdAt.toISOString(), completedAt: updated.completedAt?.toISOString() ?? null, deadline: updated.deadline?.toISOString() ?? null });
+    res.json(serializeQuest(updated));
   } catch (err) {
     req.log.error({ err }, "Error updating quest");
     res.status(500).json({ error: "Internal server error" });
@@ -174,6 +442,58 @@ router.delete("/quests/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting quest");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/quests/:id/log", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const logs = await db
+      .select()
+      .from(questDailyLogTable)
+      .where(eq(questDailyLogTable.questId, id))
+      .orderBy(questDailyLogTable.date);
+    res.json(logs);
+  } catch (err) {
+    req.log.error({ err }, "Error getting quest daily logs");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+router.put("/quests/:id/log/:date", async (req, res) => {
+  try {
+    const questId = parseInt(req.params.id);
+    const date = req.params.date;
+
+    if (!DATE_REGEX.test(date)) {
+      return res.status(400).json({ error: "date must be in YYYY-MM-DD format" });
+    }
+
+    const body = UpsertQuestDailyLogBody.parse(req.body);
+    const { currentAmount } = body;
+
+    const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, questId));
+    if (!quest) return res.status(404).json({ error: "Quest not found" });
+
+    const isCompleted = quest.targetAmount != null
+      ? currentAmount >= quest.targetAmount
+      : false;
+
+    const [log] = await db
+      .insert(questDailyLogTable)
+      .values({ questId, date, currentAmount, isCompleted })
+      .onConflictDoUpdate({
+        target: [questDailyLogTable.questId, questDailyLogTable.date],
+        set: { currentAmount, isCompleted },
+      })
+      .returning();
+
+    res.json(log);
+  } catch (err) {
+    req.log.error({ err }, "Error upserting quest daily log");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -373,159 +693,6 @@ router.post("/quests/:id/fail", async (req, res) => {
   }
 });
 
-router.post("/quests/process-overdue", async (req, res) => {
-  try {
-    const now = new Date();
-    const overdueQuests = await db
-      .select()
-      .from(questsTable)
-      .where(
-        and(
-          eq(questsTable.status, "active"),
-          isNotNull(questsTable.deadline),
-          lt(questsTable.deadline, now)
-        )
-      );
-
-    if (overdueQuests.length === 0) {
-      const char = await getOrCreateCharacter();
-      return res.json({
-        penalties: [],
-        autoFailedQuests: [],
-        character: {
-          ...char,
-          xpToNextLevel: XP_PER_LEVEL(char.level),
-          lastCheckin: char.lastCheckin?.toISOString() ?? null,
-        },
-      });
-    }
-
-    const char = await getOrCreateCharacter();
-
-    const penalties: Array<{
-      type: string;
-      description: string;
-      xpDeducted: number;
-      goldDeducted: number;
-      occurredAt: string;
-    }> = [];
-    const failedQuestsSerialized: object[] = [];
-
-    const updatedChar = await db.transaction(async (tx) => {
-      let totalXpDeducted = 0;
-      let totalGoldDeducted = 0;
-      let runningFailStreak = char.failStreak;
-      const statAccum: Record<string, number> = {
-        strength: char.strength,
-        intellect: char.intellect,
-        endurance: char.endurance,
-        agility: char.agility,
-        discipline: char.discipline,
-      };
-
-      for (const quest of overdueQuests) {
-        runningFailStreak += 1;
-        const xpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
-        const attrMult = getAttributePenaltyMultiplier(runningFailStreak);
-
-        const xpDeducted = Math.min(
-          Math.max(0, char.xp - totalXpDeducted),
-          Math.floor(quest.xpPenalty * xpGoldMult)
-        );
-        const goldDeducted = Math.min(
-          Math.max(0, char.gold - totalGoldDeducted),
-          Math.floor(quest.goldPenalty * xpGoldMult)
-        );
-        totalXpDeducted += xpDeducted;
-        totalGoldDeducted += goldDeducted;
-
-        const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
-        const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
-        const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
-        const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
-        statAccum[statField] = Math.max(1, statAccum[statField] - catStatPenalty);
-        statAccum.discipline = Math.max(1, statAccum.discipline - discPenalty);
-
-        await tx
-          .update(questsTable)
-          .set({ status: "failed" })
-          .where(eq(questsTable.id, quest.id));
-
-        await tx.insert(questLogTable).values({
-          questName: quest.name,
-          category: quest.category,
-          difficulty: quest.difficulty,
-          outcome: "failed",
-          xpChange: -xpDeducted,
-          goldChange: -goldDeducted,
-          multiplierApplied: xpGoldMult,
-          actionType: "MISSED_DAY",
-          statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
-        });
-
-        const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
-
-        const [penaltyLog] = await tx.insert(penaltyLogTable).values({
-          type: "quest_overdue",
-          description: penaltyDesc,
-          xpDeducted,
-          goldDeducted,
-        }).returning();
-
-        penalties.push({
-          type: "quest_overdue",
-          description: penaltyDesc,
-          xpDeducted,
-          goldDeducted,
-          occurredAt: penaltyLog.occurredAt.toISOString(),
-        });
-
-        failedQuestsSerialized.push({
-          ...quest,
-          status: "failed",
-          createdAt: quest.createdAt.toISOString(),
-          completedAt: quest.completedAt?.toISOString() ?? null,
-          deadline: quest.deadline?.toISOString() ?? null,
-        });
-      }
-
-      const finalXpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
-
-      const [updated] = await tx
-        .update(characterTable)
-        .set({
-          xp: Math.max(0, char.xp - totalXpDeducted),
-          gold: Math.max(0, char.gold - totalGoldDeducted),
-          strength: statAccum.strength,
-          intellect: statAccum.intellect,
-          endurance: statAccum.endurance,
-          agility: statAccum.agility,
-          discipline: statAccum.discipline,
-          totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
-          failStreak: runningFailStreak,
-          penaltyMultiplier: finalXpGoldMult,
-        })
-        .where(eq(characterTable.id, char.id))
-        .returning();
-
-      return updated;
-    });
-
-    res.json({
-      penalties,
-      autoFailedQuests: failedQuestsSerialized,
-      character: {
-        ...updatedChar,
-        xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
-        lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
-      },
-    });
-  } catch (err) {
-    req.log.error({ err }, "Error processing overdue quests");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 router.get("/quest-log", async (req, res) => {
   try {
     const log = await db.select().from(questLogTable).orderBy(questLogTable.occurredAt);
@@ -536,30 +703,6 @@ router.get("/quest-log", async (req, res) => {
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error getting quest log");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.post("/quests/recalculate-rewards", async (req, res) => {
-  try {
-    const activeQuests = await db
-      .select()
-      .from(questsTable)
-      .where(eq(questsTable.status, "active"));
-
-    let updatedCount = 0;
-    for (const quest of activeQuests) {
-      const rewards = calculateRewards(quest.difficulty, quest.durationMinutes);
-      await db
-        .update(questsTable)
-        .set(rewards)
-        .where(eq(questsTable.id, quest.id));
-      updatedCount++;
-    }
-
-    res.json({ success: true, updatedCount });
-  } catch (err) {
-    req.log.error({ err }, "Error recalculating quest rewards");
     res.status(500).json({ error: "Internal server error" });
   }
 });

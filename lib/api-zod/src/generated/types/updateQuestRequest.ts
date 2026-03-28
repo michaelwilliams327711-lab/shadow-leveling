@@ -5,8 +5,9 @@
  * Shadow Leveling - Gamified Habit Tracker API
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdateQuestRequestDifficulty } from "./updateQuestRequestDifficulty";
+import type { RecurrenceConfig } from "./recurrenceConfig";
 import type { StatBoost } from "./statBoost";
+import type { UpdateQuestRequestDifficulty } from "./updateQuestRequestDifficulty";
 
 export interface UpdateQuestRequest {
   name?: string;
@@ -14,6 +15,10 @@ export interface UpdateQuestRequest {
   difficulty?: UpdateQuestRequestDifficulty;
   durationMinutes?: number;
   isDaily?: boolean;
+  isPaused?: boolean;
   description?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
 }

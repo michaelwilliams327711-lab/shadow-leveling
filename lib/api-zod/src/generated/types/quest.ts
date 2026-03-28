@@ -7,6 +7,7 @@
  */
 import type { QuestDifficulty } from "./questDifficulty";
 import type { QuestStatus } from "./questStatus";
+import type { RecurrenceConfig } from "./recurrenceConfig";
 import type { StatBoost } from "./statBoost";
 
 export interface Quest {
@@ -21,9 +22,13 @@ export interface Quest {
   goldPenalty: number;
   status: QuestStatus;
   isDaily: boolean;
+  isPaused: boolean;
   description?: string | null;
   createdAt: string;
   completedAt?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
 }

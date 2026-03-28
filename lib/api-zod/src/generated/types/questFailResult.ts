@@ -6,14 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Character } from "./character";
-
-export interface QuestFailResultStatPenalties {
-  strength: number;
-  intellect: number;
-  endurance: number;
-  agility: number;
-  discipline: number;
-}
+import type { QuestFailResultStatPenalties } from "./questFailResultStatPenalties";
 
 export interface QuestFailResult {
   success: boolean;

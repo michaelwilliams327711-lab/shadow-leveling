@@ -32,6 +32,7 @@ import type {
   PurchaseResult,
   Quest,
   QuestCompletionResult,
+  QuestDailyLog,
   QuestFailResult,
   QuestLogEntry,
   Reward,
@@ -39,6 +40,7 @@ import type {
   SaveAwakeningRequest,
   UpdateCharacterRequest,
   UpdateQuestRequest,
+  UpsertQuestDailyLogRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -861,6 +863,182 @@ export const useDeleteQuest = <
   TContext
 > => {
   return useMutation(getDeleteQuestMutationOptions(options));
+};
+
+/**
+ * @summary List daily progress logs for a quest
+ */
+export const getGetQuestDailyLogsUrl = (id: number) => {
+  return `/api/quests/${id}/log`;
+};
+
+export const getQuestDailyLogs = async (
+  id: number,
+  options?: RequestInit,
+): Promise<QuestDailyLog[]> => {
+  return customFetch<QuestDailyLog[]>(getGetQuestDailyLogsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQuestDailyLogsQueryKey = (id: number) => {
+  return [`/api/quests/${id}/log`] as const;
+};
+
+export const getGetQuestDailyLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQuestDailyLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getQuestDailyLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQuestDailyLogsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getQuestDailyLogs>>
+  > = ({ signal }) => getQuestDailyLogs(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQuestDailyLogs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetQuestDailyLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getQuestDailyLogs>>
+>;
+export type GetQuestDailyLogsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List daily progress logs for a quest
+ */
+
+export function useGetQuestDailyLogs<
+  TData = Awaited<ReturnType<typeof getQuestDailyLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getQuestDailyLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetQuestDailyLogsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Upsert daily progress for a quest on a given date
+ */
+export const getUpsertQuestDailyLogUrl = (id: number, date: string) => {
+  return `/api/quests/${id}/log/${date}`;
+};
+
+export const upsertQuestDailyLog = async (
+  id: number,
+  date: string,
+  upsertQuestDailyLogRequest: UpsertQuestDailyLogRequest,
+  options?: RequestInit,
+): Promise<QuestDailyLog> => {
+  return customFetch<QuestDailyLog>(getUpsertQuestDailyLogUrl(id, date), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertQuestDailyLogRequest),
+  });
+};
+
+export const getUpsertQuestDailyLogMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertQuestDailyLog>>,
+    TError,
+    { id: number; date: string; data: BodyType<UpsertQuestDailyLogRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertQuestDailyLog>>,
+  TError,
+  { id: number; date: string; data: BodyType<UpsertQuestDailyLogRequest> },
+  TContext
+> => {
+  const mutationKey = ["upsertQuestDailyLog"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertQuestDailyLog>>,
+    { id: number; date: string; data: BodyType<UpsertQuestDailyLogRequest> }
+  > = (props) => {
+    const { id, date, data } = props ?? {};
+
+    return upsertQuestDailyLog(id, date, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertQuestDailyLogMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertQuestDailyLog>>
+>;
+export type UpsertQuestDailyLogMutationBody =
+  BodyType<UpsertQuestDailyLogRequest>;
+export type UpsertQuestDailyLogMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Upsert daily progress for a quest on a given date
+ */
+export const useUpsertQuestDailyLog = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertQuestDailyLog>>,
+    TError,
+    { id: number; date: string; data: BodyType<UpsertQuestDailyLogRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertQuestDailyLog>>,
+  TError,
+  { id: number; date: string; data: BodyType<UpsertQuestDailyLogRequest> },
+  TContext
+> => {
+  return useMutation(getUpsertQuestDailyLogMutationOptions(options));
 };
 
 /**

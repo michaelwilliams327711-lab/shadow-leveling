@@ -46,18 +46,6 @@ export interface CheckinResult {
   milestoneBonusGold: number;
 }
 
-export type QuestCategory = (typeof QuestCategory)[keyof typeof QuestCategory];
-
-export const QuestCategory = {
-  Financial: "Financial",
-  Productivity: "Productivity",
-  Study: "Study",
-  Health: "Health",
-  Creative: "Creative",
-  Social: "Social",
-  Other: "Other",
-} as const;
-
 export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
 
 export const StatBoost = {
@@ -67,6 +55,26 @@ export const StatBoost = {
   agility: "agility",
   discipline: "discipline",
 } as const;
+
+export type RecurrenceConfigType =
+  (typeof RecurrenceConfigType)[keyof typeof RecurrenceConfigType];
+
+export const RecurrenceConfigType = {
+  none: "none",
+  daily: "daily",
+  weekly: "weekly",
+  monthly: "monthly",
+  yearly: "yearly",
+} as const;
+
+export interface RecurrenceConfig {
+  type: RecurrenceConfigType;
+  intervalDays?: number | null;
+  daysOfWeek?: number[] | null;
+  dayOfMonth?: number | null;
+  month?: number | null;
+  day?: number | null;
+}
 
 export type QuestDifficulty =
   (typeof QuestDifficulty)[keyof typeof QuestDifficulty];
@@ -103,11 +111,15 @@ export interface Quest {
   goldPenalty: number;
   status: QuestStatus;
   isDaily: boolean;
+  isPaused: boolean;
   description?: string | null;
   createdAt: string;
   completedAt?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
 }
 
 export type CreateQuestRequestDifficulty =
@@ -134,6 +146,9 @@ export interface CreateQuestRequest {
   description?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
 }
 
 export type UpdateQuestRequestDifficulty =
@@ -157,8 +172,24 @@ export interface UpdateQuestRequest {
   difficulty?: UpdateQuestRequestDifficulty;
   durationMinutes?: number;
   isDaily?: boolean;
+  isPaused?: boolean;
   description?: string | null;
   statBoost?: StatBoost | null;
+  targetAmount?: number | null;
+  amountUnit?: string | null;
+  recurrence?: RecurrenceConfig | null;
+}
+
+export interface QuestDailyLog {
+  id: number;
+  questId: number;
+  date: string;
+  currentAmount: number;
+  isCompleted: boolean;
+}
+
+export interface UpsertQuestDailyLogRequest {
+  currentAmount: number;
 }
 
 export type QuestCompletionResultStatGains = {

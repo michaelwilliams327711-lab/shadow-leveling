@@ -118,14 +118,6 @@ export const CharacterLoginResponse = zod.object({
   }),
 });
 
-export const StatBoost = zod.enum([
-  "strength",
-  "intellect",
-  "endurance",
-  "agility",
-  "discipline",
-]);
-
 /**
  * @summary List all quests
  */
@@ -141,11 +133,26 @@ export const ListQuestsResponseItem = zod.object({
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
   isDaily: zod.boolean(),
+  isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
-  statBoost: StatBoost.nullish(),
+  statBoost: zod
+    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .nullish(),
+  targetAmount: zod.number().nullish(),
+  amountUnit: zod.string().nullish(),
+  recurrence: zod
+    .object({
+      type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+      intervalDays: zod.number().nullish(),
+      daysOfWeek: zod.array(zod.number()).nullish(),
+      dayOfMonth: zod.number().nullish(),
+      month: zod.number().nullish(),
+      day: zod.number().nullish(),
+    })
+    .nullish(),
 });
 export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
 
@@ -160,7 +167,21 @@ export const CreateQuestBody = zod.object({
   isDaily: zod.boolean(),
   description: zod.string().nullish(),
   deadline: zod.string().nullish(),
-  statBoost: StatBoost.nullish(),
+  statBoost: zod
+    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .nullish(),
+  targetAmount: zod.number().nullish(),
+  amountUnit: zod.string().nullish(),
+  recurrence: zod
+    .object({
+      type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+      intervalDays: zod.number().nullish(),
+      daysOfWeek: zod.array(zod.number()).nullish(),
+      dayOfMonth: zod.number().nullish(),
+      month: zod.number().nullish(),
+      day: zod.number().nullish(),
+    })
+    .nullish(),
 });
 
 /**
@@ -182,11 +203,26 @@ export const GetQuestResponse = zod.object({
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
   isDaily: zod.boolean(),
+  isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
-  statBoost: StatBoost.nullish(),
+  statBoost: zod
+    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .nullish(),
+  targetAmount: zod.number().nullish(),
+  amountUnit: zod.string().nullish(),
+  recurrence: zod
+    .object({
+      type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+      intervalDays: zod.number().nullish(),
+      daysOfWeek: zod.array(zod.number()).nullish(),
+      dayOfMonth: zod.number().nullish(),
+      month: zod.number().nullish(),
+      day: zod.number().nullish(),
+    })
+    .nullish(),
 });
 
 /**
@@ -204,8 +240,23 @@ export const UpdateQuestBody = zod.object({
     .optional(),
   durationMinutes: zod.number().optional(),
   isDaily: zod.boolean().optional(),
+  isPaused: zod.boolean().optional(),
   description: zod.string().nullish(),
-  statBoost: StatBoost.nullish(),
+  statBoost: zod
+    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .nullish(),
+  targetAmount: zod.number().nullish(),
+  amountUnit: zod.string().nullish(),
+  recurrence: zod
+    .object({
+      type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+      intervalDays: zod.number().nullish(),
+      daysOfWeek: zod.array(zod.number()).nullish(),
+      dayOfMonth: zod.number().nullish(),
+      month: zod.number().nullish(),
+      day: zod.number().nullish(),
+    })
+    .nullish(),
 });
 
 export const UpdateQuestResponse = zod.object({
@@ -220,11 +271,26 @@ export const UpdateQuestResponse = zod.object({
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
   isDaily: zod.boolean(),
+  isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
-  statBoost: StatBoost.nullish(),
+  statBoost: zod
+    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .nullish(),
+  targetAmount: zod.number().nullish(),
+  amountUnit: zod.string().nullish(),
+  recurrence: zod
+    .object({
+      type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+      intervalDays: zod.number().nullish(),
+      daysOfWeek: zod.array(zod.number()).nullish(),
+      dayOfMonth: zod.number().nullish(),
+      month: zod.number().nullish(),
+      day: zod.number().nullish(),
+    })
+    .nullish(),
 });
 
 /**
@@ -236,6 +302,44 @@ export const DeleteQuestParams = zod.object({
 
 export const DeleteQuestResponse = zod.object({
   success: zod.boolean(),
+});
+
+/**
+ * @summary List daily progress logs for a quest
+ */
+export const GetQuestDailyLogsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetQuestDailyLogsResponseItem = zod.object({
+  id: zod.number(),
+  questId: zod.number(),
+  date: zod.string(),
+  currentAmount: zod.number(),
+  isCompleted: zod.boolean(),
+});
+export const GetQuestDailyLogsResponse = zod.array(
+  GetQuestDailyLogsResponseItem,
+);
+
+/**
+ * @summary Upsert daily progress for a quest on a given date
+ */
+export const UpsertQuestDailyLogParams = zod.object({
+  id: zod.coerce.number(),
+  date: zod.coerce.string(),
+});
+
+export const UpsertQuestDailyLogBody = zod.object({
+  currentAmount: zod.number(),
+});
+
+export const UpsertQuestDailyLogResponse = zod.object({
+  id: zod.number(),
+  questId: zod.number(),
+  date: zod.string(),
+  currentAmount: zod.number(),
+  isCompleted: zod.boolean(),
 });
 
 /**
@@ -366,11 +470,26 @@ export const ProcessOverdueQuestsResponse = zod.object({
       goldPenalty: zod.number(),
       status: zod.enum(["active", "completed", "failed"]),
       isDaily: zod.boolean(),
+      isPaused: zod.boolean(),
       description: zod.string().nullish(),
       createdAt: zod.string(),
       completedAt: zod.string().nullish(),
       deadline: zod.string().nullish(),
-      statBoost: StatBoost.nullish(),
+      statBoost: zod
+        .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+        .nullish(),
+      targetAmount: zod.number().nullish(),
+      amountUnit: zod.string().nullish(),
+      recurrence: zod
+        .object({
+          type: zod.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+          intervalDays: zod.number().nullish(),
+          daysOfWeek: zod.array(zod.number()).nullish(),
+          dayOfMonth: zod.number().nullish(),
+          month: zod.number().nullish(),
+          day: zod.number().nullish(),
+        })
+        .nullish(),
     }),
   ),
   character: zod.object({

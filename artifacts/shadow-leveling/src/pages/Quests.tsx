@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Control, type UseFormWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { 
@@ -11,12 +11,12 @@ import {
   useDeleteQuest,
   getListQuestsQueryKey,
   getGetCharacterQueryKey,
-  QuestCategory,
   QuestDifficulty,
   StatBoost,
 } from "@workspace/api-client-react";
+import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, type LucideIcon } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +53,16 @@ import {
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 
+const QuestCategory = {
+  Financial: "Financial",
+  Productivity: "Productivity",
+  Study: "Study",
+  Health: "Health",
+  Creative: "Creative",
+  Social: "Social",
+  Other: "Other",
+} as const;
+
 const CATEGORY_PRESETS = Object.values(QuestCategory);
 
 const CATEGORY_STAT_MAP: Record<string, string> = {
@@ -72,6 +82,21 @@ const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: str
   intellect:  { label: "Intellect",  icon: Brain,    color: "text-blue-400" },
   discipline: { label: "Discipline", icon: Target,   color: "text-purple-400" },
 };
+
+const DAYS_OF_WEEK = [
+  { label: "Sun", value: 0 },
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+];
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 function getEffectiveStat(category: string, statBoost?: string | null): string {
   if (statBoost) return statBoost;
@@ -183,6 +208,15 @@ function CategoryCombobox({ value, onChange }: CategoryComboboxProps) {
   );
 }
 
+const recurrenceSchema = z.object({
+  type: z.enum(["none", "daily", "weekly", "monthly", "yearly"]).default("none"),
+  intervalDays: z.coerce.number().int().min(1).optional(),
+  daysOfWeek: z.array(z.number()).optional(),
+  dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+  day: z.coerce.number().int().min(1).max(31).optional(),
+});
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -192,6 +226,9 @@ const createSchema = z.object({
   durationMinutes: z.coerce.number().min(1),
   isDaily: z.boolean(),
   deadline: z.string().optional(),
+  targetAmount: z.coerce.number().int().min(1).optional(),
+  amountUnit: z.string().optional(),
+  recurrence: recurrenceSchema.optional(),
 });
 
 const editSchema = z.object({
@@ -202,7 +239,174 @@ const editSchema = z.object({
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
   durationMinutes: z.coerce.number().min(1).optional(),
   isDaily: z.boolean().optional(),
+  targetAmount: z.coerce.number().int().min(1).optional().nullable(),
+  amountUnit: z.string().optional().nullable(),
+  recurrence: recurrenceSchema.optional().nullable(),
 });
+
+type CreateFormValues = z.infer<typeof createSchema>;
+type EditFormValues = z.infer<typeof editSchema>;
+
+function RecurrenceFieldsCreate({
+  control,
+  watch,
+}: {
+  control: Control<CreateFormValues>;
+  watch: UseFormWatch<CreateFormValues>;
+}) {
+  const recurrenceType = watch("recurrence")?.type ?? "none";
+  return <RecurrenceFieldsUI control={control as Control<CreateFormValues>} recurrenceType={recurrenceType} />;
+}
+
+function RecurrenceFieldsEdit({
+  control,
+  watch,
+}: {
+  control: Control<EditFormValues>;
+  watch: UseFormWatch<EditFormValues>;
+}) {
+  const recurrenceType = watch("recurrence")?.type ?? "none";
+  return <RecurrenceFieldsUI control={control as Control<EditFormValues>} recurrenceType={recurrenceType} />;
+}
+
+function RecurrenceFieldsUI({
+  control,
+  recurrenceType,
+}: {
+  control: Control<CreateFormValues> | Control<EditFormValues>;
+  recurrenceType: string;
+}) {
+  const ctrl = control as Control<CreateFormValues>;
+  return (
+    <div className="space-y-3 border border-white/10 rounded-lg p-3 bg-white/5">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <RotateCcw className="w-3.5 h-3.5" />
+        Recurrence
+      </div>
+
+      <FormField control={ctrl} name="recurrence.type" render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-xs">Schedule</FormLabel>
+          <Select onValueChange={field.onChange} value={field.value ?? "none"}>
+            <FormControl><SelectTrigger className="h-8 text-xs bg-background/50"><SelectValue /></SelectTrigger></FormControl>
+            <SelectContent>
+              <SelectItem value="none">None (one-time)</SelectItem>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormItem>
+      )} />
+
+      {recurrenceType === "daily" && (
+        <FormField control={ctrl} name="recurrence.intervalDays" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs">Every N days</FormLabel>
+            <FormControl>
+              <Input type="number" min={1} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+      )}
+
+      {recurrenceType === "weekly" && (
+        <FormField control={ctrl} name="recurrence.daysOfWeek" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs">Days of week</FormLabel>
+            <div className="flex gap-1.5 flex-wrap">
+              {DAYS_OF_WEEK.map(d => (
+                <label key={d.value} className={cn(
+                  "flex items-center justify-center w-10 h-8 rounded text-xs cursor-pointer border transition-colors",
+                  (field.value ?? []).includes(d.value)
+                    ? "bg-primary/30 border-primary/60 text-primary"
+                    : "bg-background/50 border-white/10 text-muted-foreground hover:border-white/30"
+                )}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={(field.value ?? []).includes(d.value)}
+                    onChange={(e) => {
+                      const current = field.value ?? [];
+                      if (e.target.checked) {
+                        field.onChange([...current, d.value].sort());
+                      } else {
+                        field.onChange(current.filter((v: number) => v !== d.value));
+                      }
+                    }}
+                  />
+                  {d.label}
+                </label>
+              ))}
+            </div>
+          </FormItem>
+        )} />
+      )}
+
+      {recurrenceType === "monthly" && (
+        <FormField control={ctrl} name="recurrence.dayOfMonth" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs">Day of month (1–31)</FormLabel>
+            <FormControl>
+              <Input type="number" min={1} max={31} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+      )}
+
+      {recurrenceType === "yearly" && (
+        <div className="grid grid-cols-2 gap-2">
+          <FormField control={ctrl} name="recurrence.month" render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Month</FormLabel>
+              <Select onValueChange={(v) => field.onChange(parseInt(v))} value={field.value?.toString()}>
+                <FormControl><SelectTrigger className="h-8 text-xs bg-background/50"><SelectValue placeholder="Month" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {MONTHS.map((m, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+          <FormField control={ctrl} name="recurrence.day" render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Day</FormLabel>
+              <FormControl>
+                <Input type="number" min={1} max={31} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getRecurrenceLabel(recurrence: RecurrenceConfig | null | undefined): string | null {
+  if (!recurrence || recurrence.type === "none") return null;
+  switch (recurrence.type) {
+    case "daily": {
+      const n = recurrence.intervalDays ?? 1;
+      return n === 1 ? "Daily" : `Every ${n} days`;
+    }
+    case "weekly": {
+      const days = recurrence.daysOfWeek ?? [];
+      if (days.length === 0) return "Weekly";
+      return days.map(d => DAYS_OF_WEEK[d]?.label).filter(Boolean).join(", ");
+    }
+    case "monthly":
+      return `Monthly (day ${recurrence.dayOfMonth ?? 1})`;
+    case "yearly":
+      return `Yearly (${MONTHS[(recurrence.month ?? 1) - 1]} ${recurrence.day ?? 1})`;
+    default:
+      return null;
+  }
+}
 
 export default function Quests() {
   const { data: quests = [], isLoading } = useListQuests();
@@ -215,6 +419,8 @@ export default function Quests() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
+  const [showRecurrence, setShowRecurrence] = useState(false);
+  const [showEditRecurrence, setShowEditRecurrence] = useState(false);
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -227,6 +433,9 @@ export default function Quests() {
       durationMinutes: 30,
       isDaily: true,
       deadline: "",
+      targetAmount: undefined,
+      amountUnit: "",
+      recurrence: { type: "none" },
     }
   });
 
@@ -240,11 +449,15 @@ export default function Quests() {
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
       isDaily: false,
+      targetAmount: undefined,
+      amountUnit: "",
+      recurrence: { type: "none" },
     }
   });
 
   useEffect(() => {
     if (editingQuest) {
+      const rec = editingQuest.recurrence as RecurrenceConfig | null;
       editForm.reset({
         name: editingQuest.name,
         description: editingQuest.description ?? "",
@@ -253,7 +466,11 @@ export default function Quests() {
         difficulty: editingQuest.difficulty as QuestDifficulty,
         durationMinutes: editingQuest.durationMinutes,
         isDaily: editingQuest.isDaily,
+        targetAmount: editingQuest.targetAmount ?? undefined,
+        amountUnit: editingQuest.amountUnit ?? "",
+        recurrence: rec ?? { type: "none" },
       });
+      setShowEditRecurrence(!!(rec && rec.type !== "none"));
     }
   }, [editingQuest, editForm]);
 
@@ -292,6 +509,26 @@ export default function Quests() {
     });
   };
 
+  const onTogglePause = (quest: Quest) => {
+    updateQuest.mutate(
+      { id: quest.id, data: { isPaused: !quest.isPaused } },
+      {
+        onSuccess: () => {
+          invalidateQuests();
+          toast({
+            title: quest.isPaused ? "Quest Resumed" : "Quest Paused",
+            description: quest.isPaused ? "The quest is now active again." : "The quest has been paused.",
+          });
+        }
+      }
+    );
+  };
+
+  const buildRecurrence = (rec: z.infer<typeof recurrenceSchema> | null | undefined): RecurrenceConfig | null => {
+    if (!rec || rec.type === "none") return null;
+    return rec as RecurrenceConfig;
+  };
+
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
     const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
     createQuest.mutate({
@@ -304,11 +541,15 @@ export default function Quests() {
         description: data.description || null,
         deadline: deadlineIso,
         statBoost: data.statBoost ?? null,
+        targetAmount: data.targetAmount ?? null,
+        amountUnit: data.amountUnit || null,
+        recurrence: buildRecurrence(data.recurrence),
       }
     }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);
+        setShowRecurrence(false);
         createForm.reset();
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
       }
@@ -328,6 +569,9 @@ export default function Quests() {
           isDaily: data.isDaily,
           description: data.description || null,
           statBoost: data.statBoost ?? null,
+          targetAmount: data.targetAmount ?? null,
+          amountUnit: data.amountUnit || null,
+          recurrence: buildRecurrence(data.recurrence),
         }
       },
       {
@@ -371,13 +615,13 @@ export default function Quests() {
         </div>
 
         {/* Create Quest Dialog */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) setShowRecurrence(false); }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold tracking-wider hover-glow">
               <Plus className="w-4 h-4 mr-2" /> ADD QUEST
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass-panel border-white/10 sm:max-w-[480px]">
+          <DialogContent className="glass-panel border-white/10 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display tracking-widest text-xl">Register Mission</DialogTitle>
             </DialogHeader>
@@ -473,6 +717,27 @@ export default function Quests() {
                   )} />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={createForm.control} name="targetAmount" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Amount <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} className="bg-background/50" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={createForm.control} name="amountUnit" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. oz, pages" {...field} className="bg-background/50" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
                 <FormField control={createForm.control} name="deadline" render={({ field }) => (
                   <FormItem>
                     <FormLabel>
@@ -490,6 +755,19 @@ export default function Quests() {
                   </FormItem>
                 )} />
 
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-white transition-colors w-full"
+                  onClick={() => setShowRecurrence(v => !v)}
+                >
+                  <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showRecurrence && "rotate-180")} />
+                  {showRecurrence ? "Hide" : "Show"} Recurrence Settings
+                </button>
+
+                {showRecurrence && (
+                  <RecurrenceFieldsCreate control={createForm.control} watch={createForm.watch} />
+                )}
+
                 <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={createQuest.isPending}>
                   {createQuest.isPending ? "Registering..." : "Submit Mission"}
                 </Button>
@@ -501,7 +779,7 @@ export default function Quests() {
 
       {/* Edit Quest Dialog */}
       <Dialog open={!!editingQuest} onOpenChange={(open) => { if (!open) setEditingQuest(null); }}>
-        <DialogContent className="glass-panel border-white/10 sm:max-w-[480px]">
+        <DialogContent className="glass-panel border-white/10 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display tracking-widest text-xl">Edit Mission</DialogTitle>
           </DialogHeader>
@@ -597,6 +875,40 @@ export default function Quests() {
                 )} />
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={editForm.control} name="targetAmount" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Amount <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)} className="bg-background/50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={editForm.control} name="amountUnit" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. oz, pages" {...field} value={field.value ?? ""} className="bg-background/50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+
+              <button
+                type="button"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-white transition-colors w-full"
+                onClick={() => setShowEditRecurrence(v => !v)}
+              >
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showEditRecurrence && "rotate-180")} />
+                {showEditRecurrence ? "Hide" : "Show"} Recurrence Settings
+              </button>
+
+              {showEditRecurrence && (
+                <RecurrenceFieldsEdit control={editForm.control} watch={editForm.watch} />
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 mt-4"
@@ -624,86 +936,120 @@ export default function Quests() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {quests.filter(q => q.status === status).map(quest => (
-                  <Card key={quest.id} className="glass-panel overflow-hidden group">
-                    <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <Badge className={`${difficultyColors[quest.difficulty]} px-2 py-0 uppercase tracking-widest font-bold border rounded-sm`}>
-                            Rank {quest.difficulty}
-                          </Badge>
-                          <Badge variant="outline" className="text-muted-foreground border-white/10 bg-white/5">
-                            {quest.category}
-                          </Badge>
-                          {quest.isDaily && <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-none">Daily</Badge>}
-                          {(() => {
-                            const statKey = getEffectiveStat(quest.category, quest.statBoost);
-                            const { label, icon: StatIcon, color } = STAT_DISPLAY[statKey] ?? STAT_DISPLAY["strength"];
-                            return (
-                              <span className={`flex items-center gap-1 text-xs ${color}`}>
-                                <StatIcon className="w-3 h-3" />
-                                {label}
+                {quests.filter(q => q.status === status).map(quest => {
+                  const recLabel = getRecurrenceLabel(quest.recurrence as RecurrenceConfig | null);
+                  return (
+                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group", quest.isPaused && "opacity-60")}>
+                      <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <Badge className={`${difficultyColors[quest.difficulty]} px-2 py-0 uppercase tracking-widest font-bold border rounded-sm`}>
+                              Rank {quest.difficulty}
+                            </Badge>
+                            <Badge variant="outline" className="text-muted-foreground border-white/10 bg-white/5">
+                              {quest.category}
+                            </Badge>
+                            {quest.isDaily && <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-none">Daily</Badge>}
+                            {recLabel && (
+                              <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-none flex items-center gap-1">
+                                <RotateCcw className="w-2.5 h-2.5" />
+                                {recLabel}
+                              </Badge>
+                            )}
+                            {quest.isPaused && (
+                              <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400 border-none flex items-center gap-1">
+                                <Pause className="w-2.5 h-2.5" />
+                                Paused
+                              </Badge>
+                            )}
+                            {(() => {
+                              const statKey = getEffectiveStat(quest.category, quest.statBoost);
+                              const { label, icon: StatIcon, color } = STAT_DISPLAY[statKey] ?? STAT_DISPLAY["strength"];
+                              return (
+                                <span className={`flex items-center gap-1 text-xs ${color}`}>
+                                  <StatIcon className="w-3 h-3" />
+                                  {label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <h3 className="text-xl font-bold text-white font-sans">{quest.name}</h3>
+                          {quest.description && (
+                            <p className="text-sm text-muted-foreground leading-relaxed">{quest.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
+                            <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {quest.durationMinutes}m</span>
+                            <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {quest.xpReward} XP</span>
+                            <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {quest.goldReward} G</span>
+                            {quest.targetAmount != null && (
+                              <span className="flex items-center gap-1.5 text-cyan-400">
+                                <Target className="w-4 h-4" />
+                                Target: {quest.targetAmount}{quest.amountUnit ? ` ${quest.amountUnit}` : ""}
                               </span>
-                            );
-                          })()}
+                            )}
+                          </div>
                         </div>
-                        <h3 className="text-xl font-bold text-white font-sans">{quest.name}</h3>
-                        {quest.description && (
-                          <p className="text-sm text-muted-foreground leading-relaxed">{quest.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
-                          <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {quest.durationMinutes}m</span>
-                          <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {quest.xpReward} XP</span>
-                          <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {quest.goldReward} G</span>
-                        </div>
-                      </div>
 
-                      <div className="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-                        {status === 'active' && (
-                          <>
+                        <div className="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                          {status === 'active' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
+                                onClick={() => setEditingQuest(quest)}
+                                title="Edit quest"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className={cn(
+                                  "border-yellow-500/30 hover:border-yellow-500/60 hover:bg-yellow-500/10",
+                                  quest.isPaused ? "text-yellow-400" : "text-yellow-400/60 hover:text-yellow-400"
+                                )}
+                                onClick={() => onTogglePause(quest)}
+                                title={quest.isPaused ? "Resume quest" : "Pause quest"}
+                                disabled={updateQuest.isPending}
+                              >
+                                {quest.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                                onClick={() => onFail(quest.id)}
+                                disabled={failQuest.isPending || completeQuest.isPending}
+                              >
+                                <XCircle className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Fail</span>
+                              </Button>
+                              <Button
+                                className="flex-1 sm:flex-none bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 hover:text-green-300"
+                                onClick={() => onComplete(quest.id)}
+                                disabled={failQuest.isPending || completeQuest.isPending}
+                              >
+                                <CheckCircle2 className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Clear</span>
+                              </Button>
+                            </>
+                          )}
+                          {(status === 'completed' || status === 'failed') && (
                             <Button
                               variant="outline"
                               size="icon"
-                              className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
-                              onClick={() => setEditingQuest(quest)}
-                              title="Edit quest"
+                              className="border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+                              onClick={() => onDelete(quest.id)}
+                              title="Delete quest"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="outline"
-                              className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
-                              onClick={() => onFail(quest.id)}
-                              disabled={failQuest.isPending || completeQuest.isPending}
-                            >
-                              <XCircle className="w-4 h-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Fail</span>
-                            </Button>
-                            <Button
-                              className="flex-1 sm:flex-none bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 hover:text-green-300"
-                              onClick={() => onComplete(quest.id)}
-                              disabled={failQuest.isPending || completeQuest.isPending}
-                            >
-                              <CheckCircle2 className="w-4 h-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Clear</span>
-                            </Button>
-                          </>
-                        )}
-                        {(status === 'completed' || status === 'failed') && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
-                            onClick={() => onDelete(quest.id)}
-                            title="Delete quest"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
