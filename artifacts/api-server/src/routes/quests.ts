@@ -46,6 +46,28 @@ const CATEGORY_STAT_GAINS: Record<string, string> = {
   Other: "strength",
 };
 
+function getAttributePenaltyMultiplier(failStreak: number): number {
+  if (failStreak >= 10) return 3.0;
+  if (failStreak >= 7) return 2.5;
+  if (failStreak >= 4) return 2.0;
+  if (failStreak >= 2) return 1.5;
+  return 1.0;
+}
+
+function getXpGoldPenaltyMultiplier(failStreak: number): number {
+  if (failStreak >= 10) return 2.0;
+  if (failStreak >= 7) return 1.5;
+  if (failStreak >= 4) return 1.25;
+  if (failStreak >= 2) return 1.1;
+  return 1.0;
+}
+
+function getDifficultyStatPenalty(difficulty: string): number {
+  if (difficulty === "S" || difficulty === "SS" || difficulty === "SSS") return 3;
+  if (difficulty === "A" || difficulty === "B") return 2;
+  return 1;
+}
+
 router.get("/quests", async (req, res) => {
   try {
     const quests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
@@ -193,6 +215,8 @@ router.post("/quests/:id/complete", async (req, res) => {
         agility: statUpdates.agility,
         discipline: statUpdates.discipline,
         totalQuestsCompleted: char.totalQuestsCompleted + 1,
+        failStreak: 0,
+        penaltyMultiplier: 1.0,
       })
       .where(eq(characterTable.id, char.id))
       .returning();
@@ -251,11 +275,16 @@ router.post("/quests/:id/fail", async (req, res) => {
 
     const char = await getOrCreateCharacter();
 
-    const xpDeducted = Math.min(char.xp, quest.xpPenalty);
-    const goldDeducted = Math.min(char.gold, quest.goldPenalty);
+    const newFailStreak = char.failStreak + 1;
+    const xpGoldMult = getXpGoldPenaltyMultiplier(newFailStreak);
+    const attrMult = getAttributePenaltyMultiplier(newFailStreak);
+
+    const xpDeducted = Math.min(char.xp, Math.floor(quest.xpPenalty * xpGoldMult));
+    const goldDeducted = Math.min(char.gold, Math.floor(quest.goldPenalty * xpGoldMult));
 
     const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
-    const statPenalty = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
+    const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
+    const statPenalty = Math.floor(baseStatPenalty * attrMult);
 
     const statUpdates: Record<string, number> = {
       strength: char.strength,
@@ -276,6 +305,8 @@ router.post("/quests/:id/fail", async (req, res) => {
         agility: statUpdates.agility,
         discipline: statUpdates.discipline,
         totalQuestsFailed: char.totalQuestsFailed + 1,
+        failStreak: newFailStreak,
+        penaltyMultiplier: xpGoldMult,
       })
       .where(eq(characterTable.id, char.id))
       .returning();
@@ -291,7 +322,7 @@ router.post("/quests/:id/fail", async (req, res) => {
       outcome: "failed",
       xpChange: -xpDeducted,
       goldChange: -goldDeducted,
-      multiplierApplied: 1.0,
+      multiplierApplied: xpGoldMult,
     });
 
     const statPenalties = {
@@ -361,7 +392,7 @@ router.post("/quests/process-overdue", async (req, res) => {
     const updatedChar = await db.transaction(async (tx) => {
       let totalXpDeducted = 0;
       let totalGoldDeducted = 0;
-
+      let runningFailStreak = char.failStreak;
       const statAccum: Record<string, number> = {
         strength: char.strength,
         intellect: char.intellect,
@@ -371,19 +402,24 @@ router.post("/quests/process-overdue", async (req, res) => {
       };
 
       for (const quest of overdueQuests) {
+        runningFailStreak += 1;
+        const xpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
+        const attrMult = getAttributePenaltyMultiplier(runningFailStreak);
+
         const xpDeducted = Math.min(
           Math.max(0, char.xp - totalXpDeducted),
-          quest.xpPenalty
+          Math.floor(quest.xpPenalty * xpGoldMult)
         );
         const goldDeducted = Math.min(
           Math.max(0, char.gold - totalGoldDeducted),
-          quest.goldPenalty
+          Math.floor(quest.goldPenalty * xpGoldMult)
         );
         totalXpDeducted += xpDeducted;
         totalGoldDeducted += goldDeducted;
 
         const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
-        const statPenalty = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
+        const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
+        const statPenalty = Math.floor(baseStatPenalty * attrMult);
         statAccum[statField] = Math.max(1, statAccum[statField] - statPenalty);
 
         await tx
@@ -398,7 +434,7 @@ router.post("/quests/process-overdue", async (req, res) => {
           outcome: "failed",
           xpChange: -xpDeducted,
           goldChange: -goldDeducted,
-          multiplierApplied: 1.0,
+          multiplierApplied: xpGoldMult,
         });
 
         const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
@@ -427,6 +463,8 @@ router.post("/quests/process-overdue", async (req, res) => {
         });
       }
 
+      const finalXpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
+
       const [updated] = await tx
         .update(characterTable)
         .set({
@@ -438,6 +476,8 @@ router.post("/quests/process-overdue", async (req, res) => {
           agility: statAccum.agility,
           discipline: statAccum.discipline,
           totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
+          failStreak: runningFailStreak,
+          penaltyMultiplier: finalXpGoldMult,
         })
         .where(eq(characterTable.id, char.id))
         .returning();

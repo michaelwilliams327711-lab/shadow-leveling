@@ -457,8 +457,12 @@ components:
           type: integer
         totalQuestsFailed:
           type: integer
+        failStreak:
+          type: integer
+        penaltyMultiplier:
+          type: number
       required:
-        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed]
+        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier]
 
     UpdateCharacterRequest:
       type: object

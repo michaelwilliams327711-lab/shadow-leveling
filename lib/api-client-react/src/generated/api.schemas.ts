@@ -27,6 +27,8 @@ export interface Character {
   lastCheckin?: string | null;
   totalQuestsCompleted: number;
   totalQuestsFailed: number;
+  failStreak: number;
+  penaltyMultiplier: number;
 }
 
 export interface UpdateCharacterRequest {

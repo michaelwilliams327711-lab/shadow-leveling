@@ -35,6 +35,8 @@ export const GetCharacterResponse = zod.object({
   lastCheckin: zod.string().nullish(),
   totalQuestsCompleted: zod.number(),
   totalQuestsFailed: zod.number(),
+  failStreak: zod.number(),
+  penaltyMultiplier: zod.number(),
 });
 
 /**
@@ -62,6 +64,8 @@ export const UpdateCharacterResponse = zod.object({
   lastCheckin: zod.string().nullish(),
   totalQuestsCompleted: zod.number(),
   totalQuestsFailed: zod.number(),
+  failStreak: zod.number(),
+  penaltyMultiplier: zod.number(),
 });
 
 /**
@@ -109,6 +113,8 @@ export const CharacterLoginResponse = zod.object({
     lastCheckin: zod.string().nullish(),
     totalQuestsCompleted: zod.number(),
     totalQuestsFailed: zod.number(),
+    failStreak: zod.number(),
+    penaltyMultiplier: zod.number(),
   }),
 });
 
@@ -301,6 +307,8 @@ export const CompleteQuestResponse = zod.object({
     lastCheckin: zod.string().nullish(),
     totalQuestsCompleted: zod.number(),
     totalQuestsFailed: zod.number(),
+    failStreak: zod.number(),
+    penaltyMultiplier: zod.number(),
   }),
 });
 
@@ -340,6 +348,8 @@ export const FailQuestResponse = zod.object({
     lastCheckin: zod.string().nullish(),
     totalQuestsCompleted: zod.number(),
     totalQuestsFailed: zod.number(),
+    failStreak: zod.number(),
+    penaltyMultiplier: zod.number(),
   }),
 });
 
@@ -417,6 +427,8 @@ export const ProcessOverdueQuestsResponse = zod.object({
     lastCheckin: zod.string().nullish(),
     totalQuestsCompleted: zod.number(),
     totalQuestsFailed: zod.number(),
+    failStreak: zod.number(),
+    penaltyMultiplier: zod.number(),
   }),
 });
 
@@ -520,6 +532,8 @@ export const ChallengeBossResponse = zod.object({
     lastCheckin: zod.string().nullish(),
     totalQuestsCompleted: zod.number(),
     totalQuestsFailed: zod.number(),
+    failStreak: zod.number(),
+    penaltyMultiplier: zod.number(),
   }),
 });
 
