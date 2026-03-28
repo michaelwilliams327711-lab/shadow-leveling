@@ -1,0 +1,39 @@
+I need to expand the analytics and scheduling interface of my existing React/Node.js RPG gamification app. The app tracks user tasks, awards XP and Gold, and maintains stats like Strength, Intellect, and Discipline.
+
+Please install the following dependencies if they are not already in the project: recharts, react-calendar, react-activity-calendar, and lucide-react (for UI icons).
+
+Create a new dedicated AnalyticsDashboard.jsx component and integrate the following features. Maintain a cohesive "Solo Leveling" dark-mode aesthetic across all components (black/dark grey backgrounds #121212, neon purple #8b5cf6 or neon green #10b981 accents, and crisp sans-serif fonts).
+
+1. KPI Header Row (Top of Dashboard)
+Create a row of three distinct, highly visual Key Performance Indicator (KPI) cards at the top of the dashboard.
+
+Current Streak: Display the number of consecutive days logged in with a flame icon.
+
+Treasury (Gold): Display the total spendable Gold balance with a coin icon.
+
+Next Level Target: Display a small progress bar showing Current XP / Total XP Needed for Next Level.
+
+2. Advanced Analytics Section (Using Recharts)
+Implement a grid layout containing the following chart components. Create realistic mock data for these charts to demonstrate functionality before wiring them to the backend.
+
+The Progression Curve (Line Chart): A chart tracking "Total XP Gained" over the last 30 days. The X-axis should be dates, and the Y-axis should be XP. Make the line neon purple with a subtle gradient fill underneath it.
+
+The Grind Breakdown (Horizontal Bar Chart): A chart comparing total XP accumulated across the core character stats (e.g., Strength, Intellect, Discipline, Focus). This will show the user where their real-life effort is being spent.
+
+Time Allocation (Doughnut Chart): A chart breaking down the types of completed quests over the last 7 days (e.g., 40% Logistics/Physical Work, 30% Drawing/Art Practice, 30% C++ Programming). Include a clear legend.
+
+3. The Quest Calendars
+Below the charts, build a scheduling section utilizing calendar libraries.
+
+Consistency Heat Map: Use react-activity-calendar (or build a custom grid) to create a GitHub-style contribution graph. This should track the past year of activity. The more XP earned on a specific day, the brighter the square's color (scale from dark grey to bright neon green).
+
+The Raid Schedule (Monthly Calendar): Use react-calendar to render a full monthly view.
+
+Style the calendar to override the default white CSS—make it dark mode to match the app.
+
+Add custom tile content: allow specific dates to render small icons or dots indicating scheduled tasks (e.g., "Weekly Review") or locked Boss Fight unlock dates.
+
+4. Data Integration & State
+Ensure the dashboard is wrapped in a responsive container so it scales correctly on desktop and mobile.
+
+Write a mock fetchDashboardData async function that simulates fetching this data from the backend (SQLite/PostgreSQL) so the charts populate immediately upon rendering.
