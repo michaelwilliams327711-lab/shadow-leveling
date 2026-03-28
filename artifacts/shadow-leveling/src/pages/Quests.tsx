@@ -62,12 +62,12 @@ const createSchema = z.object({
 });
 
 const editSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1).optional(),
   description: z.string().optional(),
-  category: z.nativeEnum(QuestCategory),
-  difficulty: z.nativeEnum(QuestDifficulty),
-  durationMinutes: z.coerce.number().min(1),
-  isDaily: z.boolean(),
+  category: z.nativeEnum(QuestCategory).optional(),
+  difficulty: z.nativeEnum(QuestDifficulty).optional(),
+  durationMinutes: z.coerce.number().min(1).optional(),
+  isDaily: z.boolean().optional(),
 });
 
 function StatBoostBadge({ category }: { category: string }) {
@@ -390,7 +390,11 @@ export default function Quests() {
                 )} />
               </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={updateQuest.isPending}>
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 mt-4"
+                disabled={updateQuest.isPending || completeQuest.isPending || failQuest.isPending}
+              >
                 {updateQuest.isPending ? "Updating..." : "Save Changes"}
               </Button>
             </form>
