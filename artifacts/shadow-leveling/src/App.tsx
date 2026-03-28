@@ -49,10 +49,8 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
 
     const runChecks = async () => {
       try {
-        const [loginResult, overdueResult] = await Promise.all([
-          characterLogin(),
-          processOverdueQuests(),
-        ]);
+        const loginResult = await characterLogin();
+        const overdueResult = await processOverdueQuests();
 
         const allPenalties: PenaltyEvent[] = [
           ...(loginResult.penalties ?? []),
