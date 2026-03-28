@@ -1,0 +1,93 @@
+Please design the backend database schema for our RPG gamification app using SQLite (or PostgreSQL). We need these specific tables to ensure our React charts (Line, Bar, Doughnut, Heatmap) and Automated Penalty Engine have the exact historical data they need to function.
+
+Create the following tables and relationships:
+
+1. Table: Users (The Character Sheet)
+
+This stores the current state of the player.
+
+id (Primary Key)
+
+username (String)
+
+level (Integer, default 1)
+
+current_xp (Integer, default 0)
+
+total_gold (Integer, default 0)
+
+current_streak (Integer, default 0)
+
+last_login_date (Timestamp) -> Crucial for the missed-day penalty engine.
+
+stat_strength (Integer, default 10)
+
+stat_intellect (Integer, default 10)
+
+stat_discipline (Integer, default 10)
+
+stat_focus (Integer, default 10)
+
+stat_vitality (Integer, default 10)
+
+2. Table: Quests (The Task Dictionary)
+
+This stores the available habits, tasks, and goals.
+
+id (Primary Key)
+
+title (String) -> e.g., "1 Hour of C++", "Warehouse Shift", "Nail Art Practice"
+
+category (String) -> e.g., "Physical", "Intellect", "Psyche"
+
+stat_tied_to (String) -> e.g., "Strength", "Focus"
+
+difficulty (String or Integer) -> Used to calculate rewards/penalties
+
+base_reward_xp (Integer)
+
+base_reward_gold (Integer)
+
+is_daily_habit (Boolean)
+
+deadline (Timestamp, nullable)
+
+3. Table: Activity_Log (The Chart Engine)
+
+This is the most important table. It acts as the "ledger" or "time machine" recording every single action. Every chart and calendar on the dashboard pulls from here.
+
+id (Primary Key)
+
+user_id (Foreign Key -> Users)
+
+quest_id (Foreign Key -> Quests, nullable if it's a login penalty)
+
+action_type (String) -> Must be one of: 'COMPLETED', 'FAILED', 'MISSED_DAY', 'BOSS_DEFEATED'
+
+xp_change (Integer) -> Positive for rewards, Negative for penalties
+
+gold_change (Integer) -> Positive for rewards, Negative for penalties
+
+stat_category (String) -> Logs which stat was impacted so the Doughnut and Bar charts can group the data.
+
+created_at (Timestamp, default CURRENT_TIMESTAMP) -> Crucial for the Line Chart and Consistency Heat Map.
+
+4. Table: Boss_Arena (Gated Encounters)
+
+This stores the high-stakes boss fights.
+
+id (Primary Key)
+
+name (String)
+
+required_xp_to_unlock (Integer)
+
+max_hp (Integer)
+
+current_hp (Integer)
+
+status (String) -> e.g., "LOCKED", "ACTIVE", "DEFEATED"
+
+Required Backend Endpoints for Dashboard:
+
+Please create a GET /api/dashboard-stats endpoint that queries the Activity_Log table and returns the data cleanly formatted for Recharts and react-activity-calendar. It needs to aggregate the xp_change by date for the last 30 days (for the Line Chart), and group xp_change by stat_category (for the Doughnut/Bar charts).
