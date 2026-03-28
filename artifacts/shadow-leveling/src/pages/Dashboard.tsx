@@ -162,7 +162,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">
                 Attributes
-                <span className="text-xs font-sans text-muted-foreground bg-white/5 px-2 py-1 rounded">Rank: D</span>
+                <span className="text-xs font-sans text-muted-foreground bg-white/5 px-2 py-1 rounded">Rank: E</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
