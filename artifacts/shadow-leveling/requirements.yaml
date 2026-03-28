@@ -1,0 +1,22 @@
+packages:
+  "recharts": "For the stats radar chart"
+  "date-fns": "For date formatting and heatmap calculations"
+  "framer-motion": "For dramatic UI animations and transitions"
+  "@hookform/resolvers": "For form validation"
+  "react-hook-form": "For form state management"
+  "zod": "For schema validation"
+
+images:
+  - path: "artifacts/shadow-leveling/public/images/hero-bg.png"
+    description: "Dark intense glowing purple and blue aura background, smoky and atmospheric, solo leveling style, very subtle"
+    aspect_ratio: "16:9"
+  - path: "artifacts/shadow-leveling/public/images/boss-arena.png"
+    description: "Dark fantasy dungeon gate, glowing red eyes in the shadows, oppressive atmosphere"
+    aspect_ratio: "16:9"
+  - path: "artifacts/shadow-leveling/public/images/awakening.png"
+    description: "Ethereal glowing blue portal in a dark void, magical runes, mysterious and powerful"
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react
+  - Force dark mode theme

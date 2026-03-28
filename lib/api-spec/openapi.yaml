@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Shadow Leveling - Gamified Habit Tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: character
+    description: Character/player stats and progression
+  - name: quests
+    description: Quest/task management
+  - name: shop
+    description: Rewards shop
+  - name: bosses
+    description: Boss arena
+  - name: awakening
+    description: Vision journal
+  - name: rng
+    description: RNG events
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,356 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /character:
+    get:
+      operationId: getCharacter
+      tags: [character]
+      summary: Get character stats
+      responses:
+        "200":
+          description: Character data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+    patch:
+      operationId: updateCharacter
+      tags: [character]
+      summary: Update character name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCharacterRequest"
+      responses:
+        "200":
+          description: Updated character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+
+  /character/checkin:
+    post:
+      operationId: dailyCheckin
+      tags: [character]
+      summary: Daily login check-in
+      responses:
+        "200":
+          description: Checkin result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinResult"
+
+  /quests:
+    get:
+      operationId: listQuests
+      tags: [quests]
+      summary: List all quests
+      responses:
+        "200":
+          description: List of quests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quest"
+    post:
+      operationId: createQuest
+      tags: [quests]
+      summary: Create a quest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestRequest"
+      responses:
+        "201":
+          description: Created quest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quest"
+
+  /quests/{id}:
+    get:
+      operationId: getQuest
+      tags: [quests]
+      summary: Get a quest by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quest"
+    patch:
+      operationId: updateQuest
+      tags: [quests]
+      summary: Update a quest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestRequest"
+      responses:
+        "200":
+          description: Updated quest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quest"
+    delete:
+      operationId: deleteQuest
+      tags: [quests]
+      summary: Delete a quest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /quests/{id}/complete:
+    post:
+      operationId: completeQuest
+      tags: [quests]
+      summary: Mark a quest as complete and award XP/Gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Completion result with rewards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestCompletionResult"
+
+  /quests/{id}/fail:
+    post:
+      operationId: failQuest
+      tags: [quests]
+      summary: Mark a quest as failed and deduct XP/Gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Failure result with penalties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestFailResult"
+
+  /quest-log:
+    get:
+      operationId: getQuestLog
+      tags: [quests]
+      summary: Get quest history log
+      responses:
+        "200":
+          description: Quest log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuestLogEntry"
+
+  /shop/rewards:
+    get:
+      operationId: listRewards
+      tags: [shop]
+      summary: List all shop rewards
+      responses:
+        "200":
+          description: List of rewards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reward"
+    post:
+      operationId: createReward
+      tags: [shop]
+      summary: Create a custom reward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRewardRequest"
+      responses:
+        "201":
+          description: Created reward
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reward"
+
+  /shop/rewards/{id}:
+    delete:
+      operationId: deleteReward
+      tags: [shop]
+      summary: Delete a reward
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /shop/rewards/{id}/purchase:
+    post:
+      operationId: purchaseReward
+      tags: [shop]
+      summary: Purchase a reward with Gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseResult"
+
+  /bosses:
+    get:
+      operationId: listBosses
+      tags: [bosses]
+      summary: List all bosses
+      responses:
+        "200":
+          description: List of bosses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Boss"
+
+  /bosses/{id}/challenge:
+    post:
+      operationId: challengeBoss
+      tags: [bosses]
+      summary: Challenge a boss
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Boss challenge result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BossChallengeResult"
+
+  /awakening:
+    get:
+      operationId: getAwakening
+      tags: [awakening]
+      summary: Get vision/anti-vision journal
+      responses:
+        "200":
+          description: Awakening journal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Awakening"
+    put:
+      operationId: saveAwakening
+      tags: [awakening]
+      summary: Save vision/anti-vision journal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAwakeningRequest"
+      responses:
+        "200":
+          description: Saved awakening
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Awakening"
+
+  /rng/daily-event:
+    get:
+      operationId: getDailyRngEvent
+      tags: [rng]
+      summary: Get today's RNG event if any
+      responses:
+        "200":
+          description: RNG event or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RngEventResponse"
+
+  /activity:
+    get:
+      operationId: getActivityHeatmap
+      tags: [character]
+      summary: Get activity heatmap data for past year
+      responses:
+        "200":
+          description: Activity heatmap
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityDay"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +391,393 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        level:
+          type: integer
+        xp:
+          type: integer
+        xpToNextLevel:
+          type: integer
+        gold:
+          type: integer
+        strength:
+          type: integer
+        intellect:
+          type: integer
+        endurance:
+          type: integer
+        agility:
+          type: integer
+        discipline:
+          type: integer
+        streak:
+          type: integer
+        longestStreak:
+          type: integer
+        multiplier:
+          type: number
+        lastCheckin:
+          type: string
+          nullable: true
+        totalQuestsCompleted:
+          type: integer
+        totalQuestsFailed:
+          type: integer
+      required:
+        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed]
+
+    UpdateCharacterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required: [name]
+
+    CheckinResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        streak:
+          type: integer
+        multiplier:
+          type: number
+        alreadyCheckedIn:
+          type: boolean
+        milestoneBonus:
+          type: boolean
+        milestoneBonusXp:
+          type: integer
+        milestoneBonusGold:
+          type: integer
+      required: [success, message, streak, multiplier, alreadyCheckedIn, milestoneBonus, milestoneBonusXp, milestoneBonusGold]
+
+    Quest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
+        difficulty:
+          type: string
+          enum: [F, E, D, C, B, A, S, SS, SSS]
+        durationMinutes:
+          type: integer
+        xpReward:
+          type: integer
+        goldReward:
+          type: integer
+        xpPenalty:
+          type: integer
+        goldPenalty:
+          type: integer
+        status:
+          type: string
+          enum: [active, completed, failed]
+        isDaily:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        completedAt:
+          type: string
+          nullable: true
+      required: [id, name, category, difficulty, durationMinutes, xpReward, goldReward, xpPenalty, goldPenalty, status, isDaily, createdAt]
+
+    CreateQuestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
+        difficulty:
+          type: string
+          enum: [F, E, D, C, B, A, S, SS, SSS]
+        durationMinutes:
+          type: integer
+        isDaily:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+      required: [name, category, difficulty, durationMinutes, isDaily]
+
+    UpdateQuestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
+        difficulty:
+          type: string
+          enum: [F, E, D, C, B, A, S, SS, SSS]
+        durationMinutes:
+          type: integer
+        isDaily:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+
+    QuestCompletionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        xpAwarded:
+          type: integer
+        goldAwarded:
+          type: integer
+        multiplierApplied:
+          type: number
+        rngBonus:
+          type: boolean
+        newLevel:
+          type: integer
+        leveledUp:
+          type: boolean
+        statGains:
+          type: object
+          properties:
+            strength:
+              type: integer
+            intellect:
+              type: integer
+            endurance:
+              type: integer
+            agility:
+              type: integer
+            discipline:
+              type: integer
+          required: [strength, intellect, endurance, agility, discipline]
+        character:
+          $ref: "#/components/schemas/Character"
+      required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character]
+
+    QuestFailResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        xpDeducted:
+          type: integer
+        goldDeducted:
+          type: integer
+        character:
+          $ref: "#/components/schemas/Character"
+      required: [success, xpDeducted, goldDeducted, character]
+
+    QuestLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        questName:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+        outcome:
+          type: string
+          enum: [completed, failed]
+        xpChange:
+          type: integer
+        goldChange:
+          type: integer
+        multiplierApplied:
+          type: number
+        occurredAt:
+          type: string
+      required: [id, questName, category, difficulty, outcome, xpChange, goldChange, multiplierApplied, occurredAt]
+
+    DeleteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    Reward:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        goldCost:
+          type: integer
+        category:
+          type: string
+        timesRedeemed:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, name, goldCost, category, timesRedeemed, createdAt]
+
+    CreateRewardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        goldCost:
+          type: integer
+        category:
+          type: string
+      required: [name, goldCost, category]
+
+    PurchaseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        goldSpent:
+          type: integer
+        goldRemaining:
+          type: integer
+      required: [success, message, goldSpent, goldRemaining]
+
+    Boss:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        rank:
+          type: string
+          enum: [F, E, D, C, B, A, S, SS, SSS]
+        xpThreshold:
+          type: integer
+        xpReward:
+          type: integer
+        goldReward:
+          type: integer
+        xpPenalty:
+          type: integer
+        challenge:
+          type: string
+        isDefeated:
+          type: boolean
+        isUnlocked:
+          type: boolean
+        defeatRecordedAt:
+          type: string
+          nullable: true
+        failureRecordedAt:
+          type: string
+          nullable: true
+      required: [id, name, description, rank, xpThreshold, xpReward, goldReward, xpPenalty, challenge, isDefeated, isUnlocked]
+
+    BossChallengeResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        victory:
+          type: boolean
+        message:
+          type: string
+        xpChange:
+          type: integer
+        goldChange:
+          type: integer
+        character:
+          $ref: "#/components/schemas/Character"
+      required: [success, victory, message, xpChange, goldChange, character]
+
+    Awakening:
+      type: object
+      properties:
+        id:
+          type: integer
+        vision:
+          type: string
+          nullable: true
+        antiVision:
+          type: string
+          nullable: true
+        coreValues:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+      required: [id, updatedAt]
+
+    SaveAwakeningRequest:
+      type: object
+      properties:
+        vision:
+          type: string
+          nullable: true
+        antiVision:
+          type: string
+          nullable: true
+        coreValues:
+          type: string
+          nullable: true
+
+    RngEventResponse:
+      type: object
+      properties:
+        hasEvent:
+          type: boolean
+        event:
+          $ref: "#/components/schemas/RngEvent"
+          nullable: true
+      required: [hasEvent]
+
+    RngEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [streak_multiplier_day, double_gold_day, bonus_xp_day, chaos_challenge]
+        title:
+          type: string
+        description:
+          type: string
+        multiplierBonus:
+          type: number
+      required: [type, title, description, multiplierBonus]
+
+    ActivityDay:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+        level:
+          type: integer
+      required: [date, count, level]

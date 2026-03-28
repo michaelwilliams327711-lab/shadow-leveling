@@ -1,0 +1,47 @@
+Create a full-stack gamified habit-tracking and productivity web application. The app should have a clean, dark-mode UI with an intense, high-stakes RPG/Solo Leveling theme. Please include the following core features, mechanics, and technical requirements:
+
+1. The Awakening & Character Dashboard
+The Awakening: A dedicated journaling page where the user writes out their "Vision" (ultimate goals) and "Anti-Vision" (the worst-case scenario if they fail to change) to ground their motivation.
+
+Dashboard: Display the user's current Level, Total XP (Experience Points for leveling), Total Gold (currency for rewards), and core stats (e.g., Strength, Flexibility, Intellect).
+
+Visuals: Integrate a dynamic Radar Chart to map out stat distribution, and a GitHub-style Heat Map to visually track daily login and habit consistency over time.
+
+2. High-Stakes Quest System (Habit & Task Manager)
+Create a CRUD interface for tasks with specific parameters: Task Name, Category, Difficulty Level, and Duration.
+
+Dynamic Payouts & Penalties: * Success: Completing a task awards XP and Gold scaled to its Difficulty and Duration.
+
+Failure: Missing a daily login or failing a scheduled task deducts XP and Gold (negative reinforcement).
+
+Pre-populate the database with example quests: * Financial: "Deposit $20 into Savings"
+
+Productivity: "Complete Daily To-Do List"
+
+Study/Skill Building: "1 Hour of C++ Programming" or "45 Minutes of Drawing Practice"
+
+3. Streak Multipliers & Unpredictability (RNG)
+Streaks: Implement a consecutive daily streak counter. The higher the streak, the higher the XP/Gold multiplier applied to completed tasks. Breaking the streak resets the multiplier and shatters the heat map chain.
+
+Milestones: Allow custom bonus payouts for long-term consistency (e.g., +500 XP and +1000 Gold for a 30-day streak).
+
+Unpredictability: Introduce random RNG events, such as surprise "Streak Multiplier Days" or spontaneous mid-task requirement changes to spike dopamine and keep the user engaged.
+
+4. Reward & Currency System (The Shop)
+Separate XP (used strictly for leveling up and unlocking content) from Gold (used as spendable currency).
+
+Build a "Rewards Shop" where users spend their earned Gold to buy guilt-free custom rewards (e.g., "Buy a new video game," "Guilt-free day off").
+
+5. The Boss Arena (Gated Content)
+XP Thresholds: Boss fights are locked and only become accessible when the user reaches specific XP milestones.
+
+High-Stakes Combat: Bosses represent high-effort, real-world challenges.
+
+Permanent Consequences: If the user defeats the boss, they receive a massive XP/Gold bonus and a real-life level up. If they fail, they suffer a severe XP penalty, and the defeat is permanently recorded in their Quest Log history.
+
+6. Technical Stack
+Frontend: React for a smooth, reactive interface. Include libraries like Chart.js or Recharts for the Radar Chart and Heat Map.
+
+Backend: Node.js/Express.
+
+Database: SQLite or PostgreSQL to reliably save user progress, history, stats, and custom tasks.
