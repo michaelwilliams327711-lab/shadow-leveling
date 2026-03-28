@@ -20,6 +20,7 @@ import Shop from "@/pages/Shop";
 import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
+import ShadowDashboard from "@/pages/ShadowDashboard";
 import NotFound from "@/pages/not-found";
 
 const heroBgImg = "/images/hero-bg.png";
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/arena" component={BossArena} />
       <Route path="/awakening" component={Awakening} />
       <Route path="/analytics" component={AnalyticsDashboard} />
+      <Route path="/shadow" component={ShadowDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

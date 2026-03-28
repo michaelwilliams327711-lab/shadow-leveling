@@ -7,6 +7,7 @@ import {
   BookOpen,
   LayoutDashboard,
   BarChart2,
+  TrendingDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,12 +22,13 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Status", href: "/", icon: LayoutDashboard },
-  { title: "Quests", href: "/quests", icon: ScrollText },
-  { title: "Shop", href: "/shop", icon: Store },
-  { title: "Boss Arena", href: "/arena", icon: Skull },
-  { title: "The Awakening", href: "/awakening", icon: BookOpen },
-  { title: "Analytics", href: "/analytics", icon: BarChart2 },
+  { title: "Status", href: "/", icon: LayoutDashboard, shadow: false },
+  { title: "Quests", href: "/quests", icon: ScrollText, shadow: false },
+  { title: "Shop", href: "/shop", icon: Store, shadow: false },
+  { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
+  { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
+  { title: "Analytics", href: "/analytics", icon: BarChart2, shadow: false },
+  { title: "Shadow Dashboard", href: "/shadow", icon: TrendingDown, shadow: true },
 ];
 
 export function AppSidebar() {
@@ -55,19 +57,47 @@ export function AppSidebar() {
             <SidebarMenu className="gap-2">
               {navItems.map((item) => {
                 const isActive = location === item.href;
+                const isShadow = item.shadow;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link 
+                      <Link
                         href={item.href}
                         className={`flex items-center gap-3 rounded-md px-3 py-2.5 transition-all duration-200 ${
-                          isActive 
-                            ? "bg-primary/15 text-primary border border-primary/30 shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]" 
+                          isActive && isShadow
+                            ? "border"
+                            : isActive
+                            ? "bg-primary/15 text-primary border border-primary/30 shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]"
                             : "text-muted-foreground hover:bg-white/5 hover:text-white"
                         }`}
+                        style={
+                          isActive && isShadow
+                            ? {
+                                background: "rgba(239,68,68,0.12)",
+                                borderColor: "rgba(239,68,68,0.35)",
+                                boxShadow: "inset 0 0 10px rgba(239,68,68,0.08)",
+                                color: "#ef4444",
+                              }
+                            : undefined
+                        }
                       >
-                        <item.icon className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                        <span className="font-semibold text-base tracking-wide">{item.title}</span>
+                        <item.icon
+                          className={`h-5 w-5 ${
+                            isShadow
+                              ? isActive
+                                ? "text-red-500"
+                                : "text-red-700"
+                              : isActive
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                        <span
+                          className="font-semibold text-base tracking-wide"
+                          style={isShadow && !isActive ? { color: "#7f1d1d" } : undefined}
+                        >
+                          {item.title}
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

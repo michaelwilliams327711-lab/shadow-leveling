@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questLogTable } from "@workspace/db";
-import { sql, gte } from "drizzle-orm";
+import { sql, gte, inArray } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL } from "./character.js";
 
 const router: IRouter = Router();
@@ -92,11 +92,80 @@ router.get("/dashboard-stats", async (req, res) => {
       }
     }
 
+    // Failure counts grouped by stat_category (FAILED only, for Time Sink doughnut)
+    const failuresByCategoryRaw = await db
+      .select({
+        category: questLogTable.statCategory,
+        count: sql<number>`count(*)`,
+      })
+      .from(questLogTable)
+      .where(
+        sql`${questLogTable.actionType} = 'FAILED' and ${questLogTable.statCategory} is not null`
+      )
+      .groupBy(questLogTable.statCategory)
+      .orderBy(sql`count(*) desc`);
+
+    const failuresByCategory = failuresByCategoryRaw.map((r) => ({
+      category: r.category ?? "Unknown",
+      count: Number(r.count),
+    }));
+
+    // XP bled per day over last 30 days (negative xp_change from FAILED/MISSED_DAY)
+    const xpBledRaw = await db
+      .select({
+        date: sql<string>`to_char(${questLogTable.occurredAt}, 'YYYY-MM-DD')`,
+        xpBled: sql<number>`coalesce(sum(abs(case when ${questLogTable.xpChange} < 0 then ${questLogTable.xpChange} else 0 end)), 0)`,
+      })
+      .from(questLogTable)
+      .where(
+        sql`${questLogTable.occurredAt} >= ${thirtyDaysAgo} and ${questLogTable.actionType} in ('FAILED', 'MISSED_DAY') and ${questLogTable.xpChange} < 0`
+      )
+      .groupBy(sql`to_char(${questLogTable.occurredAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${questLogTable.occurredAt}, 'YYYY-MM-DD')`);
+
+    const xpBledMap = new Map(xpBledRaw.map((r) => [r.date, Number(r.xpBled)]));
+    const xpBledByDate: { date: string; xp: number }[] = [];
+    let totalXpBled = 0;
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const bled = xpBledMap.get(dateStr) ?? 0;
+      totalXpBled += bled;
+      xpBledByDate.push({ date: dateStr, xp: -bled });
+    }
+
+    // Recent penalty log entries for Graveyard (last 20 FAILED/MISSED_DAY rows)
+    const recentPenaltiesRaw = await db
+      .select({
+        questName: questLogTable.questName,
+        statCategory: questLogTable.statCategory,
+        actionType: questLogTable.actionType,
+        xpChange: questLogTable.xpChange,
+        occurredAt: questLogTable.occurredAt,
+      })
+      .from(questLogTable)
+      .where(inArray(questLogTable.actionType, ["FAILED", "MISSED_DAY"]))
+      .orderBy(sql`${questLogTable.occurredAt} desc`)
+      .limit(20);
+
+    const recentPenalties = recentPenaltiesRaw.map((r) => ({
+      date: r.occurredAt.toISOString().split("T")[0],
+      description: r.questName,
+      stat_category: r.statCategory ?? "Unknown",
+      action_type: r.actionType,
+      xp_change: r.xpChange,
+    }));
+
     res.json({
       xpByDate,
       xpByStatCategory,
       activityCalendar,
       outcomeBreakdown,
+      failuresByCategory,
+      xpBledByDate,
+      totalXpBled,
+      recentPenalties,
       character: {
         streak: char.streak,
         gold: char.gold,
