@@ -6,12 +6,21 @@ interface StatRadarProps {
 }
 
 export function StatRadar({ character }: StatRadarProps) {
+  const fullMark = Math.max(
+    character.strength,
+    character.agility,
+    character.endurance,
+    character.discipline,
+    character.intellect,
+    10
+  ) * 2;
+
   const data = [
-    { subject: "STR", A: character.strength, fullMark: Math.max(10, character.strength + 5) },
-    { subject: "AGI", A: character.agility, fullMark: Math.max(10, character.agility + 5) },
-    { subject: "END", A: character.endurance, fullMark: Math.max(10, character.endurance + 5) },
-    { subject: "DIS", A: character.discipline, fullMark: Math.max(10, character.discipline + 5) },
-    { subject: "INT", A: character.intellect, fullMark: Math.max(10, character.intellect + 5) },
+    { subject: "STR", A: character.strength, fullMark },
+    { subject: "AGI", A: character.agility, fullMark },
+    { subject: "END", A: character.endurance, fullMark },
+    { subject: "DIS", A: character.discipline, fullMark },
+    { subject: "INT", A: character.intellect, fullMark },
   ];
 
   return (
@@ -23,7 +32,7 @@ export function StatRadar({ character }: StatRadarProps) {
             dataKey="subject" 
             tick={{ fill: "hsl(var(--foreground))", fontSize: 12, fontFamily: "Rajdhani, sans-serif", fontWeight: 600 }} 
           />
-          <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
+          <PolarRadiusAxis angle={30} domain={[0, fullMark]} tick={false} axisLine={false} />
           <Radar
             name="Stats"
             dataKey="A"
