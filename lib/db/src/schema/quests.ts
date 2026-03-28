@@ -15,6 +15,7 @@ export const questsTable = pgTable("quests", {
   status: text("status").notNull().default("active"),
   isDaily: boolean("is_daily").notNull().default(false),
   description: text("description"),
+  deadline: timestamp("deadline"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });
@@ -31,7 +32,17 @@ export const questLogTable = pgTable("quest_log", {
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
 });
 
+export const penaltyLogTable = pgTable("penalty_log", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  xpDeducted: integer("xp_deducted").notNull().default(0),
+  goldDeducted: integer("gold_deducted").notNull().default(0),
+  occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+});
+
 export const insertQuestSchema = createInsertSchema(questsTable).omit({ id: true, createdAt: true, completedAt: true });
 export type InsertQuest = z.infer<typeof insertQuestSchema>;
 export type Quest = typeof questsTable.$inferSelect;
 export type QuestLog = typeof questLogTable.$inferSelect;
+export type PenaltyLog = typeof penaltyLogTable.$inferSelect;

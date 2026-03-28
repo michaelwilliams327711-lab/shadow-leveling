@@ -94,6 +94,7 @@ export interface Quest {
   description?: string | null;
   createdAt: string;
   completedAt?: string | null;
+  deadline?: string | null;
 }
 
 export type CreateQuestRequestCategory =
@@ -131,6 +132,7 @@ export interface CreateQuestRequest {
   durationMinutes: number;
   isDaily: boolean;
   description?: string | null;
+  deadline?: string | null;
 }
 
 export type UpdateQuestRequestCategory =
@@ -323,4 +325,31 @@ export interface ActivityDay {
   date: string;
   count: number;
   level: number;
+}
+
+export type PenaltyEventType =
+  (typeof PenaltyEventType)[keyof typeof PenaltyEventType];
+
+export const PenaltyEventType = {
+  missed_day: "missed_day",
+  quest_overdue: "quest_overdue",
+} as const;
+
+export interface PenaltyEvent {
+  type: PenaltyEventType;
+  description: string;
+  xpDeducted: number;
+  goldDeducted: number;
+  occurredAt: string;
+}
+
+export interface LoginCheckResult {
+  penalties: PenaltyEvent[];
+  character: Character;
+}
+
+export interface ProcessOverdueResult {
+  penalties: PenaltyEvent[];
+  autoFailedQuests: Quest[];
+  character: Character;
 }

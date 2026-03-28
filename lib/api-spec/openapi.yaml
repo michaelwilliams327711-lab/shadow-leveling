@@ -78,6 +78,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/CheckinResult"
 
+  /character/login:
+    post:
+      operationId: characterLogin
+      tags: [character]
+      summary: Auto login check - detects missed days and applies penalties
+      responses:
+        "200":
+          description: Login check result with any penalties applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginCheckResult"
+
   /quests:
     get:
       operationId: listQuests
@@ -221,6 +234,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/QuestLogEntry"
+
+  /quests/process-overdue:
+    post:
+      operationId: processOverdueQuests
+      tags: [quests]
+      summary: Auto-fail active quests past their deadline and apply penalties
+      responses:
+        "200":
+          description: Result with auto-failed quests and penalty events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessOverdueResult"
 
   /shop/rewards:
     get:
@@ -498,6 +524,9 @@ components:
         completedAt:
           type: string
           nullable: true
+        deadline:
+          type: string
+          nullable: true
       required: [id, name, category, difficulty, durationMinutes, xpReward, goldReward, xpPenalty, goldPenalty, status, isDaily, createdAt]
 
     CreateQuestRequest:
@@ -516,6 +545,9 @@ components:
         isDaily:
           type: boolean
         description:
+          type: string
+          nullable: true
+        deadline:
           type: string
           nullable: true
       required: [name, category, difficulty, durationMinutes, isDaily]
@@ -781,3 +813,45 @@ components:
         level:
           type: integer
       required: [date, count, level]
+
+    PenaltyEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [missed_day, quest_overdue]
+        description:
+          type: string
+        xpDeducted:
+          type: integer
+        goldDeducted:
+          type: integer
+        occurredAt:
+          type: string
+      required: [type, description, xpDeducted, goldDeducted, occurredAt]
+
+    LoginCheckResult:
+      type: object
+      properties:
+        penalties:
+          type: array
+          items:
+            $ref: "#/components/schemas/PenaltyEvent"
+        character:
+          $ref: "#/components/schemas/Character"
+      required: [penalties, character]
+
+    ProcessOverdueResult:
+      type: object
+      properties:
+        penalties:
+          type: array
+          items:
+            $ref: "#/components/schemas/PenaltyEvent"
+        autoFailedQuests:
+          type: array
+          items:
+            $ref: "#/components/schemas/Quest"
+        character:
+          $ref: "#/components/schemas/Character"
+      required: [penalties, autoFailedQuests, character]

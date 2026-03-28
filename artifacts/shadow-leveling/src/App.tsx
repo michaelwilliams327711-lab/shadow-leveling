@@ -1,9 +1,17 @@
+import { useState, useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PenaltyModal } from "@/components/PenaltyModal";
+import {
+  characterLogin,
+  processOverdueQuests,
+  getGetCharacterQueryKey,
+  getListQuestsQueryKey,
+} from "@workspace/api-client-react";
 
 // Pages
 import Dashboard from "@/pages/Dashboard";
@@ -19,10 +27,53 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
+
+interface PenaltyEvent {
+  type: string;
+  description: string;
+  xpDeducted: number;
+  goldDeducted: number;
+  occurredAt: string;
+}
+
+function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => void }) {
+  const ran = useRef(false);
+
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+
+    const runChecks = async () => {
+      try {
+        const [loginResult, overdueResult] = await Promise.all([
+          characterLogin(),
+          processOverdueQuests(),
+        ]);
+
+        const allPenalties: PenaltyEvent[] = [
+          ...(loginResult.penalties ?? []),
+          ...(overdueResult.penalties ?? []),
+        ];
+
+        if (allPenalties.length > 0) {
+          queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey() });
+          onPenalties(allPenalties);
+        }
+      } catch {
+        // silently ignore startup check errors
+      }
+    };
+
+    runChecks();
+  }, [onPenalties]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -38,6 +89,8 @@ function Router() {
 }
 
 function App() {
+  const [penalties, setPenalties] = useState<PenaltyEvent[]>([]);
+
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
@@ -46,9 +99,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Force dark mode */}
         <div className="dark min-h-screen bg-background text-foreground selection:bg-primary/30">
-          <div 
+          <div
             className="fixed inset-0 z-0 opacity-[0.03] pointer-events-none mix-blend-screen"
             style={{ backgroundImage: `url(${heroBgImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
           />
@@ -69,6 +121,13 @@ function App() {
             </div>
           </SidebarProvider>
           <Toaster />
+          <PenaltyChecker onPenalties={setPenalties} />
+          {penalties.length > 0 && (
+            <PenaltyModal
+              penalties={penalties}
+              onDismiss={() => setPenalties([])}
+            />
+          )}
         </div>
       </TooltipProvider>
     </QueryClientProvider>

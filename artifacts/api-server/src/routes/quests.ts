@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { questsTable, questLogTable, characterTable, penaltyLogTable } from "@workspace/db";
+import { eq, and, isNotNull, lt } from "drizzle-orm";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -53,6 +53,7 @@ router.get("/quests", async (req, res) => {
       ...q,
       createdAt: q.createdAt.toISOString(),
       completedAt: q.completedAt?.toISOString() ?? null,
+      deadline: q.deadline?.toISOString() ?? null,
     }));
     res.json(mapped);
   } catch (err) {
@@ -74,6 +75,7 @@ router.post("/quests", async (req, res) => {
         durationMinutes: body.durationMinutes,
         isDaily: body.isDaily,
         description: body.description ?? null,
+        deadline: body.deadline ? new Date(body.deadline as string) : null,
         ...rewards,
         status: "active",
       })
@@ -82,6 +84,7 @@ router.post("/quests", async (req, res) => {
       ...quest,
       createdAt: quest.createdAt.toISOString(),
       completedAt: quest.completedAt?.toISOString() ?? null,
+      deadline: quest.deadline?.toISOString() ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "Error creating quest");
@@ -94,7 +97,7 @@ router.get("/quests/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest) return res.status(404).json({ error: "Quest not found" });
-    res.json({ ...quest, createdAt: quest.createdAt.toISOString(), completedAt: quest.completedAt?.toISOString() ?? null });
+    res.json({ ...quest, createdAt: quest.createdAt.toISOString(), completedAt: quest.completedAt?.toISOString() ?? null, deadline: quest.deadline?.toISOString() ?? null });
   } catch (err) {
     req.log.error({ err }, "Error getting quest");
     res.status(500).json({ error: "Internal server error" });
@@ -123,7 +126,7 @@ router.patch("/quests/:id", async (req, res) => {
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Quest not found" });
-    res.json({ ...updated, createdAt: updated.createdAt.toISOString(), completedAt: updated.completedAt?.toISOString() ?? null });
+    res.json({ ...updated, createdAt: updated.createdAt.toISOString(), completedAt: updated.completedAt?.toISOString() ?? null, deadline: updated.deadline?.toISOString() ?? null });
   } catch (err) {
     req.log.error({ err }, "Error updating quest");
     res.status(500).json({ error: "Internal server error" });
@@ -287,6 +290,125 @@ router.post("/quests/:id/fail", async (req, res) => {
     res.json(data);
   } catch (err) {
     req.log.error({ err }, "Error failing quest");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/quests/process-overdue", async (req, res) => {
+  try {
+    const now = new Date();
+    const overdueQuests = await db
+      .select()
+      .from(questsTable)
+      .where(
+        and(
+          eq(questsTable.status, "active"),
+          isNotNull(questsTable.deadline),
+          lt(questsTable.deadline, now)
+        )
+      );
+
+    if (overdueQuests.length === 0) {
+      const char = await getOrCreateCharacter();
+      return res.json({
+        penalties: [],
+        autoFailedQuests: [],
+        character: {
+          ...char,
+          xpToNextLevel: XP_PER_LEVEL(char.level),
+          lastCheckin: char.lastCheckin?.toISOString() ?? null,
+        },
+      });
+    }
+
+    const char = await getOrCreateCharacter();
+    let totalXpDeducted = 0;
+    let totalGoldDeducted = 0;
+
+    const penalties: Array<{
+      type: string;
+      description: string;
+      xpDeducted: number;
+      goldDeducted: number;
+      occurredAt: string;
+    }> = [];
+
+    const failedQuestsSerialized: object[] = [];
+
+    for (const quest of overdueQuests) {
+      const xpDeducted = Math.min(
+        Math.max(0, char.xp - totalXpDeducted),
+        quest.xpPenalty
+      );
+      const goldDeducted = Math.min(
+        Math.max(0, char.gold - totalGoldDeducted),
+        quest.goldPenalty
+      );
+      totalXpDeducted += xpDeducted;
+      totalGoldDeducted += goldDeducted;
+
+      await db
+        .update(questsTable)
+        .set({ status: "failed" })
+        .where(eq(questsTable.id, quest.id));
+
+      await db.insert(questLogTable).values({
+        questName: quest.name,
+        category: quest.category,
+        difficulty: quest.difficulty,
+        outcome: "failed",
+        xpChange: -xpDeducted,
+        goldChange: -goldDeducted,
+        multiplierApplied: 1.0,
+      });
+
+      const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
+
+      const [penaltyLog] = await db.insert(penaltyLogTable).values({
+        type: "quest_overdue",
+        description: penaltyDesc,
+        xpDeducted,
+        goldDeducted,
+      }).returning();
+
+      penalties.push({
+        type: "quest_overdue",
+        description: penaltyDesc,
+        xpDeducted,
+        goldDeducted,
+        occurredAt: penaltyLog.occurredAt.toISOString(),
+      });
+
+      failedQuestsSerialized.push({
+        ...quest,
+        status: "failed",
+        createdAt: quest.createdAt.toISOString(),
+        completedAt: quest.completedAt?.toISOString() ?? null,
+        deadline: quest.deadline?.toISOString() ?? null,
+      });
+    }
+
+    const [updatedChar] = await db
+      .update(characterTable)
+      .set({
+        xp: Math.max(0, char.xp - totalXpDeducted),
+        gold: Math.max(0, char.gold - totalGoldDeducted),
+        totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
+      })
+      .where(eq(characterTable.id, char.id))
+      .returning();
+
+    res.json({
+      penalties,
+      autoFailedQuests: failedQuestsSerialized,
+      character: {
+        ...updatedChar,
+        xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
+        lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error processing overdue quests");
     res.status(500).json({ error: "Internal server error" });
   }
 });

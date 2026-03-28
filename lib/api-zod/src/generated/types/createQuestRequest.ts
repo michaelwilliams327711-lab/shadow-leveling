@@ -15,4 +15,5 @@ export interface CreateQuestRequest {
   durationMinutes: number;
   isDaily: boolean;
   description?: string | null;
+  deadline?: string | null;
 }

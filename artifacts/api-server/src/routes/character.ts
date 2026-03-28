@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { characterTable, activityTable } from "@workspace/db";
+import { characterTable, activityTable, penaltyLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   GetCharacterResponse,
@@ -185,6 +185,91 @@ router.post("/character/checkin", async (req, res) => {
     res.json(data);
   } catch (err) {
     req.log.error({ err }, "Error checking in");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/character/login", async (req, res) => {
+  try {
+    const char = await getOrCreateCharacter();
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const penalties: Array<{
+      type: string;
+      description: string;
+      xpDeducted: number;
+      goldDeducted: number;
+      occurredAt: string;
+    }> = [];
+
+    let updatedChar = char;
+
+    if (char.lastLoginDate) {
+      const lastLogin = new Date(char.lastLoginDate);
+      const lastLoginStart = new Date(lastLogin);
+      lastLoginStart.setHours(0, 0, 0, 0);
+
+      const daysDiff = Math.floor(
+        (todayStart.getTime() - lastLoginStart.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysDiff >= 2) {
+        const daysMissed = daysDiff - 1;
+        const xpPenalty = Math.min(char.xp, daysMissed * 50);
+        const goldPenalty = Math.min(char.gold, daysMissed * 25);
+
+        const penaltyDesc = `Missed ${daysMissed} day${daysMissed > 1 ? "s" : ""} of login — streak reset`;
+
+        const [penaltyLog] = await db.insert(penaltyLogTable).values({
+          type: "missed_day",
+          description: penaltyDesc,
+          xpDeducted: xpPenalty,
+          goldDeducted: goldPenalty,
+        }).returning();
+
+        const [updated] = await db.update(characterTable)
+          .set({
+            xp: Math.max(0, char.xp - xpPenalty),
+            gold: Math.max(0, char.gold - goldPenalty),
+            streak: 0,
+            multiplier: 1.0,
+            lastLoginDate: now,
+          })
+          .where(eq(characterTable.id, char.id))
+          .returning();
+
+        updatedChar = updated;
+
+        penalties.push({
+          type: "missed_day",
+          description: penaltyDesc,
+          xpDeducted: xpPenalty,
+          goldDeducted: goldPenalty,
+          occurredAt: penaltyLog.occurredAt.toISOString(),
+        });
+      } else {
+        await db.update(characterTable)
+          .set({ lastLoginDate: now })
+          .where(eq(characterTable.id, char.id));
+      }
+    } else {
+      await db.update(characterTable)
+        .set({ lastLoginDate: now })
+        .where(eq(characterTable.id, char.id));
+    }
+
+    res.json({
+      penalties,
+      character: {
+        ...updatedChar,
+        xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
+        lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error in character login");
     res.status(500).json({ error: "Internal server error" });
   }
 });

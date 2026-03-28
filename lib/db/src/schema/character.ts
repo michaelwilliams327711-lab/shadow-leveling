@@ -17,6 +17,7 @@ export const characterTable = pgTable("character", {
   longestStreak: integer("longest_streak").notNull().default(0),
   multiplier: real("multiplier").notNull().default(1.0),
   lastCheckin: timestamp("last_checkin"),
+  lastLoginDate: timestamp("last_login_date"),
   totalQuestsCompleted: integer("total_quests_completed").notNull().default(0),
   totalQuestsFailed: integer("total_quests_failed").notNull().default(0),
 });

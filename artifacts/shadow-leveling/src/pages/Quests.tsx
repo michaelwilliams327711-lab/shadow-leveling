@@ -67,6 +67,7 @@ const createSchema = z.object({
   difficulty: z.nativeEnum(QuestDifficulty),
   durationMinutes: z.coerce.number().min(1),
   isDaily: z.boolean(),
+  deadline: z.string().optional(),
 });
 
 const editSchema = z.object({
@@ -110,7 +111,8 @@ export default function Quests() {
       category: QuestCategory.Productivity,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
-      isDaily: true
+      isDaily: true,
+      deadline: "",
     }
   });
 
@@ -175,7 +177,7 @@ export default function Quests() {
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
-    createQuest.mutate({ data: { ...data, description: data.description || null } }, {
+    createQuest.mutate({ data: { ...data, description: data.description || null, deadline: data.deadline || null } }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);
@@ -310,6 +312,23 @@ export default function Quests() {
                     </FormItem>
                   )} />
                 </div>
+
+                <FormField control={createForm.control} name="deadline" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Deadline <span className="text-muted-foreground">(optional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        className="bg-background/50 [color-scheme:dark]"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-destructive/70">If set, the quest auto-fails when the deadline passes.</p>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={createQuest.isPending}>
                   {createQuest.isPending ? "Registering..." : "Submit Mission"}

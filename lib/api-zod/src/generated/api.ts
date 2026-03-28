@@ -79,6 +79,40 @@ export const DailyCheckinResponse = zod.object({
 });
 
 /**
+ * @summary Auto login check - detects missed days and applies penalties
+ */
+export const CharacterLoginResponse = zod.object({
+  penalties: zod.array(
+    zod.object({
+      type: zod.enum(["missed_day", "quest_overdue"]),
+      description: zod.string(),
+      xpDeducted: zod.number(),
+      goldDeducted: zod.number(),
+      occurredAt: zod.string(),
+    }),
+  ),
+  character: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    level: zod.number(),
+    xp: zod.number(),
+    xpToNextLevel: zod.number(),
+    gold: zod.number(),
+    strength: zod.number(),
+    intellect: zod.number(),
+    endurance: zod.number(),
+    agility: zod.number(),
+    discipline: zod.number(),
+    streak: zod.number(),
+    longestStreak: zod.number(),
+    multiplier: zod.number(),
+    lastCheckin: zod.string().nullish(),
+    totalQuestsCompleted: zod.number(),
+    totalQuestsFailed: zod.number(),
+  }),
+});
+
+/**
  * @summary List all quests
  */
 export const ListQuestsResponseItem = zod.object({
@@ -104,6 +138,7 @@ export const ListQuestsResponseItem = zod.object({
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
+  deadline: zod.string().nullish(),
 });
 export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
 
@@ -125,6 +160,7 @@ export const CreateQuestBody = zod.object({
   durationMinutes: zod.number(),
   isDaily: zod.boolean(),
   description: zod.string().nullish(),
+  deadline: zod.string().nullish(),
 });
 
 /**
@@ -157,6 +193,7 @@ export const GetQuestResponse = zod.object({
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
+  deadline: zod.string().nullish(),
 });
 
 /**
@@ -210,6 +247,7 @@ export const UpdateQuestResponse = zod.object({
   description: zod.string().nullish(),
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
+  deadline: zod.string().nullish(),
 });
 
 /**
@@ -313,6 +351,67 @@ export const GetQuestLogResponseItem = zod.object({
   occurredAt: zod.string(),
 });
 export const GetQuestLogResponse = zod.array(GetQuestLogResponseItem);
+
+/**
+ * @summary Auto-fail active quests past their deadline and apply penalties
+ */
+export const ProcessOverdueQuestsResponse = zod.object({
+  penalties: zod.array(
+    zod.object({
+      type: zod.enum(["missed_day", "quest_overdue"]),
+      description: zod.string(),
+      xpDeducted: zod.number(),
+      goldDeducted: zod.number(),
+      occurredAt: zod.string(),
+    }),
+  ),
+  autoFailedQuests: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      category: zod.enum([
+        "Financial",
+        "Productivity",
+        "Study",
+        "Health",
+        "Creative",
+        "Social",
+        "Other",
+      ]),
+      difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
+      durationMinutes: zod.number(),
+      xpReward: zod.number(),
+      goldReward: zod.number(),
+      xpPenalty: zod.number(),
+      goldPenalty: zod.number(),
+      status: zod.enum(["active", "completed", "failed"]),
+      isDaily: zod.boolean(),
+      description: zod.string().nullish(),
+      createdAt: zod.string(),
+      completedAt: zod.string().nullish(),
+      deadline: zod.string().nullish(),
+    }),
+  ),
+  character: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    level: zod.number(),
+    xp: zod.number(),
+    xpToNextLevel: zod.number(),
+    gold: zod.number(),
+    strength: zod.number(),
+    intellect: zod.number(),
+    endurance: zod.number(),
+    agility: zod.number(),
+    discipline: zod.number(),
+    streak: zod.number(),
+    longestStreak: zod.number(),
+    multiplier: zod.number(),
+    lastCheckin: zod.string().nullish(),
+    totalQuestsCompleted: zod.number(),
+    totalQuestsFailed: zod.number(),
+  }),
+});
 
 /**
  * @summary List all shop rewards

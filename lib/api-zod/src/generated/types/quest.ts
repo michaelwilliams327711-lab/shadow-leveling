@@ -24,4 +24,5 @@ export interface Quest {
   description?: string | null;
   createdAt: string;
   completedAt?: string | null;
+  deadline?: string | null;
 }

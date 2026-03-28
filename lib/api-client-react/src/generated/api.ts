@@ -27,6 +27,8 @@ import type {
   CreateRewardRequest,
   DeleteResult,
   HealthStatus,
+  LoginCheckResult,
+  ProcessOverdueResult,
   PurchaseResult,
   Quest,
   QuestCompletionResult,
@@ -363,6 +365,87 @@ export const useDailyCheckin = <
   TContext
 > => {
   return useMutation(getDailyCheckinMutationOptions(options));
+};
+
+/**
+ * @summary Auto login check - detects missed days and applies penalties
+ */
+export const getCharacterLoginUrl = () => {
+  return `/api/character/login`;
+};
+
+export const characterLogin = async (
+  options?: RequestInit,
+): Promise<LoginCheckResult> => {
+  return customFetch<LoginCheckResult>(getCharacterLoginUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCharacterLoginMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof characterLogin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof characterLogin>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["characterLogin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof characterLogin>>,
+    void
+  > = () => {
+    return characterLogin(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CharacterLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof characterLogin>>
+>;
+
+export type CharacterLoginMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Auto login check - detects missed days and applies penalties
+ */
+export const useCharacterLogin = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof characterLogin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof characterLogin>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getCharacterLoginMutationOptions(options));
 };
 
 /**
@@ -1022,6 +1105,87 @@ export function useGetQuestLog<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Auto-fail active quests past their deadline and apply penalties
+ */
+export const getProcessOverdueQuestsUrl = () => {
+  return `/api/quests/process-overdue`;
+};
+
+export const processOverdueQuests = async (
+  options?: RequestInit,
+): Promise<ProcessOverdueResult> => {
+  return customFetch<ProcessOverdueResult>(getProcessOverdueQuestsUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getProcessOverdueQuestsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof processOverdueQuests>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof processOverdueQuests>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["processOverdueQuests"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof processOverdueQuests>>,
+    void
+  > = () => {
+    return processOverdueQuests(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ProcessOverdueQuestsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof processOverdueQuests>>
+>;
+
+export type ProcessOverdueQuestsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Auto-fail active quests past their deadline and apply penalties
+ */
+export const useProcessOverdueQuests = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof processOverdueQuests>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof processOverdueQuests>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getProcessOverdueQuestsMutationOptions(options));
+};
 
 /**
  * @summary List all shop rewards
