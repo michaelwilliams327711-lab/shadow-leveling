@@ -31,6 +31,8 @@ export const questLogTable = pgTable("quest_log", {
   goldChange: integer("gold_change").notNull(),
   multiplierApplied: real("multiplier_applied").notNull().default(1.0),
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+  actionType: text("action_type").notNull().default("COMPLETED"),
+  statCategory: text("stat_category"),
 });
 
 export const penaltyLogTable = pgTable("penalty_log", {

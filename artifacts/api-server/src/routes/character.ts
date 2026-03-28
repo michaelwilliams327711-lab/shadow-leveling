@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { characterTable, activityTable, penaltyLogTable } from "@workspace/db";
+import { characterTable, activityTable, penaltyLogTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   GetCharacterResponse,
@@ -228,6 +228,18 @@ router.post("/character/login", async (req, res) => {
           xpDeducted: xpPenalty,
           goldDeducted: goldPenalty,
         }).returning();
+
+        await db.insert(questLogTable).values({
+          questName: penaltyDesc,
+          category: "Penalty",
+          difficulty: "D",
+          outcome: "failed",
+          xpChange: -xpPenalty,
+          goldChange: -goldPenalty,
+          multiplierApplied: 1.0,
+          actionType: "MISSED_DAY",
+          statCategory: null,
+        });
 
         const [updated] = await db.update(characterTable)
           .set({

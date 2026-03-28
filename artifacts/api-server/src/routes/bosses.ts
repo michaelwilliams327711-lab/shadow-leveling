@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { bossesTable, characterTable } from "@workspace/db";
+import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL } from "./character.js";
 
@@ -77,6 +77,18 @@ router.post("/bosses/:id/challenge", async (req, res) => {
           : { failureRecordedAt: new Date() }
       )
       .where(eq(bossesTable.id, id));
+
+    await db.insert(questLogTable).values({
+      questName: boss.name,
+      category: "Boss",
+      difficulty: boss.rank,
+      outcome: victory ? "completed" : "failed",
+      xpChange: victory ? boss.xpReward : -boss.xpPenalty,
+      goldChange: victory ? boss.goldReward : 0,
+      multiplierApplied: 1.0,
+      actionType: victory ? "BOSS_DEFEATED" : "FAILED",
+      statCategory: null,
+    });
 
     res.json({
       success: true,

@@ -6,6 +6,7 @@ import shopRouter from "./shop.js";
 import bossesRouter from "./bosses.js";
 import awakeningRouter from "./awakening.js";
 import rngRouter from "./rng.js";
+import dashboardRouter from "./dashboard.js";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(shopRouter);
 router.use(bossesRouter);
 router.use(awakeningRouter);
 router.use(rngRouter);
+router.use(dashboardRouter);
 
 export default router;

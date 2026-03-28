@@ -247,6 +247,8 @@ router.post("/quests/:id/complete", async (req, res) => {
       xpChange: xpAwarded,
       goldChange: goldAwarded,
       multiplierApplied: totalMultiplier,
+      actionType: "COMPLETED",
+      statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
     });
 
     await upsertActivity(today);
@@ -339,6 +341,8 @@ router.post("/quests/:id/fail", async (req, res) => {
       xpChange: -xpDeducted,
       goldChange: -goldDeducted,
       multiplierApplied: xpGoldMult,
+      actionType: "FAILED",
+      statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
     });
 
     const statPenalties = {
@@ -453,6 +457,8 @@ router.post("/quests/process-overdue", async (req, res) => {
           xpChange: -xpDeducted,
           goldChange: -goldDeducted,
           multiplierApplied: xpGoldMult,
+          actionType: "MISSED_DAY",
+          statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
         });
 
         const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
