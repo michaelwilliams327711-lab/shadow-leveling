@@ -58,6 +58,16 @@ export const QuestCategory = {
   Other: "Other",
 } as const;
 
+export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
+
+export const StatBoost = {
+  strength: "strength",
+  intellect: "intellect",
+  endurance: "endurance",
+  agility: "agility",
+  discipline: "discipline",
+} as const;
+
 export type QuestDifficulty =
   (typeof QuestDifficulty)[keyof typeof QuestDifficulty];
 
@@ -84,7 +94,7 @@ export const QuestStatus = {
 export interface Quest {
   id: number;
   name: string;
-  category: QuestCategory;
+  category: string;
   difficulty: QuestDifficulty;
   durationMinutes: number;
   xpReward: number;
@@ -97,20 +107,8 @@ export interface Quest {
   createdAt: string;
   completedAt?: string | null;
   deadline?: string | null;
+  statBoost?: StatBoost | null;
 }
-
-export type CreateQuestRequestCategory =
-  (typeof CreateQuestRequestCategory)[keyof typeof CreateQuestRequestCategory];
-
-export const CreateQuestRequestCategory = {
-  Financial: "Financial",
-  Productivity: "Productivity",
-  Study: "Study",
-  Health: "Health",
-  Creative: "Creative",
-  Social: "Social",
-  Other: "Other",
-} as const;
 
 export type CreateQuestRequestDifficulty =
   (typeof CreateQuestRequestDifficulty)[keyof typeof CreateQuestRequestDifficulty];
@@ -129,26 +127,14 @@ export const CreateQuestRequestDifficulty = {
 
 export interface CreateQuestRequest {
   name: string;
-  category: CreateQuestRequestCategory;
+  category: string;
   difficulty: CreateQuestRequestDifficulty;
   durationMinutes: number;
   isDaily: boolean;
   description?: string | null;
   deadline?: string | null;
+  statBoost?: StatBoost | null;
 }
-
-export type UpdateQuestRequestCategory =
-  (typeof UpdateQuestRequestCategory)[keyof typeof UpdateQuestRequestCategory];
-
-export const UpdateQuestRequestCategory = {
-  Financial: "Financial",
-  Productivity: "Productivity",
-  Study: "Study",
-  Health: "Health",
-  Creative: "Creative",
-  Social: "Social",
-  Other: "Other",
-} as const;
 
 export type UpdateQuestRequestDifficulty =
   (typeof UpdateQuestRequestDifficulty)[keyof typeof UpdateQuestRequestDifficulty];
@@ -167,11 +153,12 @@ export const UpdateQuestRequestDifficulty = {
 
 export interface UpdateQuestRequest {
   name?: string;
-  category?: UpdateQuestRequestCategory;
+  category?: string;
   difficulty?: UpdateQuestRequestDifficulty;
   durationMinutes?: number;
   isDaily?: boolean;
   description?: string | null;
+  statBoost?: StatBoost | null;
 }
 
 export type QuestCompletionResultStatGains = {

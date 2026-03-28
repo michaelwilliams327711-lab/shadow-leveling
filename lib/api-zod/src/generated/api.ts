@@ -118,21 +118,21 @@ export const CharacterLoginResponse = zod.object({
   }),
 });
 
+export const StatBoost = zod.enum([
+  "strength",
+  "intellect",
+  "endurance",
+  "agility",
+  "discipline",
+]);
+
 /**
  * @summary List all quests
  */
 export const ListQuestsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
-  category: zod.enum([
-    "Financial",
-    "Productivity",
-    "Study",
-    "Health",
-    "Creative",
-    "Social",
-    "Other",
-  ]),
+  category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
   xpReward: zod.number(),
@@ -145,6 +145,7 @@ export const ListQuestsResponseItem = zod.object({
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
+  statBoost: StatBoost.nullish(),
 });
 export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
 
@@ -153,20 +154,13 @@ export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
  */
 export const CreateQuestBody = zod.object({
   name: zod.string(),
-  category: zod.enum([
-    "Financial",
-    "Productivity",
-    "Study",
-    "Health",
-    "Creative",
-    "Social",
-    "Other",
-  ]),
+  category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
   isDaily: zod.boolean(),
   description: zod.string().nullish(),
   deadline: zod.string().nullish(),
+  statBoost: StatBoost.nullish(),
 });
 
 /**
@@ -179,15 +173,7 @@ export const GetQuestParams = zod.object({
 export const GetQuestResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  category: zod.enum([
-    "Financial",
-    "Productivity",
-    "Study",
-    "Health",
-    "Creative",
-    "Social",
-    "Other",
-  ]),
+  category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
   xpReward: zod.number(),
@@ -200,6 +186,7 @@ export const GetQuestResponse = zod.object({
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
+  statBoost: StatBoost.nullish(),
 });
 
 /**
@@ -211,37 +198,20 @@ export const UpdateQuestParams = zod.object({
 
 export const UpdateQuestBody = zod.object({
   name: zod.string().optional(),
-  category: zod
-    .enum([
-      "Financial",
-      "Productivity",
-      "Study",
-      "Health",
-      "Creative",
-      "Social",
-      "Other",
-    ])
-    .optional(),
+  category: zod.string().optional(),
   difficulty: zod
     .enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"])
     .optional(),
   durationMinutes: zod.number().optional(),
   isDaily: zod.boolean().optional(),
   description: zod.string().nullish(),
+  statBoost: StatBoost.nullish(),
 });
 
 export const UpdateQuestResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  category: zod.enum([
-    "Financial",
-    "Productivity",
-    "Study",
-    "Health",
-    "Creative",
-    "Social",
-    "Other",
-  ]),
+  category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
   xpReward: zod.number(),
@@ -254,6 +224,7 @@ export const UpdateQuestResponse = zod.object({
   createdAt: zod.string(),
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
+  statBoost: StatBoost.nullish(),
 });
 
 /**
@@ -386,15 +357,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
     zod.object({
       id: zod.number(),
       name: zod.string(),
-      category: zod.enum([
-        "Financial",
-        "Productivity",
-        "Study",
-        "Health",
-        "Creative",
-        "Social",
-        "Other",
-      ]),
+      category: zod.string(),
       difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
       durationMinutes: zod.number(),
       xpReward: zod.number(),
@@ -407,6 +370,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
       createdAt: zod.string(),
       completedAt: zod.string().nullish(),
       deadline: zod.string().nullish(),
+      statBoost: StatBoost.nullish(),
     }),
   ),
   character: zod.object({

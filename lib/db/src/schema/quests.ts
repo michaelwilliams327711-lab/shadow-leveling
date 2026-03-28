@@ -18,6 +18,7 @@ export const questsTable = pgTable("quests", {
   deadline: timestamp("deadline"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
+  statBoost: text("stat_boost"),
 });
 
 export const questLogTable = pgTable("quest_log", {

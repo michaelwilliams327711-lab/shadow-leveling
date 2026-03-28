@@ -5,14 +5,14 @@
  * Shadow Leveling - Gamified Habit Tracker API
  * OpenAPI spec version: 0.1.0
  */
-import type { QuestCategory } from "./questCategory";
 import type { QuestDifficulty } from "./questDifficulty";
 import type { QuestStatus } from "./questStatus";
+import type { StatBoost } from "./statBoost";
 
 export interface Quest {
   id: number;
   name: string;
-  category: QuestCategory;
+  category: string;
   difficulty: QuestDifficulty;
   durationMinutes: number;
   xpReward: number;
@@ -25,4 +25,5 @@ export interface Quest {
   createdAt: string;
   completedAt?: string | null;
   deadline?: string | null;
+  statBoost?: StatBoost | null;
 }

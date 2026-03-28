@@ -12,7 +12,8 @@ import {
   getListQuestsQueryKey,
   getGetCharacterQueryKey,
   QuestCategory,
-  QuestDifficulty
+  QuestDifficulty,
+  StatBoost,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, type LucideIcon } from "lucide-react";
@@ -42,28 +43,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import type { Quest } from "@workspace/api-client-react";
 
-const STAT_BOOST_MAP: Record<string, string> = {
-  Financial: "Discipline",
-  Productivity: "Intellect",
-  Study: "Intellect",
-  Health: "Endurance",
-  Creative: "Agility",
-  Social: "Agility",
-  Other: "Strength",
+const CATEGORY_PRESETS = Object.values(QuestCategory);
+const CUSTOM_CATEGORY_SENTINEL = "__custom__";
+
+const CATEGORY_STAT_MAP: Record<string, string> = {
+  Financial: "intellect",
+  Productivity: "intellect",
+  Study: "intellect",
+  Health: "endurance",
+  Creative: "agility",
+  Social: "agility",
+  Other: "strength",
 };
 
-const STAT_ICON_MAP: Record<string, { icon: LucideIcon; color: string }> = {
-  Strength:   { icon: Dumbbell, color: "text-red-400" },
-  Agility:    { icon: Zap,      color: "text-yellow-400" },
-  Endurance:  { icon: Shield,   color: "text-green-400" },
-  Intellect:  { icon: Brain,    color: "text-blue-400" },
-  Discipline: { icon: Target,   color: "text-purple-400" },
+const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = {
+  strength:   { label: "Strength",   icon: Dumbbell, color: "text-red-400" },
+  agility:    { label: "Agility",    icon: Zap,      color: "text-yellow-400" },
+  endurance:  { label: "Endurance",  icon: Shield,   color: "text-green-400" },
+  intellect:  { label: "Intellect",  icon: Brain,    color: "text-blue-400" },
+  discipline: { label: "Discipline", icon: Target,   color: "text-purple-400" },
 };
+
+function getEffectiveStat(category: string, statBoost?: string | null): string {
+  if (statBoost) return statBoost;
+  return CATEGORY_STAT_MAP[category] ?? "strength";
+}
+
+function StatBoostBadge({ category, statBoost }: { category: string; statBoost?: string | null }) {
+  const stat = getEffectiveStat(category, statBoost);
+  const { label, icon: StatIcon, color } = STAT_DISPLAY[stat] ?? STAT_DISPLAY["strength"];
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <StatIcon className={`w-3.5 h-3.5 ${color}`} />
+      <span className="text-xs text-muted-foreground">Stat Boost:</span>
+      <span className={`text-xs font-bold tracking-wider ${color}`}>{label}</span>
+      {statBoost && <span className="text-xs text-muted-foreground">(manual)</span>}
+    </div>
+  );
+}
 
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  category: z.nativeEnum(QuestCategory),
+  categoryPreset: z.string(),
+  customCategory: z.string().optional(),
+  statBoost: z.nativeEnum(StatBoost).optional(),
   difficulty: z.nativeEnum(QuestDifficulty),
   durationMinutes: z.coerce.number().min(1),
   isDaily: z.boolean(),
@@ -73,23 +97,13 @@ const createSchema = z.object({
 const editSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  category: z.nativeEnum(QuestCategory).optional(),
+  categoryPreset: z.string().optional(),
+  customCategory: z.string().optional(),
+  statBoost: z.nativeEnum(StatBoost).optional().nullable(),
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
   durationMinutes: z.coerce.number().min(1).optional(),
   isDaily: z.boolean().optional(),
 });
-
-function StatBoostBadge({ category }: { category: string }) {
-  const stat = STAT_BOOST_MAP[category] ?? "Strength";
-  const { icon: StatIcon, color } = STAT_ICON_MAP[stat] ?? STAT_ICON_MAP["Strength"];
-  return (
-    <div className="flex items-center gap-2 mt-1">
-      <StatIcon className={`w-3.5 h-3.5 ${color}`} />
-      <span className="text-xs text-muted-foreground">Stat Boost:</span>
-      <span className={`text-xs font-bold tracking-wider ${color}`}>{stat}</span>
-    </div>
-  );
-}
 
 export default function Quests() {
   const { data: quests = [], isLoading } = useListQuests();
@@ -108,7 +122,9 @@ export default function Quests() {
     defaultValues: {
       name: "",
       description: "",
-      category: QuestCategory.Productivity,
+      categoryPreset: QuestCategory.Productivity,
+      customCategory: "",
+      statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
       isDaily: true,
@@ -121,7 +137,9 @@ export default function Quests() {
     defaultValues: {
       name: "",
       description: "",
-      category: QuestCategory.Productivity,
+      categoryPreset: QuestCategory.Productivity,
+      customCategory: "",
+      statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
       isDaily: false,
@@ -130,10 +148,13 @@ export default function Quests() {
 
   useEffect(() => {
     if (editingQuest) {
+      const isPreset = CATEGORY_PRESETS.includes(editingQuest.category as typeof CATEGORY_PRESETS[number]);
       editForm.reset({
         name: editingQuest.name,
         description: editingQuest.description ?? "",
-        category: editingQuest.category as QuestCategory,
+        categoryPreset: isPreset ? editingQuest.category : CUSTOM_CATEGORY_SENTINEL,
+        customCategory: isPreset ? "" : editingQuest.category,
+        statBoost: (editingQuest.statBoost as z.infer<typeof editSchema>["statBoost"]) ?? undefined,
         difficulty: editingQuest.difficulty as QuestDifficulty,
         durationMinutes: editingQuest.durationMinutes,
         isDaily: editingQuest.isDaily,
@@ -178,7 +199,21 @@ export default function Quests() {
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
     const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
-    createQuest.mutate({ data: { ...data, description: data.description || null, deadline: deadlineIso } }, {
+    const category = data.categoryPreset === CUSTOM_CATEGORY_SENTINEL
+      ? (data.customCategory?.trim() || "Custom")
+      : data.categoryPreset;
+    createQuest.mutate({
+      data: {
+        name: data.name,
+        category,
+        difficulty: data.difficulty,
+        durationMinutes: data.durationMinutes,
+        isDaily: data.isDaily,
+        description: data.description || null,
+        deadline: deadlineIso,
+        statBoost: data.statBoost ?? null,
+      }
+    }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);
@@ -190,8 +225,22 @@ export default function Quests() {
 
   const onEditSubmit = (data: z.infer<typeof editSchema>) => {
     if (!editingQuest) return;
+    const category = data.categoryPreset === CUSTOM_CATEGORY_SENTINEL
+      ? (data.customCategory?.trim() || "Custom")
+      : data.categoryPreset;
     updateQuest.mutate(
-      { id: editingQuest.id, data: { ...data, description: data.description || null } },
+      {
+        id: editingQuest.id,
+        data: {
+          name: data.name,
+          category,
+          difficulty: data.difficulty,
+          durationMinutes: data.durationMinutes,
+          isDaily: data.isDaily,
+          description: data.description || null,
+          statBoost: data.statBoost ?? null,
+        }
+      },
       {
         onSuccess: () => {
           invalidateQuests();
@@ -202,8 +251,20 @@ export default function Quests() {
     );
   };
 
-  const watchedCreateCategory = createForm.watch("category");
-  const watchedEditCategory = editForm.watch("category");
+  const watchedCreateCategoryPreset = createForm.watch("categoryPreset");
+  const watchedCreateCustomCategory = createForm.watch("customCategory");
+  const watchedCreateStatBoost = createForm.watch("statBoost");
+  const watchedEditCategoryPreset = editForm.watch("categoryPreset");
+  const watchedEditCustomCategory = editForm.watch("customCategory");
+  const watchedEditStatBoost = editForm.watch("statBoost");
+
+  const effectiveCreateCategory = watchedCreateCategoryPreset === CUSTOM_CATEGORY_SENTINEL
+    ? (watchedCreateCustomCategory?.trim() || "Custom")
+    : watchedCreateCategoryPreset;
+
+  const effectiveEditCategory = watchedEditCategoryPreset === CUSTOM_CATEGORY_SENTINEL
+    ? (watchedEditCustomCategory?.trim() || "Custom")
+    : watchedEditCategoryPreset ?? "";
 
   const difficultyColors: Record<string, string> = {
     F: "bg-gray-500/20 text-gray-400 border-gray-500/30",
@@ -262,18 +323,18 @@ export default function Quests() {
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={createForm.control} name="category" render={({ field }) => (
+                  <FormField control={createForm.control} name="categoryPreset" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {Object.values(QuestCategory).map(cat => (
+                          {CATEGORY_PRESETS.map(cat => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
+                          <SelectItem value={CUSTOM_CATEGORY_SENTINEL}>Custom…</SelectItem>
                         </SelectContent>
                       </Select>
-                      <StatBoostBadge category={watchedCreateCategory} />
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -292,6 +353,41 @@ export default function Quests() {
                     </FormItem>
                   )} />
                 </div>
+
+                {watchedCreateCategoryPreset === CUSTOM_CATEGORY_SENTINEL && (
+                  <FormField control={createForm.control} name="customCategory" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Category Name</FormLabel>
+                      <FormControl><Input {...field} placeholder="e.g. Martial Arts, Finance…" className="bg-background/50" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+
+                <FormField control={createForm.control} name="statBoost" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                    <Select onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)} value={field.value ?? "__none__"}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Auto (from category)" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">Auto (from category)</SelectItem>
+                        {Object.values(StatBoost).map(stat => {
+                          const { label, icon: StatIcon, color } = STAT_DISPLAY[stat];
+                          return (
+                            <SelectItem key={stat} value={stat}>
+                              <span className={`flex items-center gap-2 ${color}`}>
+                                <StatIcon className="w-3.5 h-3.5" />
+                                {label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <StatBoostBadge category={effectiveCreateCategory} statBoost={watchedCreateStatBoost} />
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
@@ -367,18 +463,18 @@ export default function Quests() {
               )} />
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField control={editForm.control} name="category" render={({ field }) => (
+                <FormField control={editForm.control} name="categoryPreset" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {Object.values(QuestCategory).map(cat => (
+                        {CATEGORY_PRESETS.map(cat => (
                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
+                        <SelectItem value={CUSTOM_CATEGORY_SENTINEL}>Custom…</SelectItem>
                       </SelectContent>
                     </Select>
-                    <StatBoostBadge category={watchedEditCategory} />
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -397,6 +493,41 @@ export default function Quests() {
                   </FormItem>
                 )} />
               </div>
+
+              {watchedEditCategoryPreset === CUSTOM_CATEGORY_SENTINEL && (
+                <FormField control={editForm.control} name="customCategory" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custom Category Name</FormLabel>
+                    <FormControl><Input {...field} value={field.value ?? ""} placeholder="e.g. Martial Arts, Finance…" className="bg-background/50" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+
+              <FormField control={editForm.control} name="statBoost" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                  <Select onValueChange={(v) => field.onChange(v === "__none__" ? null : v)} value={field.value ?? "__none__"}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Auto (from category)" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Auto (from category)</SelectItem>
+                      {Object.values(StatBoost).map(stat => {
+                        const { label, icon: StatIcon, color } = STAT_DISPLAY[stat];
+                        return (
+                          <SelectItem key={stat} value={stat}>
+                            <span className={`flex items-center gap-2 ${color}`}>
+                              <StatIcon className="w-3.5 h-3.5" />
+                              {label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <StatBoostBadge category={effectiveEditCategory} statBoost={watchedEditStatBoost} />
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
@@ -459,12 +590,12 @@ export default function Quests() {
                           </Badge>
                           {quest.isDaily && <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-none">Daily</Badge>}
                           {(() => {
-                            const stat = STAT_BOOST_MAP[quest.category] ?? "Strength";
-                            const { icon: StatIcon, color } = STAT_ICON_MAP[stat] ?? STAT_ICON_MAP["Strength"];
+                            const statKey = getEffectiveStat(quest.category, quest.statBoost);
+                            const { label, icon: StatIcon, color } = STAT_DISPLAY[statKey] ?? STAT_DISPLAY["strength"];
                             return (
                               <span className={`flex items-center gap-1 text-xs ${color}`}>
                                 <StatIcon className="w-3 h-3" />
-                                {stat}
+                                {label}
                               </span>
                             );
                           })()}

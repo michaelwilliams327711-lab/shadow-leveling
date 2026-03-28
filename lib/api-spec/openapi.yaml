@@ -492,6 +492,10 @@ components:
           type: integer
       required: [success, message, streak, multiplier, alreadyCheckedIn, milestoneBonus, milestoneBonusXp, milestoneBonusGold]
 
+    StatBoost:
+      type: string
+      enum: [strength, intellect, endurance, agility, discipline]
+
     Quest:
       type: object
       properties:
@@ -501,7 +505,6 @@ components:
           type: string
         category:
           type: string
-          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
         difficulty:
           type: string
           enum: [F, E, D, C, B, A, S, SS, SSS]
@@ -531,6 +534,9 @@ components:
         deadline:
           type: string
           nullable: true
+        statBoost:
+          $ref: "#/components/schemas/StatBoost"
+          nullable: true
       required: [id, name, category, difficulty, durationMinutes, xpReward, goldReward, xpPenalty, goldPenalty, status, isDaily, createdAt]
 
     CreateQuestRequest:
@@ -540,7 +546,6 @@ components:
           type: string
         category:
           type: string
-          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
         difficulty:
           type: string
           enum: [F, E, D, C, B, A, S, SS, SSS]
@@ -554,6 +559,9 @@ components:
         deadline:
           type: string
           nullable: true
+        statBoost:
+          $ref: "#/components/schemas/StatBoost"
+          nullable: true
       required: [name, category, difficulty, durationMinutes, isDaily]
 
     UpdateQuestRequest:
@@ -563,7 +571,6 @@ components:
           type: string
         category:
           type: string
-          enum: [Financial, Productivity, Study, Health, Creative, Social, Other]
         difficulty:
           type: string
           enum: [F, E, D, C, B, A, S, SS, SSS]
@@ -573,6 +580,9 @@ components:
           type: boolean
         description:
           type: string
+          nullable: true
+        statBoost:
+          $ref: "#/components/schemas/StatBoost"
           nullable: true
 
     QuestCompletionResult:

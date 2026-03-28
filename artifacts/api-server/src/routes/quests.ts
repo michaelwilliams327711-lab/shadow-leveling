@@ -106,6 +106,7 @@ router.post("/quests", async (req, res) => {
         isDaily: body.isDaily,
         description: body.description ?? null,
         deadline: body.deadline ? new Date(body.deadline as string) : null,
+        statBoost: body.statBoost ?? null,
         ...rewards,
         status: "active",
       })
@@ -153,6 +154,7 @@ router.patch("/quests/:id", async (req, res) => {
     }
     if (body.isDaily !== undefined) updates.isDaily = body.isDaily;
     if (body.description !== undefined) updates.description = body.description;
+    if (body.statBoost !== undefined) updates.statBoost = body.statBoost ?? null;
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Quest not found" });
@@ -191,7 +193,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     const xpAwarded = Math.floor(quest.xpReward * totalMultiplier);
     const goldAwarded = Math.floor(quest.goldReward * totalMultiplier);
 
-    const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+    const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
     const streakMult = getStreakStatMultiplier(char.streak);
     const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
@@ -294,7 +296,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     const xpDeducted = Math.min(char.xp, Math.floor(quest.xpPenalty * xpGoldMult));
     const goldDeducted = Math.min(char.gold, Math.floor(quest.goldPenalty * xpGoldMult));
 
-    const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+    const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
     const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
     const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
     const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
@@ -431,7 +433,7 @@ router.post("/quests/process-overdue", async (req, res) => {
         totalXpDeducted += xpDeducted;
         totalGoldDeducted += goldDeducted;
 
-        const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+        const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
         const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
         const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
         const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
