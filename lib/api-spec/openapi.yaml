@@ -672,8 +672,6 @@ components:
           enum: [F, E, D, C, B, A, S, SS, SSS]
         durationMinutes:
           type: integer
-        isDaily:
-          type: boolean
         isPaused:
           type: boolean
         description:

@@ -239,7 +239,6 @@ export const UpdateQuestBody = zod.object({
     .enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"])
     .optional(),
   durationMinutes: zod.number().optional(),
-  isDaily: zod.boolean().optional(),
   isPaused: zod.boolean().optional(),
   description: zod.string().nullish(),
   statBoost: zod

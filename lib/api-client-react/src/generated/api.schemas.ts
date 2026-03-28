@@ -171,7 +171,6 @@ export interface UpdateQuestRequest {
   category?: string;
   difficulty?: UpdateQuestRequestDifficulty;
   durationMinutes?: number;
-  isDaily?: boolean;
   isPaused?: boolean;
   description?: string | null;
   statBoost?: StatBoost | null;
