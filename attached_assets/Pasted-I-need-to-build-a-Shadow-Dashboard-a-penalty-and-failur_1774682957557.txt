@@ -1,0 +1,48 @@
+I need to build a "Shadow Dashboard" (a penalty and failure analytics page) for my RPG gamification app. This page is designed around "Loss Aversion"—it should aggressively highlight the user's failures, missed days, and lost XP to motivate them.
+
+Create a new component called ShadowDashboard.jsx. Ensure it uses a dark, punishing aesthetic: deep black/grey backgrounds (#121212) with stark crimson/blood-red accents (#ef4444 or #991b1b). Use recharts for the graphs and lucide-react for icons (like a skull, broken chain, or trending-down arrow).
+
+Please implement the following four sections:
+
+1. The "Cost of Inaction" KPIs (Top Row)
+Create three prominent statistic cards at the top:
+
+Total XP Bled: The absolute total of all negative XP accumulated in the last 30 days (make the number bold and red).
+
+Streaks Shattered: The number of times the user triggered a 'MISSED_DAY' action.
+
+Greatest Weakness: Calculate which stat_category (e.g., Focus, Discipline, Vitality) has the most failed quests, and display it here.
+
+2. The XP Bleed (Negative Area Chart)
+Use Recharts to build an AreaChart.
+
+Crucial Logic: This chart tracks "Net XP Loss" over the last 30 days. The Y-axis should start at 0 at the top and go down into negative numbers.
+
+The filled area under the line should be a gradient of dark red, visually representing a "cliff" or a bleeding out of their potential when they miss multiple days.
+
+3. The Time Sink (Doughnut Chart)
+Use Recharts to build a PieChart (styled as a doughnut).
+
+This chart should ONLY pull data from the Activity_Log where action_type === 'FAILED'.
+
+Group the failures by stat_category (e.g., how many failures were tied to 'Focus' vs. 'Strength' vs. 'Intellect'). This will show the user exactly which areas of their life they are neglecting the most. Use varying shades of red and dark orange for the segments.
+
+4. The Graveyard (Failure Log)
+Below the charts, create a scrollable list component.
+
+This should map over the most recent FAILED or MISSED_DAY entries from the Activity_Log.
+
+Format each entry to look like a tombstone or a severe system warning.
+
+Example Mock Data to use while building:
+
+"SYSTEM WARNING: Missed 1 Hour C++ Practice | Penalty: -150 XP | Stat Damaged: Intellect"
+
+"STREAK BROKEN: Missed Daily Login | Penalty: -300 XP"
+
+"FAILED: Acrylic Nail Application Practice | Penalty: -50 XP | Stat Damaged: Focus"
+
+"FAILED: Inbound Shift Prep | Penalty: -100 XP | Stat Damaged: Discipline"
+
+Data Integration Requirement:
+Write a mock async function fetchPenaltyData() that generates fake Activity_Log data matching the exact schema we designed earlier, specifically generating negative xp_change values and 'FAILED' action types so the charts render correctly on the first load.
