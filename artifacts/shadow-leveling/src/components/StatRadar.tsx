@@ -6,18 +6,7 @@ interface StatRadarProps {
 }
 
 export function StatRadar({ character }: StatRadarProps) {
-  const maxStat = Math.max(
-    character.strength,
-    character.agility,
-    character.endurance,
-    character.discipline,
-    character.intellect,
-    1
-  );
-
-  // Scale ceiling based on level so early-game stats look small
-  // and the polygon grows meaningfully as you progress
-  const fullMark = Math.max(character.level * 50, maxStat + 10, 50);
+  const fullMark = 110_000;
 
   const data = [
     { subject: "STR", A: character.strength, fullMark },
