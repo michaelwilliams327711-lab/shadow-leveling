@@ -16,7 +16,7 @@ import {
   StatBoost,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, type LucideIcon } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +41,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 
 const CATEGORY_PRESETS = Object.values(QuestCategory);
-const CUSTOM_CATEGORY_SENTINEL = "__custom__";
 
 const CATEGORY_STAT_MAP: Record<string, string> = {
   Financial: "intellect",
@@ -82,11 +91,102 @@ function StatBoostBadge({ category, statBoost }: { category: string; statBoost?:
   );
 }
 
+interface CategoryComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function CategoryCombobox({ value, onChange }: CategoryComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const handleSelect = (selected: string) => {
+    onChange(selected);
+    setInputValue(selected);
+    setOpen(false);
+  };
+
+  const handleInputChange = (search: string) => {
+    setInputValue(search);
+    onChange(search);
+  };
+
+  const filteredPresets = CATEGORY_PRESETS.filter((cat) =>
+    cat.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-background/50 border-input font-normal h-9 px-3 text-sm"
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "Select or type category"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[220px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Type a category..."
+            value={inputValue}
+            onValueChange={handleInputChange}
+          />
+          <CommandList>
+            {filteredPresets.length === 0 && inputValue.trim() === "" && (
+              <CommandEmpty>Type to create a custom category.</CommandEmpty>
+            )}
+            {filteredPresets.length === 0 && inputValue.trim() !== "" && (
+              <CommandGroup>
+                <CommandItem
+                  value={inputValue}
+                  onSelect={() => handleSelect(inputValue.trim())}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", value === inputValue.trim() ? "opacity-100" : "opacity-0")} />
+                  Use "{inputValue.trim()}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {filteredPresets.length > 0 && (
+              <CommandGroup heading="Presets">
+                {filteredPresets.map((cat) => (
+                  <CommandItem key={cat} value={cat} onSelect={() => handleSelect(cat)}>
+                    <Check className={cn("mr-2 h-3.5 w-3.5", value === cat ? "opacity-100" : "opacity-0")} />
+                    {cat}
+                  </CommandItem>
+                ))}
+                {inputValue.trim() !== "" && !CATEGORY_PRESETS.includes(inputValue.trim() as typeof CATEGORY_PRESETS[number]) && (
+                  <CommandItem
+                    value={inputValue}
+                    onSelect={() => handleSelect(inputValue.trim())}
+                  >
+                    <Check className={cn("mr-2 h-3.5 w-3.5 opacity-0")} />
+                    Use "{inputValue.trim()}"
+                  </CommandItem>
+                )}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  categoryPreset: z.string(),
-  customCategory: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
   statBoost: z.nativeEnum(StatBoost).optional(),
   difficulty: z.nativeEnum(QuestDifficulty),
   durationMinutes: z.coerce.number().min(1),
@@ -97,8 +197,7 @@ const createSchema = z.object({
 const editSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  categoryPreset: z.string().optional(),
-  customCategory: z.string().optional(),
+  category: z.string().min(1).optional(),
   statBoost: z.nativeEnum(StatBoost).optional().nullable(),
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
   durationMinutes: z.coerce.number().min(1).optional(),
@@ -122,8 +221,7 @@ export default function Quests() {
     defaultValues: {
       name: "",
       description: "",
-      categoryPreset: QuestCategory.Productivity,
-      customCategory: "",
+      category: QuestCategory.Productivity,
       statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
@@ -137,8 +235,7 @@ export default function Quests() {
     defaultValues: {
       name: "",
       description: "",
-      categoryPreset: QuestCategory.Productivity,
-      customCategory: "",
+      category: QuestCategory.Productivity,
       statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
@@ -148,12 +245,10 @@ export default function Quests() {
 
   useEffect(() => {
     if (editingQuest) {
-      const isPreset = CATEGORY_PRESETS.includes(editingQuest.category as typeof CATEGORY_PRESETS[number]);
       editForm.reset({
         name: editingQuest.name,
         description: editingQuest.description ?? "",
-        categoryPreset: isPreset ? editingQuest.category : CUSTOM_CATEGORY_SENTINEL,
-        customCategory: isPreset ? "" : editingQuest.category,
+        category: editingQuest.category,
         statBoost: (editingQuest.statBoost as z.infer<typeof editSchema>["statBoost"]) ?? undefined,
         difficulty: editingQuest.difficulty as QuestDifficulty,
         durationMinutes: editingQuest.durationMinutes,
@@ -199,13 +294,10 @@ export default function Quests() {
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
     const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
-    const category = data.categoryPreset === CUSTOM_CATEGORY_SENTINEL
-      ? (data.customCategory?.trim() || "Custom")
-      : data.categoryPreset;
     createQuest.mutate({
       data: {
         name: data.name,
-        category,
+        category: data.category,
         difficulty: data.difficulty,
         durationMinutes: data.durationMinutes,
         isDaily: data.isDaily,
@@ -225,15 +317,12 @@ export default function Quests() {
 
   const onEditSubmit = (data: z.infer<typeof editSchema>) => {
     if (!editingQuest) return;
-    const category = data.categoryPreset === CUSTOM_CATEGORY_SENTINEL
-      ? (data.customCategory?.trim() || "Custom")
-      : data.categoryPreset;
     updateQuest.mutate(
       {
         id: editingQuest.id,
         data: {
           name: data.name,
-          category,
+          category: data.category,
           difficulty: data.difficulty,
           durationMinutes: data.durationMinutes,
           isDaily: data.isDaily,
@@ -251,20 +340,10 @@ export default function Quests() {
     );
   };
 
-  const watchedCreateCategoryPreset = createForm.watch("categoryPreset");
-  const watchedCreateCustomCategory = createForm.watch("customCategory");
+  const watchedCreateCategory = createForm.watch("category");
   const watchedCreateStatBoost = createForm.watch("statBoost");
-  const watchedEditCategoryPreset = editForm.watch("categoryPreset");
-  const watchedEditCustomCategory = editForm.watch("customCategory");
+  const watchedEditCategory = editForm.watch("category");
   const watchedEditStatBoost = editForm.watch("statBoost");
-
-  const effectiveCreateCategory = watchedCreateCategoryPreset === CUSTOM_CATEGORY_SENTINEL
-    ? (watchedCreateCustomCategory?.trim() || "Custom")
-    : watchedCreateCategoryPreset;
-
-  const effectiveEditCategory = watchedEditCategoryPreset === CUSTOM_CATEGORY_SENTINEL
-    ? (watchedEditCustomCategory?.trim() || "Custom")
-    : watchedEditCategoryPreset ?? "";
 
   const difficultyColors: Record<string, string> = {
     F: "bg-gray-500/20 text-gray-400 border-gray-500/30",
@@ -323,18 +402,12 @@ export default function Quests() {
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={createForm.control} name="categoryPreset" render={({ field }) => (
+                  <FormField control={createForm.control} name="category" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {CATEGORY_PRESETS.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
-                          <SelectItem value={CUSTOM_CATEGORY_SENTINEL}>Custom…</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <CategoryCombobox value={field.value} onChange={field.onChange} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -353,16 +426,6 @@ export default function Quests() {
                     </FormItem>
                   )} />
                 </div>
-
-                {watchedCreateCategoryPreset === CUSTOM_CATEGORY_SENTINEL && (
-                  <FormField control={createForm.control} name="customCategory" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custom Category Name</FormLabel>
-                      <FormControl><Input {...field} placeholder="e.g. Martial Arts, Finance…" className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
 
                 <FormField control={createForm.control} name="statBoost" render={({ field }) => (
                   <FormItem>
@@ -384,7 +447,7 @@ export default function Quests() {
                         })}
                       </SelectContent>
                     </Select>
-                    <StatBoostBadge category={effectiveCreateCategory} statBoost={watchedCreateStatBoost} />
+                    <StatBoostBadge category={watchedCreateCategory} statBoost={watchedCreateStatBoost} />
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -463,18 +526,12 @@ export default function Quests() {
               )} />
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField control={editForm.control} name="categoryPreset" render={({ field }) => (
+                <FormField control={editForm.control} name="category" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {CATEGORY_PRESETS.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                        <SelectItem value={CUSTOM_CATEGORY_SENTINEL}>Custom…</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CategoryCombobox value={field.value ?? ""} onChange={field.onChange} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -493,16 +550,6 @@ export default function Quests() {
                   </FormItem>
                 )} />
               </div>
-
-              {watchedEditCategoryPreset === CUSTOM_CATEGORY_SENTINEL && (
-                <FormField control={editForm.control} name="customCategory" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custom Category Name</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ""} placeholder="e.g. Martial Arts, Finance…" className="bg-background/50" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              )}
 
               <FormField control={editForm.control} name="statBoost" render={({ field }) => (
                 <FormItem>
@@ -524,7 +571,7 @@ export default function Quests() {
                       })}
                     </SelectContent>
                   </Select>
-                  <StatBoostBadge category={effectiveEditCategory} statBoost={watchedEditStatBoost} />
+                  <StatBoostBadge category={watchedEditCategory ?? ""} statBoost={watchedEditStatBoost} />
                   <FormMessage />
                 </FormItem>
               )} />
