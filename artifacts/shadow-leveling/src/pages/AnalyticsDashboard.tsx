@@ -175,7 +175,7 @@ export default function AnalyticsDashboard() {
                   </p>
                 </div>
               </div>
-              <Progress value={xpPercent} className="h-2" indicatorColor="bg-primary shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+              <Progress value={xpPercent} className="h-2" indicatorClassName="bg-primary shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
               <p className="text-xs text-muted-foreground">{xpPercent}% to next level</p>
             </CardContent>
           </Card>
