@@ -195,7 +195,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
     const streakMult = getStreakStatMultiplier(char.streak);
     const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
-    const disciplineGain = statField === "discipline" ? 0 : statGain;
+    const disciplineGain = statGain;
 
     const statUpdates: Record<string, number> = {
       strength: char.strength,
@@ -297,7 +297,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
     const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
     const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
-    const discPenalty = statField === "discipline" ? 0 : Math.floor(baseStatPenalty * xpGoldMult);
+    const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
 
     const statUpdates: Record<string, number> = {
       strength: char.strength,
@@ -434,7 +434,7 @@ router.post("/quests/process-overdue", async (req, res) => {
         const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
         const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
         const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
-        const discPenalty = statField === "discipline" ? 0 : Math.floor(baseStatPenalty * xpGoldMult);
+        const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
         statAccum[statField] = Math.max(1, statAccum[statField] - catStatPenalty);
         statAccum.discipline = Math.max(1, statAccum.discipline - discPenalty);
 
