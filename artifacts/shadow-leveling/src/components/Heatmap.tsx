@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { format, subDays } from "date-fns";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ActivityDay } from "@workspace/api-client-react";
@@ -7,6 +8,14 @@ interface HeatmapProps {
 }
 
 export function Heatmap({ data = [] }: HeatmapProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [data]);
+
   // Generate last 364 days (52 weeks * 7 days)
   const today = new Date();
   const days = Array.from({ length: 364 }).map((_, i) => {
@@ -38,7 +47,7 @@ export function Heatmap({ data = [] }: HeatmapProps) {
   }
 
   return (
-    <div className="w-full overflow-x-auto pb-4 hide-scrollbar">
+    <div ref={scrollRef} className="w-full overflow-x-auto pb-4 hide-scrollbar">
       <div className="flex gap-1 min-w-max">
         {weeks.map((week, wIndex) => (
           <div key={wIndex} className="flex flex-col gap-1">
