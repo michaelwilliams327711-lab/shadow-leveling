@@ -177,7 +177,8 @@ export default function Quests() {
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
-    createQuest.mutate({ data: { ...data, description: data.description || null, deadline: data.deadline || null } }, {
+    const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
+    createQuest.mutate({ data: { ...data, description: data.description || null, deadline: deadlineIso } }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);

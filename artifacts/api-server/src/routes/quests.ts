@@ -322,8 +322,6 @@ router.post("/quests/process-overdue", async (req, res) => {
     }
 
     const char = await getOrCreateCharacter();
-    let totalXpDeducted = 0;
-    let totalGoldDeducted = 0;
 
     const penalties: Array<{
       type: string;
@@ -332,71 +330,77 @@ router.post("/quests/process-overdue", async (req, res) => {
       goldDeducted: number;
       occurredAt: string;
     }> = [];
-
     const failedQuestsSerialized: object[] = [];
 
-    for (const quest of overdueQuests) {
-      const xpDeducted = Math.min(
-        Math.max(0, char.xp - totalXpDeducted),
-        quest.xpPenalty
-      );
-      const goldDeducted = Math.min(
-        Math.max(0, char.gold - totalGoldDeducted),
-        quest.goldPenalty
-      );
-      totalXpDeducted += xpDeducted;
-      totalGoldDeducted += goldDeducted;
+    const updatedChar = await db.transaction(async (tx) => {
+      let totalXpDeducted = 0;
+      let totalGoldDeducted = 0;
 
-      await db
-        .update(questsTable)
-        .set({ status: "failed" })
-        .where(eq(questsTable.id, quest.id));
+      for (const quest of overdueQuests) {
+        const xpDeducted = Math.min(
+          Math.max(0, char.xp - totalXpDeducted),
+          quest.xpPenalty
+        );
+        const goldDeducted = Math.min(
+          Math.max(0, char.gold - totalGoldDeducted),
+          quest.goldPenalty
+        );
+        totalXpDeducted += xpDeducted;
+        totalGoldDeducted += goldDeducted;
 
-      await db.insert(questLogTable).values({
-        questName: quest.name,
-        category: quest.category,
-        difficulty: quest.difficulty,
-        outcome: "failed",
-        xpChange: -xpDeducted,
-        goldChange: -goldDeducted,
-        multiplierApplied: 1.0,
-      });
+        await tx
+          .update(questsTable)
+          .set({ status: "failed" })
+          .where(eq(questsTable.id, quest.id));
 
-      const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
+        await tx.insert(questLogTable).values({
+          questName: quest.name,
+          category: quest.category,
+          difficulty: quest.difficulty,
+          outcome: "failed",
+          xpChange: -xpDeducted,
+          goldChange: -goldDeducted,
+          multiplierApplied: 1.0,
+        });
 
-      const [penaltyLog] = await db.insert(penaltyLogTable).values({
-        type: "quest_overdue",
-        description: penaltyDesc,
-        xpDeducted,
-        goldDeducted,
-      }).returning();
+        const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
 
-      penalties.push({
-        type: "quest_overdue",
-        description: penaltyDesc,
-        xpDeducted,
-        goldDeducted,
-        occurredAt: penaltyLog.occurredAt.toISOString(),
-      });
+        const [penaltyLog] = await tx.insert(penaltyLogTable).values({
+          type: "quest_overdue",
+          description: penaltyDesc,
+          xpDeducted,
+          goldDeducted,
+        }).returning();
 
-      failedQuestsSerialized.push({
-        ...quest,
-        status: "failed",
-        createdAt: quest.createdAt.toISOString(),
-        completedAt: quest.completedAt?.toISOString() ?? null,
-        deadline: quest.deadline?.toISOString() ?? null,
-      });
-    }
+        penalties.push({
+          type: "quest_overdue",
+          description: penaltyDesc,
+          xpDeducted,
+          goldDeducted,
+          occurredAt: penaltyLog.occurredAt.toISOString(),
+        });
 
-    const [updatedChar] = await db
-      .update(characterTable)
-      .set({
-        xp: Math.max(0, char.xp - totalXpDeducted),
-        gold: Math.max(0, char.gold - totalGoldDeducted),
-        totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
-      })
-      .where(eq(characterTable.id, char.id))
-      .returning();
+        failedQuestsSerialized.push({
+          ...quest,
+          status: "failed",
+          createdAt: quest.createdAt.toISOString(),
+          completedAt: quest.completedAt?.toISOString() ?? null,
+          deadline: quest.deadline?.toISOString() ?? null,
+        });
+      }
+
+      const [updated] = await tx
+        .update(characterTable)
+        .set({
+          xp: Math.max(0, char.xp - totalXpDeducted),
+          gold: Math.max(0, char.gold - totalGoldDeducted),
+          totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
+        })
+        .where(eq(characterTable.id, char.id))
+        .returning();
+
+      return updated;
+    });
 
     res.json({
       penalties,
