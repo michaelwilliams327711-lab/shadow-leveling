@@ -16,7 +16,7 @@ import {
 } from "@workspace/api-client-react";
 import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, type LucideIcon } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Command,
   CommandEmpty,
@@ -269,6 +270,65 @@ function RecurrenceFieldsEdit({
   return <RecurrenceFieldsUI control={control as Control<EditFormValues>} recurrenceType={recurrenceType} />;
 }
 
+function YearlyDatePicker({ ctrl }: { ctrl: Control<CreateFormValues> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="space-y-1">
+      <span className="text-xs font-medium leading-none">Date (month &amp; day)</span>
+      <FormField control={ctrl} name="recurrence.month" render={({ field: monthField }) => (
+        <FormField control={ctrl} name="recurrence.day" render={({ field: dayField }) => {
+          const month = monthField.value;
+          const day = dayField.value;
+          const selectedDate = month && day
+            ? new Date(2000, month - 1, day)
+            : undefined;
+
+          const label = selectedDate
+            ? selectedDate.toLocaleDateString("default", { month: "short", day: "numeric" })
+            : "Pick a date";
+
+          return (
+            <FormItem>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "h-8 text-xs w-full justify-start gap-2 bg-background/50 border-input font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        monthField.onChange(date.getMonth() + 1);
+                        dayField.onChange(date.getDate());
+                        setOpen(false);
+                      }
+                    }}
+                    captionLayout="dropdown"
+                    defaultMonth={selectedDate}
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          );
+        }} />
+      )} />
+    </div>
+  );
+}
+
 function RecurrenceFieldsUI({
   control,
   recurrenceType,
@@ -346,42 +406,47 @@ function RecurrenceFieldsUI({
       )}
 
       {recurrenceType === "monthly" && (
-        <FormField control={ctrl} name="recurrence.dayOfMonth" render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Day of month (1–31)</FormLabel>
-            <FormControl>
-              <Input type="number" min={1} max={31} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+        <FormField control={ctrl} name="recurrence.dayOfMonth" render={({ field }) => {
+          const WEEK_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+          const now = new Date();
+          const startOffset = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+          const fillers = Array.from({ length: startOffset }, (_, i) => i);
+          return (
+            <FormItem>
+              <FormLabel className="text-xs">Day of month</FormLabel>
+              <div className="grid grid-cols-7 gap-1">
+                {WEEK_LABELS.map((w) => (
+                  <div key={w} className="flex items-center justify-center h-6 text-[10px] text-muted-foreground/60 font-medium">
+                    {w}
+                  </div>
+                ))}
+                {fillers.map((i) => (
+                  <div key={`filler-${i}`} className="h-8" />
+                ))}
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => field.onChange(day)}
+                    className={cn(
+                      "flex items-center justify-center h-8 rounded text-xs cursor-pointer border transition-colors",
+                      (field.value === day || Number(field.value) === day)
+                        ? "bg-primary/30 border-primary/60 text-primary"
+                        : "bg-background/50 border-white/10 text-muted-foreground hover:border-white/20"
+                    )}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          );
+        }} />
       )}
 
       {recurrenceType === "yearly" && (
-        <div className="grid grid-cols-2 gap-2">
-          <FormField control={ctrl} name="recurrence.month" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs">Month</FormLabel>
-              <Select onValueChange={(v) => field.onChange(parseInt(v))} value={field.value?.toString()}>
-                <FormControl><SelectTrigger className="h-8 text-xs bg-background/50"><SelectValue placeholder="Month" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  {MONTHS.map((m, i) => (
-                    <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
-          <FormField control={ctrl} name="recurrence.day" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs">Day</FormLabel>
-              <FormControl>
-                <Input type="number" min={1} max={31} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-        </div>
+        <YearlyDatePicker ctrl={ctrl} />
       )}
     </div>
   );
