@@ -31,6 +31,7 @@ export * from "./questDifficulty";
 export * from "./questFailResult";
 export * from "./questFailResultStatPenalties";
 export * from "./questLogEntry";
+export * from "./questLogEntryActionType";
 export * from "./questLogEntryOutcome";
 export * from "./questStatus";
 export * from "./recurrenceConfig";

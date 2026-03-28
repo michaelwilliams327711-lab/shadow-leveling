@@ -3,8 +3,10 @@ import {
   useGetActivityHeatmap, 
   useGetDailyRngEvent, 
   useDailyCheckin,
+  useGetQuestLog,
   getGetCharacterQueryKey,
-  getGetActivityHeatmapQueryKey
+  getGetActivityHeatmapQueryKey,
+  type QuestLogEntry,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -17,13 +19,48 @@ import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
+function formatRelativeTime(isoString: string): string {
+  const now = Date.now();
+  const then = new Date(isoString).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? "s" : ""} ago`;
+  if (diffHr < 24) return `${diffHr} hour${diffHr !== 1 ? "s" : ""} ago`;
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 7) return `${diffDay} days ago`;
+  if (diffDay < 14) return "1 week ago";
+  return `${Math.floor(diffDay / 7)} weeks ago`;
+}
+
+function getOutcomeBadge(entry: QuestLogEntry) {
+  const actionType = entry.actionType;
+  if (actionType === "BOSS_DEFEATED") {
+    return { label: "BOSS DEFEATED", className: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
+  }
+  if (actionType === "MISSED_DAY") {
+    return { label: "MISSED", className: "bg-slate-500/20 text-slate-400 border border-slate-500/40" };
+  }
+  if (entry.outcome === "completed") {
+    return { label: "COMPLETED", className: "bg-green-500/20 text-green-400 border border-green-500/40" };
+  }
+  return { label: "FAILED", className: "bg-red-500/20 text-red-400 border border-red-500/40" };
+}
+
 export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
   const { data: heatmap } = useGetActivityHeatmap();
   const { data: rngEvent } = useGetDailyRngEvent();
+  const { data: questLogRaw } = useGetQuestLog();
   const checkinMutation = useDailyCheckin();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const questLog = questLogRaw?.slice(0, 10) ?? [];
 
   const handleCheckin = () => {
     checkinMutation.mutate(undefined, {
@@ -219,10 +256,55 @@ export default function Dashboard() {
 
           <Card className="glass-panel">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg">Activity Record</CardTitle>
+              <CardTitle className="font-display tracking-widest text-lg">
+                <InfoTooltip
+                  what="Activity Record — a heatmap of your daily quest engagement over the past year."
+                  fn="Each cell represents one day. Darker purple means more quests completed that day. Below the heatmap, your 10 most recent quest events are listed with outcome, XP/Gold changes, and timestamps."
+                  usage="Use it to spot gaps in your consistency and review recent wins or failures at a glance."
+                >
+                  <span className="cursor-default">Activity Record</span>
+                </InfoTooltip>
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Heatmap data={heatmap || []} />
+              {questLog.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Recent Activity</p>
+                  <div className="max-h-64 overflow-y-auto space-y-1 pr-1 hide-scrollbar">
+                    {questLog.map((entry) => {
+                      const badge = getOutcomeBadge(entry);
+                      const xpPositive = entry.xpChange >= 0;
+                      const goldPositive = entry.goldChange >= 0;
+                      return (
+                        <div
+                          key={entry.id}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/3 border border-white/5 hover:bg-white/5 transition-colors"
+                        >
+                          <span className={`text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded shrink-0 ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                          <span className="flex-1 text-sm text-white/80 truncate font-sans">{entry.questName}</span>
+                          <div className="flex items-center gap-2 shrink-0 text-xs font-mono">
+                            <span className={xpPositive ? "text-primary" : "text-red-400"}>
+                              {xpPositive ? "+" : ""}{entry.xpChange} XP
+                            </span>
+                            <span className={goldPositive ? "text-gold" : "text-red-400"}>
+                              {goldPositive ? "+" : ""}{entry.goldChange} G
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground shrink-0 font-sans">
+                            {formatRelativeTime(entry.occurredAt)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {questLog.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2 font-sans">No quest activity yet.</p>
+              )}
             </CardContent>
           </Card>
         </div>

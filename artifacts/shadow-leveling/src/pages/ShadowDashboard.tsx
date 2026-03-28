@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingDown, Skull, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   AreaChart,
   Area,
@@ -238,10 +239,16 @@ export default function ShadowDashboard() {
         >
           SHADOW DASHBOARD
         </h1>
-        <p className="text-muted-foreground text-lg tracking-widest uppercase">
-          <TrendingDown className="inline w-4 h-4 mr-2 text-red-500" />
-          Failure Analytics — 30-Day Reckoning
-        </p>
+        <InfoTooltip
+          what="Shadow Dashboard — a brutally honest view of your failures over the last 30 days."
+          fn="Aggregates every failed quest, missed day, and XP penalty into charts and summaries so nothing gets buried."
+          usage="Use it to confront patterns — if the same stat or category keeps appearing, that's where your discipline is breaking down."
+        >
+          <p className="text-muted-foreground text-lg tracking-widest uppercase cursor-default w-fit">
+            <TrendingDown className="inline w-4 h-4 mr-2 text-red-500" />
+            Failure Analytics — 30-Day Reckoning
+          </p>
+        </InfoTooltip>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -252,7 +259,13 @@ export default function ShadowDashboard() {
                 <TrendingDown className="w-7 h-7 text-red-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
+                <InfoTooltip
+                  what="Total XP Bled — the sum of all XP lost to failed quests and missed days over the last 30 days."
+                  fn="Each failed or missed quest deducts XP from your total. Higher fail streaks apply a multiplier that worsens the loss."
+                  usage="Minimize this by completing quests before deadlines and keeping your fail streak at zero."
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Total XP Bled</p>
+                </InfoTooltip>
                 <p className="text-3xl font-display font-bold text-red-400">
                   -{data.totalXpBled.toLocaleString()}
                 </p>
@@ -269,7 +282,13 @@ export default function ShadowDashboard() {
                 <Skull className="w-7 h-7 text-red-700" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
+                <InfoTooltip
+                  what="Streaks Shattered — the number of days in the last 30 where you missed your daily check-in entirely."
+                  fn="Each missed day breaks your streak, resets your multiplier bonus, and often triggers automatic quest failures for any active deadlines."
+                  usage="Even a single check-in per day keeps your streak alive. Use the 'Daily Arise' button on the Status page."
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Streaks Shattered</p>
+                </InfoTooltip>
                 <p className="text-3xl font-display font-bold" style={{ color: "#dc2626" }}>
                   {data.streaksShattered}
                 </p>
@@ -286,7 +305,13 @@ export default function ShadowDashboard() {
                 <AlertTriangle className="w-7 h-7 text-orange-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Greatest Weakness</p>
+                <InfoTooltip
+                  what="Greatest Weakness — the stat category where you've failed the most quests this month."
+                  fn="Calculated from the category of every manually failed quest in the last 30 days. Ties are broken by whichever appeared first."
+                  usage="This is your blind spot. Either assign easier quests in this category or double down to conquer it."
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Greatest Weakness</p>
+                </InfoTooltip>
                 <p className="text-xl font-display font-bold text-orange-400 truncate max-w-[140px]">
                   {data.greatestWeakness}
                 </p>
@@ -301,7 +326,13 @@ export default function ShadowDashboard() {
         <Card className="glass-panel border border-red-900/30">
           <CardHeader>
             <CardTitle className="font-display tracking-widest text-lg text-red-400">
-              XP Bleed — 30-Day Loss Curve
+              <InfoTooltip
+                what="XP Bleed — a day-by-day chart of XP lost to failures and missed days over the last 30 days."
+                fn="Each data point shows the net negative XP for that day. Deeper dips mean more severe penalty events occurred."
+                usage="Look for clusters of loss — they reveal rough patches where multiple quests failed in the same period."
+              >
+                <span className="cursor-default">XP Bleed — 30-Day Loss Curve</span>
+              </InfoTooltip>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -355,7 +386,13 @@ export default function ShadowDashboard() {
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
               <CardTitle className="font-display tracking-widest text-lg text-red-400">
-                Time Sink — Failures by Category
+                <InfoTooltip
+                  what="Time Sink — which stat categories your failed quests belong to, ranked by failure count."
+                  fn="Each segment represents a category (Strength, Intellect, etc.) and its share of total failures this month."
+                  usage="The largest slice is where your efforts are consistently not paying off — consider adjusting quest difficulty or swapping categories."
+                >
+                  <span className="cursor-default">Time Sink — Failures by Category</span>
+                </InfoTooltip>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
@@ -424,7 +461,13 @@ export default function ShadowDashboard() {
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
               <CardTitle className="font-display tracking-widest text-lg text-red-400">
-                Graveyard — Recent Failures
+                <InfoTooltip
+                  what="Graveyard — a log of your most recent failed quests and missed days."
+                  fn="Shows up to 20 entries sorted by date. Each entry includes the action type (FAILED or MISSED_DAY), stat category, quest description, date, and XP lost."
+                  usage="Review this to understand exactly what slipped and when — use patterns here to adjust your quest list or schedule."
+                >
+                  <span className="cursor-default">Graveyard — Recent Failures</span>
+                </InfoTooltip>
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">

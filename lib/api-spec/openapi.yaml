@@ -796,7 +796,10 @@ components:
           type: number
         occurredAt:
           type: string
-      required: [id, questName, category, difficulty, outcome, xpChange, goldChange, multiplierApplied, occurredAt]
+        actionType:
+          type: string
+          enum: [COMPLETED, FAILED, MISSED_DAY, BOSS_DEFEATED]
+      required: [id, questName, category, difficulty, outcome, xpChange, goldChange, multiplierApplied, occurredAt, actionType]
 
     DeleteResult:
       type: object

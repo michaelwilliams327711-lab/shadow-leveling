@@ -235,6 +235,16 @@ export const QuestLogEntryOutcome = {
   failed: "failed",
 } as const;
 
+export type QuestLogEntryActionType =
+  (typeof QuestLogEntryActionType)[keyof typeof QuestLogEntryActionType];
+
+export const QuestLogEntryActionType = {
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  MISSED_DAY: "MISSED_DAY",
+  BOSS_DEFEATED: "BOSS_DEFEATED",
+} as const;
+
 export interface QuestLogEntry {
   id: number;
   questName: string;
@@ -245,6 +255,7 @@ export interface QuestLogEntry {
   goldChange: number;
   multiplierApplied: number;
   occurredAt: string;
+  actionType: QuestLogEntryActionType;
 }
 
 export interface DeleteResult {

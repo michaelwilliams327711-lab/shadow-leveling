@@ -440,6 +440,7 @@ export const GetQuestLogResponseItem = zod.object({
   goldChange: zod.number(),
   multiplierApplied: zod.number(),
   occurredAt: zod.string(),
+  actionType: zod.enum(["COMPLETED", "FAILED", "MISSED_DAY", "BOSS_DEFEATED"]),
 });
 export const GetQuestLogResponse = zod.array(GetQuestLogResponseItem);
 

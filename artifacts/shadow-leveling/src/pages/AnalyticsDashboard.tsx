@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Flame, Coins, Zap, BarChart2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   AreaChart,
   Area,
@@ -124,10 +125,16 @@ export default function AnalyticsDashboard() {
         <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight mb-1">
           ANALYTICS
         </h1>
-        <p className="text-muted-foreground text-lg tracking-widest uppercase">
-          <BarChart2 className="inline w-4 h-4 mr-2 text-primary" />
-          Player Progression Overview
-        </p>
+        <InfoTooltip
+          what="Analytics — a full breakdown of your progression data."
+          fn="Aggregates your XP gains, gold, streaks, quest outcomes, and activity over time into charts and summaries."
+          usage="Use this page to identify trends, spot weaknesses, and optimize which quests you're prioritizing."
+        >
+          <p className="text-muted-foreground text-lg tracking-widest uppercase cursor-default w-fit">
+            <BarChart2 className="inline w-4 h-4 mr-2 text-primary" />
+            Player Progression Overview
+          </p>
+        </InfoTooltip>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -138,7 +145,13 @@ export default function AnalyticsDashboard() {
                 <Flame className="w-7 h-7 text-orange-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Current Streak</p>
+                <InfoTooltip
+                  what="Current Streak — consecutive days you've checked in without missing."
+                  fn="Resets to 0 if you skip a daily check-in. Longer streaks grow your XP/Gold reward multiplier."
+                  usage="Check in every day using the 'Daily Arise' button on the Status page to keep your streak alive."
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Current Streak</p>
+                </InfoTooltip>
                 <p className="text-3xl font-display font-bold text-orange-400">{data.character.streak}</p>
                 <p className="text-xs text-muted-foreground">days in a row</p>
               </div>
@@ -153,7 +166,13 @@ export default function AnalyticsDashboard() {
                 <Coins className="w-7 h-7 text-yellow-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Treasury / Gold</p>
+                <InfoTooltip
+                  what="Treasury / Gold — your total accumulated in-game currency."
+                  fn="Earned by completing quests. Higher-rank quests award more Gold per run."
+                  usage="Spend Gold in the Shop to redeem real-life rewards you've defined for yourself."
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Treasury / Gold</p>
+                </InfoTooltip>
                 <p className="text-3xl font-display font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">gold coins</p>
               </div>
@@ -169,7 +188,13 @@ export default function AnalyticsDashboard() {
                   <Zap className="w-7 h-7 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Next Level XP</p>
+                  <InfoTooltip
+                    what="Next Level XP — your current XP progress toward the next level."
+                    fn="XP accumulates from completed quests and resets per-level (not globally). The bar shows how far you are."
+                    usage="Focus on higher-rank quests and maintain your streak multiplier to level up faster."
+                  >
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Next Level XP</p>
+                  </InfoTooltip>
                   <p className="text-xl font-display font-bold text-primary">
                     {data.character.xp.toLocaleString()} <span className="text-sm text-muted-foreground font-normal">/ {data.character.xpToNextLevel.toLocaleString()}</span>
                   </p>
@@ -185,7 +210,15 @@ export default function AnalyticsDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">Progression Curve — 30-Day XP</CardTitle>
+            <CardTitle className="font-display tracking-widest text-lg">
+              <InfoTooltip
+                what="Progression Curve — your XP earned per day over the last 30 days."
+                fn="Each point on the chart represents net XP gained that day from completed quests. Flat lines mean no activity."
+                usage="Look for consistent peaks — they indicate your most productive days. Aim to reduce gaps between peaks."
+              >
+                <span className="cursor-default">Progression Curve — 30-Day XP</span>
+              </InfoTooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={240}>
@@ -226,7 +259,15 @@ export default function AnalyticsDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card className="glass-panel h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg">Grind Breakdown — XP by Stat</CardTitle>
+              <CardTitle className="font-display tracking-widest text-lg">
+                <InfoTooltip
+                  what="Grind Breakdown — total XP earned broken down by which stat category the quests targeted."
+                  fn="Shows whether your grind is balanced across Strength, Intellect, Endurance, Agility, and Discipline."
+                  usage="If one bar dominates, consider adding quests in other categories to develop a well-rounded character."
+                >
+                  <span className="cursor-default">Grind Breakdown — XP by Stat</span>
+                </InfoTooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
@@ -254,7 +295,15 @@ export default function AnalyticsDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass-panel h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg">Quest Outcome Breakdown</CardTitle>
+              <CardTitle className="font-display tracking-widest text-lg">
+                <InfoTooltip
+                  what="Quest Outcome Breakdown — a pie chart of all your quest results to date."
+                  fn="Segments show counts of Completed, Failed, Missed, and Boss Defeated outcomes across your entire history."
+                  usage="A high Failed or Missed ratio signals quests that may be too ambitious — consider adjusting difficulty or deadlines."
+                >
+                  <span className="cursor-default">Quest Outcome Breakdown</span>
+                </InfoTooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row items-center gap-4">
               {outcomeChartData.length === 0 ? (
@@ -319,7 +368,15 @@ export default function AnalyticsDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
+            <CardTitle className="font-display tracking-widest text-lg">
+              <InfoTooltip
+                what="Activity Heatmap — a full-year view of your daily quest activity."
+                fn="Each cell is one day. Darker green means more quests completed. The label shows your total quest count for the year."
+                usage="Identify your most active weeks and any streaks of inactivity. Consistency over the year is the goal."
+              >
+                <span className="cursor-default">Activity Heatmap — Past Year</span>
+              </InfoTooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <ActivityCalendar
@@ -346,7 +403,15 @@ export default function AnalyticsDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">Raid Schedule — Monthly View</CardTitle>
+            <CardTitle className="font-display tracking-widest text-lg">
+              <InfoTooltip
+                what="Raid Schedule — an interactive monthly calendar for planning and reviewing your quest timeline."
+                fn="Navigate months to see which days you were active. Today is highlighted in green, selected days in purple."
+                usage="Use it to plan ahead — spot upcoming gaps in your schedule and decide which quests to tackle each day."
+              >
+                <span className="cursor-default">Raid Schedule — Monthly View</span>
+              </InfoTooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <style>{`

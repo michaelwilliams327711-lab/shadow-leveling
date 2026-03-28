@@ -5,6 +5,7 @@
  * Shadow Leveling - Gamified Habit Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { QuestLogEntryActionType } from "./questLogEntryActionType";
 import type { QuestLogEntryOutcome } from "./questLogEntryOutcome";
 
 export interface QuestLogEntry {
@@ -17,4 +18,5 @@ export interface QuestLogEntry {
   goldChange: number;
   multiplierApplied: number;
   occurredAt: string;
+  actionType: QuestLogEntryActionType;
 }
