@@ -12,10 +12,10 @@ import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCirc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatRadar } from "@/components/StatRadar";
 import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
@@ -100,31 +100,49 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
-            <Coins className="text-gold w-5 h-5" />
-            <span className="text-gold font-bold text-xl">{character.gold.toLocaleString()} G</span>
-          </div>
-          <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30">
-            <Flame className="text-orange-500 w-5 h-5" />
-            <span className="text-orange-500 font-bold text-xl">{character.streak} Day</span>
-            {character.multiplier > 1 && (
-              <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
-                {character.multiplier}x
-              </span>
-            )}
-          </div>
+          <InfoTooltip
+            what="Gold — the in-game currency earned by completing quests."
+            fn="Accumulates as you clear missions. Higher-rank quests award more Gold."
+            usage="Spend it in the Shop to claim real-life rewards you define."
+          >
+            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
+              <Coins className="text-gold w-5 h-5" />
+              <span className="text-gold font-bold text-xl">{character.gold.toLocaleString()} G</span>
+            </div>
+          </InfoTooltip>
+          <InfoTooltip
+            what="Daily check-in streak — consecutive days you've logged in and checked in."
+            fn="Builds a multiplier (up to 2×) that boosts XP and Gold rewards for completed quests."
+            usage="Hit the 'Daily Arise' button every day to keep your streak alive and grow your multiplier."
+          >
+            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30">
+              <Flame className="text-orange-500 w-5 h-5" />
+              <span className="text-orange-500 font-bold text-xl">{character.streak} Day</span>
+              {character.multiplier > 1 && (
+                <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
+                  {character.multiplier}x
+                </span>
+              )}
+            </div>
+          </InfoTooltip>
           {failStreak > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border ${failStreakBorderColors[failStreakTier]}`}
+            <InfoTooltip
+              what="Fail streak — consecutive quest failures or expired deadlines."
+              fn="Applies a penalty multiplier that reduces XP and Gold earned from completed quests."
+              usage="Complete any quest successfully to reset the fail streak and remove the penalty."
             >
-              <SkullIcon className={`w-5 h-5 ${failStreakColors[failStreakTier]}`} />
-              <div className="flex flex-col">
-                <span className={`font-bold text-base leading-tight ${failStreakColors[failStreakTier]}`}>{failStreak} Fail Streak</span>
-                <span className={`text-xs leading-tight ${failStreakColors[failStreakTier]} opacity-80`}>{penaltyMultiplier}x penalty</span>
-              </div>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border ${failStreakBorderColors[failStreakTier]}`}
+              >
+                <SkullIcon className={`w-5 h-5 ${failStreakColors[failStreakTier]}`} />
+                <div className="flex flex-col">
+                  <span className={`font-bold text-base leading-tight ${failStreakColors[failStreakTier]}`}>{failStreak} Fail Streak</span>
+                  <span className={`text-xs leading-tight ${failStreakColors[failStreakTier]} opacity-80`}>{penaltyMultiplier}x penalty</span>
+                </div>
+              </motion.div>
+            </InfoTooltip>
           )}
         </div>
       </div>
@@ -152,24 +170,42 @@ export default function Dashboard() {
             </div>
             <CardContent className="p-8 relative z-10">
               <div className="flex justify-between items-baseline mb-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl text-muted-foreground font-display tracking-widest">LEVEL</span>
-                  <span className="text-6xl font-display font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{character.level}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-primary font-bold text-xl">{character.xp.toLocaleString()}</span>
-                  <span className="text-muted-foreground text-sm"> / {(character.xp + character.xpToNextLevel).toLocaleString()} XP</span>
-                </div>
+                <InfoTooltip
+                  what="Character Level — your overall power rank in the system."
+                  fn="Increases as you accumulate XP from completed quests. Higher levels unlock greater stat ceilings."
+                  usage="Complete quests regularly to gain XP and level up faster."
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl text-muted-foreground font-display tracking-widest">LEVEL</span>
+                    <span className="text-6xl font-display font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{character.level}</span>
+                  </div>
+                </InfoTooltip>
+                <InfoTooltip
+                  what="Experience Points (XP) — progress toward the next level."
+                  fn="Earned by completing quests. Amount varies by rank and active multipliers."
+                  usage="Fill the bar to level up. Streak bonuses and high-rank quests accelerate progress."
+                >
+                  <div className="text-right">
+                    <span className="text-primary font-bold text-xl">{character.xp.toLocaleString()}</span>
+                    <span className="text-muted-foreground text-sm"> / {(character.xp + character.xpToNextLevel).toLocaleString()} XP</span>
+                  </div>
+                </InfoTooltip>
               </div>
               
-              <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-8 border border-white/5 shadow-inner">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${xpPercent}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
-                />
-              </div>
+              <InfoTooltip
+                what="XP Progress Bar — how close you are to the next level."
+                fn="Shows current XP as a fraction of the XP required to reach the next level."
+                usage="Keep completing quests to push the bar to 100% and trigger a level-up."
+              >
+                <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-8 border border-white/5 shadow-inner">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${xpPercent}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
+                  />
+                </div>
+              </InfoTooltip>
 
               <Button 
                 onClick={handleCheckin}
@@ -204,26 +240,52 @@ export default function Dashboard() {
               <StatRadar character={character} />
               
               <div className="space-y-4 mt-6">
-                <TooltipProvider>
-                  {stats.map((stat) => (
-                    <Tooltip key={stat.name}>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-3 cursor-default">
-                          <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${stat.color}`}>
-                            <stat.icon className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
-                            </div>
-                            <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName="bg-white/70" />
-                          </div>
+                {stats.map((stat) => {
+                  const statTooltips: Record<string, { what: string; fn: string; usage: string }> = {
+                    Strength: {
+                      what: "Strength — raw physical power and force output.",
+                      fn: "Increases when you complete Physical and strength-oriented quests.",
+                      usage: "Assign quests in the Strength or Other category to grow this stat.",
+                    },
+                    Agility: {
+                      what: "Agility — speed, coordination, and creative reflexes.",
+                      fn: "Increases when you complete Creative or Social quests.",
+                      usage: "Take on Creative and Social missions to boost Agility.",
+                    },
+                    Endurance: {
+                      what: "Endurance — stamina and long-term resilience.",
+                      fn: "Increases when you complete Health-related quests.",
+                      usage: "Log workout, wellness, or Health-category quests to grow Endurance.",
+                    },
+                    Intellect: {
+                      what: "Intellect — mental acuity, knowledge, and problem-solving.",
+                      fn: "Increases when you complete Financial, Productivity, or Study quests.",
+                      usage: "Focus on learning and productivity missions to raise Intellect.",
+                    },
+                    Discipline: {
+                      what: "Discipline — willpower, consistency, and self-control.",
+                      fn: "Grows passively with your check-in streak and completed quest volume.",
+                      usage: "Maintain a daily streak and clear quests consistently to raise Discipline.",
+                    },
+                  };
+                  const tip = statTooltips[stat.name];
+                  return (
+                    <InfoTooltip key={stat.name} what={tip.what} fn={tip.fn} usage={tip.usage}>
+                      <div className="flex items-center gap-3 cursor-default">
+                        <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${stat.color}`}>
+                          <stat.icon className="w-4 h-4" />
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent>{stat.val.toLocaleString()} / 110,000</TooltipContent>
-                    </Tooltip>
-                  ))}
-                </TooltipProvider>
+                        <div className="flex-1">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
+                            <span className="text-xs text-muted-foreground">{stat.val.toLocaleString()} / 110,000</span>
+                          </div>
+                          <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName="bg-white/70" />
+                        </div>
+                      </div>
+                    </InfoTooltip>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -236,8 +298,16 @@ export default function Dashboard() {
               <Card className={`glass-panel border ${failStreakBorderColors[failStreakTier]}`}>
                 <CardHeader className="pb-2">
                   <CardTitle className={`font-display tracking-widest text-lg flex items-center gap-2 ${failStreakColors[failStreakTier]}`}>
-                    <SkullIcon className="w-5 h-5" />
-                    Failure Streak
+                    <InfoTooltip
+                      what="Failure Streak — how many quests you've failed in a row."
+                      fn="Each failure or missed deadline adds to this counter and worsens your penalty multiplier."
+                      usage="Complete any quest successfully to reset the streak and restore full XP/Gold rewards."
+                    >
+                      <span className="flex items-center gap-2">
+                        <SkullIcon className="w-5 h-5" />
+                        Failure Streak
+                      </span>
+                    </InfoTooltip>
                     {failStreakTier !== "none" && failStreakTier !== "low" && (
                       <span className={`text-xs font-sans px-2 py-0.5 rounded-full ml-auto ${
                         failStreakTier === "max" ? "bg-red-900/60 text-red-300" :

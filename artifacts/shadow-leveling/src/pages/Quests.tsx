@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -658,6 +659,54 @@ export default function Quests() {
     SSS: "bg-primary/20 text-primary border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.6)] animate-pulse",
   };
 
+  const rankTooltips: Record<string, { what: string; fn: string; usage: string }> = {
+    F: {
+      what: "Rank F — the lowest difficulty tier.",
+      fn: "Awards minimal XP and Gold. Suitable for tiny 5–10 min tasks.",
+      usage: "Use for trivial chores or warm-up tasks. Easy to complete, but low reward.",
+    },
+    E: {
+      what: "Rank E — beginner difficulty.",
+      fn: "Awards small XP and Gold. Suitable for short tasks under 30 minutes.",
+      usage: "Good for daily habits and simple recurring to-dos.",
+    },
+    D: {
+      what: "Rank D — easy difficulty.",
+      fn: "Awards moderate XP and Gold. Suitable for tasks around 30–60 minutes.",
+      usage: "Assign to straightforward tasks that require some focus.",
+    },
+    C: {
+      what: "Rank C — medium difficulty.",
+      fn: "Awards decent XP and Gold. Suitable for tasks requiring 1–2 hours of effort.",
+      usage: "Great for study sessions, workouts, or focused work blocks.",
+    },
+    B: {
+      what: "Rank B — hard difficulty.",
+      fn: "Awards solid XP and Gold. Suitable for demanding tasks of 2–4 hours.",
+      usage: "Reserve for projects, long study sprints, or physically demanding challenges.",
+    },
+    A: {
+      what: "Rank A — very hard difficulty.",
+      fn: "Awards high XP and Gold. Suitable for tasks that take most of the day.",
+      usage: "Use sparingly for major milestones or intensive full-day efforts.",
+    },
+    S: {
+      what: "Rank S — elite difficulty.",
+      fn: "Awards very high XP and Gold. Equivalent to a significant life achievement.",
+      usage: "Set for ambitious multi-session projects or major personal goals.",
+    },
+    SS: {
+      what: "Rank SS — legendary difficulty.",
+      fn: "Awards exceptional XP and Gold. Only for the most grueling long-term quests.",
+      usage: "Assign to week-long sprints or major life challenges.",
+    },
+    SSS: {
+      what: "Rank SSS — mythic difficulty.",
+      fn: "Awards maximum XP and Gold. Reserved for once-in-a-lifetime feats.",
+      usage: "Only for the absolute hardest goals you can set for yourself.",
+    },
+  };
+
   if (isLoading) return <div className="p-8">Loading System Data...</div>;
 
   return (
@@ -974,9 +1023,20 @@ export default function Quests() {
                       <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-center gap-3 flex-wrap">
-                            <Badge className={`${difficultyColors[quest.difficulty]} px-2 py-0 uppercase tracking-widest font-bold border rounded-sm`}>
-                              Rank {quest.difficulty}
-                            </Badge>
+                            {(() => {
+                              const tip = rankTooltips[quest.difficulty];
+                              return tip ? (
+                                <InfoTooltip what={tip.what} fn={tip.fn} usage={tip.usage}>
+                                  <Badge className={`${difficultyColors[quest.difficulty]} px-2 py-0 uppercase tracking-widest font-bold border rounded-sm`}>
+                                    Rank {quest.difficulty}
+                                  </Badge>
+                                </InfoTooltip>
+                              ) : (
+                                <Badge className={`${difficultyColors[quest.difficulty]} px-2 py-0 uppercase tracking-widest font-bold border rounded-sm`}>
+                                  Rank {quest.difficulty}
+                                </Badge>
+                              );
+                            })()}
                             <Badge variant="outline" className="text-muted-foreground border-white/10 bg-white/5">
                               {quest.category}
                             </Badge>

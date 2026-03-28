@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Store, Coins, Plus, ShoppingCart } from "lucide-react";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -97,10 +98,16 @@ export default function Shop() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
-            <Coins className="text-gold w-6 h-6" />
-            <span className="text-gold font-bold text-2xl">{character?.gold?.toLocaleString() || 0}</span>
-          </div>
+          <InfoTooltip
+            what="Gold — the in-game currency of the System Shop."
+            fn="Earned by completing quests. Higher-rank quests and streak multipliers yield more Gold."
+            usage="Spend it here to purchase real-life rewards you've defined. Add new rewards with the + button."
+          >
+            <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
+              <Coins className="text-gold w-6 h-6" />
+              <span className="text-gold font-bold text-2xl">{character?.gold?.toLocaleString() || 0}</span>
+            </div>
+          </InfoTooltip>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
