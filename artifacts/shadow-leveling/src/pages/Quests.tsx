@@ -764,7 +764,7 @@ export default function Quests() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={createForm.control} name="targetAmount" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Target Amount <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
                       <FormControl>
                         <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} className="bg-background/50" />
                       </FormControl>
@@ -773,7 +773,7 @@ export default function Quests() {
                   )} />
                   <FormField control={createForm.control} name="amountUnit" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. oz, pages" {...field} className="bg-background/50" />
                       </FormControl>
@@ -909,7 +909,7 @@ export default function Quests() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editForm.control} name="targetAmount" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Target Amount <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
                       <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)} className="bg-background/50" />
                     </FormControl>
@@ -918,7 +918,7 @@ export default function Quests() {
                 )} />
                 <FormField control={editForm.control} name="amountUnit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. oz, pages" {...field} value={field.value ?? ""} className="bg-background/50" />
                     </FormControl>
