@@ -315,6 +315,13 @@ export const FailQuestResponse = zod.object({
   success: zod.boolean(),
   xpDeducted: zod.number(),
   goldDeducted: zod.number(),
+  statPenalties: zod.object({
+    strength: zod.number(),
+    intellect: zod.number(),
+    endurance: zod.number(),
+    agility: zod.number(),
+    discipline: zod.number(),
+  }),
   character: zod.object({
     id: zod.number(),
     name: zod.string(),

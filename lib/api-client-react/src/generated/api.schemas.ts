@@ -192,10 +192,19 @@ export interface QuestCompletionResult {
   character: Character;
 }
 
+export type QuestFailResultStatPenalties = {
+  strength: number;
+  intellect: number;
+  endurance: number;
+  agility: number;
+  discipline: number;
+};
+
 export interface QuestFailResult {
   success: boolean;
   xpDeducted: number;
   goldDeducted: number;
+  statPenalties: QuestFailResultStatPenalties;
   character: Character;
 }
 

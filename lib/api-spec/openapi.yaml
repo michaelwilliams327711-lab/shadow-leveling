@@ -615,9 +615,23 @@ components:
           type: integer
         goldDeducted:
           type: integer
+        statPenalties:
+          type: object
+          properties:
+            strength:
+              type: integer
+            intellect:
+              type: integer
+            endurance:
+              type: integer
+            agility:
+              type: integer
+            discipline:
+              type: integer
+          required: [strength, intellect, endurance, agility, discipline]
         character:
           $ref: "#/components/schemas/Character"
-      required: [success, xpDeducted, goldDeducted, character]
+      required: [success, xpDeducted, goldDeducted, statPenalties, character]
 
     QuestLogEntry:
       type: object

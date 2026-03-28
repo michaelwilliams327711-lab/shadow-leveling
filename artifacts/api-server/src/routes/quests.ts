@@ -254,10 +254,27 @@ router.post("/quests/:id/fail", async (req, res) => {
     const xpDeducted = Math.min(char.xp, quest.xpPenalty);
     const goldDeducted = Math.min(char.gold, quest.goldPenalty);
 
+    const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+    const statPenalty = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
+
+    const statUpdates: Record<string, number> = {
+      strength: char.strength,
+      intellect: char.intellect,
+      endurance: char.endurance,
+      agility: char.agility,
+      discipline: char.discipline,
+    };
+    statUpdates[statField] = Math.max(1, statUpdates[statField] - statPenalty);
+
     const [updatedChar] = await db.update(characterTable)
       .set({
         xp: Math.max(0, char.xp - xpDeducted),
         gold: Math.max(0, char.gold - goldDeducted),
+        strength: statUpdates.strength,
+        intellect: statUpdates.intellect,
+        endurance: statUpdates.endurance,
+        agility: statUpdates.agility,
+        discipline: statUpdates.discipline,
         totalQuestsFailed: char.totalQuestsFailed + 1,
       })
       .where(eq(characterTable.id, char.id))
@@ -277,10 +294,19 @@ router.post("/quests/:id/fail", async (req, res) => {
       multiplierApplied: 1.0,
     });
 
+    const statPenalties = {
+      strength: statField === "strength" ? statPenalty : 0,
+      intellect: statField === "intellect" ? statPenalty : 0,
+      endurance: statField === "endurance" ? statPenalty : 0,
+      agility: statField === "agility" ? statPenalty : 0,
+      discipline: statField === "discipline" ? statPenalty : 0,
+    };
+
     const data = FailQuestResponse.parse({
       success: true,
       xpDeducted,
       goldDeducted,
+      statPenalties,
       character: {
         ...updatedChar,
         xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
@@ -336,6 +362,14 @@ router.post("/quests/process-overdue", async (req, res) => {
       let totalXpDeducted = 0;
       let totalGoldDeducted = 0;
 
+      const statAccum: Record<string, number> = {
+        strength: char.strength,
+        intellect: char.intellect,
+        endurance: char.endurance,
+        agility: char.agility,
+        discipline: char.discipline,
+      };
+
       for (const quest of overdueQuests) {
         const xpDeducted = Math.min(
           Math.max(0, char.xp - totalXpDeducted),
@@ -347,6 +381,10 @@ router.post("/quests/process-overdue", async (req, res) => {
         );
         totalXpDeducted += xpDeducted;
         totalGoldDeducted += goldDeducted;
+
+        const statField = CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+        const statPenalty = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
+        statAccum[statField] = Math.max(1, statAccum[statField] - statPenalty);
 
         await tx
           .update(questsTable)
@@ -394,6 +432,11 @@ router.post("/quests/process-overdue", async (req, res) => {
         .set({
           xp: Math.max(0, char.xp - totalXpDeducted),
           gold: Math.max(0, char.gold - totalGoldDeducted),
+          strength: statAccum.strength,
+          intellect: statAccum.intellect,
+          endurance: statAccum.endurance,
+          agility: statAccum.agility,
+          discipline: statAccum.discipline,
           totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
         })
         .where(eq(characterTable.id, char.id))
