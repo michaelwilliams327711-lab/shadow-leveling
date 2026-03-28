@@ -37,7 +37,7 @@ function calculateRewards(difficulty: string, durationMinutes: number) {
 }
 
 const CATEGORY_STAT_GAINS: Record<string, string> = {
-  Financial: "discipline",
+  Financial: "intellect",
   Productivity: "intellect",
   Study: "intellect",
   Health: "endurance",
