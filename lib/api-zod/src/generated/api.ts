@@ -164,7 +164,7 @@ export const CreateQuestBody = zod.object({
   category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
-  isDaily: zod.boolean(),
+  isDaily: zod.boolean().optional(),
   description: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
