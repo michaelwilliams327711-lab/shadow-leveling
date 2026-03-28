@@ -83,11 +83,11 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { name: "Strength", val: character.strength, icon: Dumbbell, color: "text-red-400" },
-    { name: "Agility", val: character.agility, icon: Zap, color: "text-yellow-400" },
-    { name: "Endurance", val: character.endurance, icon: Shield, color: "text-green-400" },
-    { name: "Intellect", val: character.intellect, icon: Brain, color: "text-blue-400" },
-    { name: "Discipline", val: character.discipline, icon: Target, color: "text-purple-400" },
+    { name: "Strength", val: character.strength, icon: Dumbbell, color: "text-red-400", barColor: "bg-red-400" },
+    { name: "Agility", val: character.agility, icon: Zap, color: "text-yellow-400", barColor: "bg-yellow-400" },
+    { name: "Endurance", val: character.endurance, icon: Shield, color: "text-green-400", barColor: "bg-green-400" },
+    { name: "Intellect", val: character.intellect, icon: Brain, color: "text-blue-400", barColor: "bg-blue-400" },
+    { name: "Discipline", val: character.discipline, icon: Target, color: "text-purple-400", barColor: "bg-purple-400" },
   ];
 
   return (
@@ -277,10 +277,10 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between mb-1">
-                            <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
+                            <span className={`text-sm font-semibold tracking-wide ${stat.color}`}>{stat.name}</span>
                             <span className="text-xs text-muted-foreground">{stat.val.toLocaleString()} / 110,000</span>
                           </div>
-                          <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName="bg-white/70" />
+                          <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName={stat.barColor} />
                         </div>
                       </div>
                     </InfoTooltip>

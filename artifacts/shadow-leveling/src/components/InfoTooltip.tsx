@@ -21,7 +21,7 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState<TooltipPos>({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
-  const wrapperRef = useRef<HTMLSpanElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -144,7 +144,7 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
 
   return (
     <>
-      <span
+      <div
         ref={wrapperRef}
         className="cursor-help"
         onMouseEnter={!isMobile ? handleMouseEnter : undefined}
@@ -153,7 +153,7 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
         onTouchEnd={isMobile ? handleTap : undefined}
       >
         {children}
-      </span>
+      </div>
       {typeof document !== "undefined" && createPortal(tooltip, document.body)}
     </>
   );
