@@ -216,7 +216,7 @@ export default function Dashboard() {
                             <div className="flex justify-between mb-1">
                               <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
                             </div>
-                            <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorColor="bg-white/70" />
+                            <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName="bg-white/70" />
                           </div>
                         </div>
                       </TooltipTrigger>
