@@ -15,7 +15,7 @@ import {
   QuestDifficulty
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,14 @@ const STAT_BOOST_MAP: Record<string, string> = {
   Other: "Strength",
 };
 
+const STAT_ICON_MAP: Record<string, { icon: LucideIcon; color: string }> = {
+  Strength:   { icon: Dumbbell, color: "text-red-400" },
+  Agility:    { icon: Zap,      color: "text-yellow-400" },
+  Endurance:  { icon: Shield,   color: "text-green-400" },
+  Intellect:  { icon: Brain,    color: "text-blue-400" },
+  Discipline: { icon: Target,   color: "text-purple-400" },
+};
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -72,11 +80,12 @@ const editSchema = z.object({
 
 function StatBoostBadge({ category }: { category: string }) {
   const stat = STAT_BOOST_MAP[category] ?? "Strength";
+  const { icon: StatIcon, color } = STAT_ICON_MAP[stat] ?? STAT_ICON_MAP["Strength"];
   return (
     <div className="flex items-center gap-2 mt-1">
-      <Zap className="w-3.5 h-3.5 text-primary" />
+      <StatIcon className={`w-3.5 h-3.5 ${color}`} />
       <span className="text-xs text-muted-foreground">Stat Boost:</span>
-      <span className="text-xs font-bold text-primary tracking-wider">{stat}</span>
+      <span className={`text-xs font-bold tracking-wider ${color}`}>{stat}</span>
     </div>
   );
 }
@@ -429,10 +438,16 @@ export default function Quests() {
                             {quest.category}
                           </Badge>
                           {quest.isDaily && <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-none">Daily</Badge>}
-                          <span className="flex items-center gap-1 text-xs text-primary/70">
-                            <Zap className="w-3 h-3" />
-                            {STAT_BOOST_MAP[quest.category] ?? "Strength"}
-                          </span>
+                          {(() => {
+                            const stat = STAT_BOOST_MAP[quest.category] ?? "Strength";
+                            const { icon: StatIcon, color } = STAT_ICON_MAP[stat] ?? STAT_ICON_MAP["Strength"];
+                            return (
+                              <span className={`flex items-center gap-1 text-xs ${color}`}>
+                                <StatIcon className="w-3 h-3" />
+                                {stat}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <h3 className="text-xl font-bold text-white font-sans">{quest.name}</h3>
                         {quest.description && (
@@ -451,7 +466,7 @@ export default function Quests() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="border-white/10 text-muted-foreground hover:text-white hover:border-white/30 hover:bg-white/5"
+                              className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
                               onClick={() => setEditingQuest(quest)}
                               title="Edit quest"
                             >
