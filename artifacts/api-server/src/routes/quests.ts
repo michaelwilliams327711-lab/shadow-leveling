@@ -12,27 +12,29 @@ import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity } from "./character.
 
 const router: IRouter = Router();
 
-const DIFFICULTY_MULTIPLIERS: Record<string, { xp: number; gold: number }> = {
-  F: { xp: 0.5, gold: 0.5 },
-  E: { xp: 0.75, gold: 0.75 },
-  D: { xp: 1.0, gold: 1.0 },
-  C: { xp: 1.5, gold: 1.5 },
-  B: { xp: 2.0, gold: 2.0 },
-  A: { xp: 3.0, gold: 3.0 },
-  S: { xp: 5.0, gold: 5.0 },
-  SS: { xp: 8.0, gold: 8.0 },
-  SSS: { xp: 15.0, gold: 15.0 },
+const RANK_BASE_REWARDS: Record<string, { xp: number; gold: number }> = {
+  F:   { xp: 10,  gold: 5   },
+  E:   { xp: 25,  gold: 12  },
+  D:   { xp: 50,  gold: 25  },
+  C:   { xp: 100, gold: 50  },
+  B:   { xp: 175, gold: 85  },
+  A:   { xp: 275, gold: 135 },
+  S:   { xp: 350, gold: 175 },
+  SS:  { xp: 425, gold: 210 },
+  SSS: { xp: 500, gold: 250 },
 };
 
+const DURATION_BONUS_PER_MINUTE = { xp: 0.3, gold: 0.15 };
+
 function calculateRewards(difficulty: string, durationMinutes: number) {
-  const mult = DIFFICULTY_MULTIPLIERS[difficulty] ?? { xp: 1, gold: 1 };
-  const baseXp = Math.floor(20 + durationMinutes * 1.5);
-  const baseGold = Math.floor(10 + durationMinutes * 0.75);
+  const base = RANK_BASE_REWARDS[difficulty] ?? { xp: 50, gold: 25 };
+  const xpReward = Math.floor(base.xp + durationMinutes * DURATION_BONUS_PER_MINUTE.xp);
+  const goldReward = Math.floor(base.gold + durationMinutes * DURATION_BONUS_PER_MINUTE.gold);
   return {
-    xpReward: Math.floor(baseXp * mult.xp),
-    goldReward: Math.floor(baseGold * mult.gold),
-    xpPenalty: Math.floor(baseXp * mult.xp * 0.5),
-    goldPenalty: Math.floor(baseGold * mult.gold * 0.3),
+    xpReward,
+    goldReward,
+    xpPenalty: Math.floor(xpReward * 0.5),
+    goldPenalty: Math.floor(goldReward * 0.3),
   };
 }
 
@@ -534,6 +536,30 @@ router.get("/quest-log", async (req, res) => {
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error getting quest log");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/quests/recalculate-rewards", async (req, res) => {
+  try {
+    const activeQuests = await db
+      .select()
+      .from(questsTable)
+      .where(eq(questsTable.status, "active"));
+
+    let updatedCount = 0;
+    for (const quest of activeQuests) {
+      const rewards = calculateRewards(quest.difficulty, quest.durationMinutes);
+      await db
+        .update(questsTable)
+        .set(rewards)
+        .where(eq(questsTable.id, quest.id));
+      updatedCount++;
+    }
+
+    res.json({ success: true, updatedCount });
+  } catch (err) {
+    req.log.error({ err }, "Error recalculating quest rewards");
     res.status(500).json({ error: "Internal server error" });
   }
 });
