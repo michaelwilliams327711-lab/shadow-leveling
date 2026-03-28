@@ -12,6 +12,7 @@ import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCirc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatRadar } from "@/components/StatRadar";
 import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
@@ -203,20 +204,26 @@ export default function Dashboard() {
               <StatRadar character={character} />
               
               <div className="space-y-4 mt-6">
-                {stats.map((stat) => (
-                  <div key={stat.name} className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${stat.color}`}>
-                      <stat.icon className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
-                        <span className="text-sm font-bold text-white">{stat.val}</span>
-                      </div>
-                      <Progress value={Math.min(100, stat.val * 2)} className="h-1.5" indicatorColor="bg-white/70" />
-                    </div>
-                  </div>
-                ))}
+                <TooltipProvider>
+                  {stats.map((stat) => (
+                    <Tooltip key={stat.name}>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-3 cursor-default">
+                          <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${stat.color}`}>
+                            <stat.icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm font-semibold tracking-wide text-gray-300">{stat.name}</span>
+                            </div>
+                            <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorColor="bg-white/70" />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>{stat.val.toLocaleString()} / 110,000</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
