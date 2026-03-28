@@ -5,7 +5,8 @@ import {
   Store, 
   Skull, 
   BookOpen,
-  LayoutDashboard
+  LayoutDashboard,
+  BarChart2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ const navItems = [
   { title: "Shop", href: "/shop", icon: Store },
   { title: "Boss Arena", href: "/arena", icon: Skull },
   { title: "The Awakening", href: "/awakening", icon: BookOpen },
+  { title: "Analytics", href: "/analytics", icon: BarChart2 },
 ];
 
 export function AppSidebar() {
