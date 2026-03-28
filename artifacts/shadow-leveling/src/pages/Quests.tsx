@@ -40,7 +40,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -225,7 +224,6 @@ const createSchema = z.object({
   statBoost: z.nativeEnum(StatBoost).optional(),
   difficulty: z.nativeEnum(QuestDifficulty),
   durationMinutes: z.coerce.number().min(1),
-  isDaily: z.boolean(),
   deadline: z.string().optional(),
   targetAmount: z.coerce.number().int().min(1).optional(),
   amountUnit: z.string().optional(),
@@ -239,7 +237,6 @@ const editSchema = z.object({
   statBoost: z.nativeEnum(StatBoost).optional().nullable(),
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
   durationMinutes: z.coerce.number().min(1).optional(),
-  isDaily: z.boolean().optional(),
   targetAmount: z.coerce.number().int().min(1).optional().nullable(),
   amountUnit: z.string().optional().nullable(),
   recurrence: recurrenceSchema.optional().nullable(),
@@ -496,7 +493,6 @@ export default function Quests() {
       statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
-      isDaily: true,
       deadline: "",
       targetAmount: undefined,
       amountUnit: "",
@@ -513,7 +509,6 @@ export default function Quests() {
       statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
-      isDaily: false,
       targetAmount: undefined,
       amountUnit: "",
       recurrence: { type: "none" },
@@ -530,7 +525,6 @@ export default function Quests() {
         statBoost: (editingQuest.statBoost as z.infer<typeof editSchema>["statBoost"]) ?? undefined,
         difficulty: editingQuest.difficulty as QuestDifficulty,
         durationMinutes: editingQuest.durationMinutes,
-        isDaily: editingQuest.isDaily,
         targetAmount: editingQuest.targetAmount ?? undefined,
         amountUnit: editingQuest.amountUnit ?? "",
         recurrence: rec ?? { type: "none" },
@@ -602,7 +596,6 @@ export default function Quests() {
         category: data.category,
         difficulty: data.difficulty,
         durationMinutes: data.durationMinutes,
-        isDaily: data.isDaily,
         description: data.description || null,
         deadline: deadlineIso,
         statBoost: data.statBoost ?? null,
@@ -631,7 +624,6 @@ export default function Quests() {
           category: data.category,
           difficulty: data.difficulty,
           durationMinutes: data.durationMinutes,
-          isDaily: data.isDaily,
           description: data.description || null,
           statBoost: data.statBoost ?? null,
           targetAmount: data.targetAmount ?? null,
@@ -761,26 +753,13 @@ export default function Quests() {
                   </FormItem>
                 )} />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration (minutes)</FormLabel>
-                      <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={createForm.control} name="isDaily" render={({ field }) => (
-                    <FormItem className="flex flex-col justify-center">
-                      <FormLabel>Daily Quest</FormLabel>
-                      <div className="flex items-center gap-3 pt-2">
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <span className="text-sm text-muted-foreground">{field.value ? "Yes" : "No"}</span>
-                      </div>
-                    </FormItem>
-                  )} />
-                </div>
+                <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (minutes)</FormLabel>
+                    <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={createForm.control} name="targetAmount" render={({ field }) => (
@@ -919,26 +898,13 @@ export default function Quests() {
                 </FormItem>
               )} />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (minutes)</FormLabel>
-                    <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={editForm.control} name="isDaily" render={({ field }) => (
-                  <FormItem className="flex flex-col justify-center">
-                    <FormLabel>Daily Quest</FormLabel>
-                    <div className="flex items-center gap-3 pt-2">
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <span className="text-sm text-muted-foreground">{field.value ? "Yes" : "No"}</span>
-                    </div>
-                  </FormItem>
-                )} />
-              </div>
+              <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (minutes)</FormLabel>
+                  <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editForm.control} name="targetAmount" render={({ field }) => (
@@ -1014,7 +980,6 @@ export default function Quests() {
                             <Badge variant="outline" className="text-muted-foreground border-white/10 bg-white/5">
                               {quest.category}
                             </Badge>
-                            {quest.isDaily && <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-none">Daily</Badge>}
                             {recLabel && (
                               <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-none flex items-center gap-1">
                                 <RotateCcw className="w-2.5 h-2.5" />

@@ -370,7 +370,7 @@ router.post("/quests", async (req, res) => {
         category: body.category,
         difficulty: body.difficulty,
         durationMinutes: body.durationMinutes,
-        isDaily: body.isDaily,
+        isDaily: (body.recurrence as RecurrenceConfig)?.type === "daily",
         description: body.description ?? null,
         deadline: body.deadline ? new Date(body.deadline as string) : null,
         statBoost: body.statBoost ?? null,
@@ -418,13 +418,15 @@ router.patch("/quests/:id", async (req, res) => {
       if (body.difficulty !== undefined) updates.difficulty = body.difficulty;
       if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
     }
-    if (body.isDaily !== undefined) updates.isDaily = body.isDaily;
     if (body.isPaused !== undefined) updates.isPaused = body.isPaused;
     if (body.description !== undefined) updates.description = body.description;
     if (body.statBoost !== undefined) updates.statBoost = body.statBoost ?? null;
     if (body.targetAmount !== undefined) updates.targetAmount = body.targetAmount ?? null;
     if (body.amountUnit !== undefined) updates.amountUnit = body.amountUnit ?? null;
-    if (body.recurrence !== undefined) updates.recurrence = body.recurrence ?? null;
+    if (body.recurrence !== undefined) {
+      updates.recurrence = body.recurrence ?? null;
+      updates.isDaily = (body.recurrence as RecurrenceConfig)?.type === "daily";
+    }
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Quest not found" });
