@@ -3,16 +3,16 @@ import { useForm, type Control, type UseFormWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { 
-  useListQuests, 
   useCompleteQuest, 
   useFailQuest,
   useCreateQuest,
   useUpdateQuest,
   useDeleteQuest,
-  getListQuestsQueryKey,
   getGetCharacterQueryKey,
   QuestDifficulty,
   StatBoost,
+  useListQuestsWindowed,
+  getListQuestsWindowedQueryKey,
 } from "@workspace/api-client-react";
 import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -315,6 +315,8 @@ function YearlyDatePicker({ ctrl }: { ctrl: Control<CreateFormValues> }) {
                     }}
                     captionLayout="dropdown"
                     defaultMonth={selectedDate}
+                    fromYear={new Date().getFullYear()}
+                    toYear={new Date().getFullYear() + 30}
                   />
                 </PopoverContent>
               </Popover>
@@ -471,8 +473,12 @@ function getRecurrenceLabel(recurrence: RecurrenceConfig | null | undefined): st
   }
 }
 
+const DEFAULT_WINDOW_DAYS = 30;
+
 export default function Quests() {
-  const { data: quests = [], isLoading } = useListQuests();
+  const [showAll, setShowAll] = useState(false);
+  const windowDays = showAll ? null : DEFAULT_WINDOW_DAYS;
+  const { data: quests = [], isLoading } = useListQuestsWindowed({ windowDays });
   const createQuest = useCreateQuest();
   const updateQuest = useUpdateQuest();
   const deleteQuest = useDeleteQuest();
@@ -535,7 +541,7 @@ export default function Quests() {
   }, [editingQuest, editForm]);
 
   const invalidateQuests = () => {
-    queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
   };
 
@@ -846,6 +852,7 @@ export default function Quests() {
                       <Input
                         type="datetime-local"
                         {...field}
+                        max={`${new Date().getFullYear() + 30}-12-31T23:59`}
                         className="bg-background/50 [color-scheme:dark]"
                       />
                     </FormControl>
@@ -1008,14 +1015,15 @@ export default function Quests() {
       </Dialog>
 
       <Tabs defaultValue="active" className="w-full">
-        <TabsList className="bg-card border border-white/5 mb-6 w-full justify-start rounded-xl p-1">
-          <InfoTooltip
-            what="ACTIVE tab — quests currently in progress."
-            fn="Lists all quests that have not yet been completed, failed, or paused."
-            usage="Complete or Fail a quest from here. Use Pause to temporarily remove it from your active rotation."
-          >
-            <TabsTrigger value="active" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-primary/20 data-[state=active]:text-primary">ACTIVE</TabsTrigger>
-          </InfoTooltip>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+          <TabsList className="bg-card border border-white/5 w-full justify-start rounded-xl p-1">
+            <InfoTooltip
+              what="ACTIVE tab — quests currently in progress."
+              fn="Lists all quests that have not yet been completed, failed, or paused."
+              usage="Complete or Fail a quest from here. Use Pause to temporarily remove it from your active rotation."
+            >
+              <TabsTrigger value="active" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-primary/20 data-[state=active]:text-primary">ACTIVE</TabsTrigger>
+            </InfoTooltip>
           <InfoTooltip
             what="CLEARED tab — successfully completed quests."
             fn="Shows every quest you have marked as complete. Completion awards XP and Gold."
@@ -1030,13 +1038,24 @@ export default function Quests() {
           >
             <TabsTrigger value="failed" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive">FAILED</TabsTrigger>
           </InfoTooltip>
-        </TabsList>
+          </TabsList>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 text-xs border-white/10 text-muted-foreground hover:text-white hover:border-white/30"
+            onClick={() => setShowAll(v => !v)}
+          >
+            {showAll ? "Upcoming only" : "Show all quests"}
+          </Button>
+        </div>
 
         {(['active', 'completed', 'failed'] as const).map((status) => (
           <TabsContent key={status} value={status} className="space-y-4">
             {quests.filter(q => q.status === status).length === 0 ? (
               <div className="text-center py-16 border border-dashed border-white/10 rounded-xl glass-panel">
-                <p className="text-muted-foreground tracking-widest">NO MISSIONS FOUND</p>
+                <p className="text-muted-foreground tracking-widest">
+                  {status === 'active' && !showAll ? "NO UPCOMING MISSIONS — USE \"SHOW ALL QUESTS\" TO SEE FAR-FUTURE QUESTS" : "NO MISSIONS FOUND"}
+                </p>
               </div>
             ) : (
               <div className="grid gap-4">

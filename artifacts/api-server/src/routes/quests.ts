@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, lt } from "drizzle-orm";
+import { eq, and, isNotNull, lt, lte } from "drizzle-orm";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -353,10 +353,71 @@ router.post("/quests/recalculate-rewards", async (req, res) => {
   }
 });
 
+/**
+ * Advance a recurring quest's next-due date until it is >= today.
+ * This ensures we find the actual upcoming occurrence, not just one step
+ * ahead of (possibly stale) completedAt/createdAt.
+ */
+function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date): Date | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let candidate = getNextOccurrenceDate(recurrence, baseDate);
+  if (!candidate) return null;
+
+  // Advance until we reach today or a future date (cap iterations to avoid infinite loop)
+  let iterations = 0;
+  while (candidate < today && iterations < 10000) {
+    candidate = getNextOccurrenceDate(recurrence, candidate);
+    if (!candidate) return null;
+    iterations++;
+  }
+
+  return candidate;
+}
+
 router.get("/quests", async (req, res) => {
   try {
-    const quests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
-    res.json(quests.map(serializeQuest));
+    const windowDaysParam = req.query.windowDays;
+    const windowDays = windowDaysParam ? parseInt(String(windowDaysParam), 10) : null;
+
+    const allQuests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
+
+    if (windowDays != null && !isNaN(windowDays) && windowDays > 0) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const windowEnd = new Date(now);
+      windowEnd.setDate(windowEnd.getDate() + windowDays);
+
+      const filtered = allQuests.filter((q) => {
+        // Always return non-active quests (completed/failed history is always visible)
+        if (q.status !== "active") return true;
+
+        const recurrence = q.recurrence as RecurrenceConfig | null;
+
+        // Recurring active quests: include if next occurrence falls within window
+        if (recurrence && recurrence.type !== "none") {
+          const nextDue = getNextDueFromNow(recurrence, q.completedAt ?? q.createdAt);
+          if (!nextDue) return false;
+          return nextDue <= windowEnd;
+        }
+
+        // One-time quests with a deadline: include if past-due or due within window
+        if (q.deadline) {
+          const deadline = new Date(q.deadline);
+          deadline.setHours(0, 0, 0, 0);
+          return deadline <= windowEnd; // past-due (< now) or within window
+        }
+
+        // One-time quests with no deadline: exclude from windowed view
+        // (they have no scheduled date; user can see them with "Show all quests")
+        return false;
+      });
+
+      return res.json(filtered.map(serializeQuest));
+    }
+
+    res.json(allQuests.map(serializeQuest));
   } catch (err) {
     req.log.error({ err }, "Error listing quests");
     res.status(500).json({ error: "Internal server error" });
