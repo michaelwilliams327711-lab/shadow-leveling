@@ -37,7 +37,7 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
   const clampY = (rawY: number, height: number) => {
     const margin = 8;
     if (rawY + height > window.innerHeight - margin) {
-      return rawY - height - TOOLTIP_OFFSET * 2;
+      return Math.max(8, rawY - height - TOOLTIP_OFFSET * 2);
     }
     return rawY;
   };

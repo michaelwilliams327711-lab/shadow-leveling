@@ -125,16 +125,20 @@ function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Da
     }
     case "monthly": {
       const dom = recurrence.dayOfMonth ?? 1;
+      next.setDate(1);
       next.setMonth(next.getMonth() + 1);
-      next.setDate(dom);
+      const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      next.setDate(Math.min(dom, lastDay));
       return next;
     }
     case "yearly": {
       const month = recurrence.month ?? 1;
       const day = recurrence.day ?? 1;
+      next.setDate(1);
       next.setFullYear(next.getFullYear() + 1);
       next.setMonth(month - 1);
-      next.setDate(day);
+      const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      next.setDate(Math.min(day, lastDay));
       return next;
     }
     default:
