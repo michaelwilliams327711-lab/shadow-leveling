@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { InfoTooltip } from "@/components/InfoTooltip";
 const bossArenaImg = "/images/boss-arena.png";
 
 const bossImageMap: Record<number, string> = {
@@ -74,10 +75,16 @@ export default function BossArena() {
       
       <div className="relative z-10 p-6 md:p-8 max-w-6xl mx-auto space-y-8">
         <div>
-          <h1 className="text-5xl font-display font-black text-destructive tracking-widest flex items-center gap-4 drop-shadow-[0_0_15px_rgba(220,38,38,0.6)]">
-            <Skull className="w-10 h-10" />
-            BOSS ARENA
-          </h1>
+          <InfoTooltip
+            what="Boss Arena — high-stakes real-world challenges."
+            fn="Each boss represents a significant challenge you must complete in the real world. Victory rewards you with large XP and Gold; defeat penalizes you."
+            usage="Only initiate a challenge when you are truly ready to attempt it. Bosses unlock as your total XP crosses certain thresholds."
+          >
+            <h1 className="text-5xl font-display font-black text-destructive tracking-widest flex items-center gap-4 drop-shadow-[0_0_15px_rgba(220,38,38,0.6)]">
+              <Skull className="w-10 h-10" />
+              BOSS ARENA
+            </h1>
+          </InfoTooltip>
           <p className="text-red-400/70 mt-2 tracking-widest uppercase text-sm">High stakes challenges. Victory brings massive rewards. Failure brings severe penalties.</p>
         </div>
 
@@ -87,11 +94,17 @@ export default function BossArena() {
             return (
               <Card key={boss.id} className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
                 {!boss.isUnlocked && (
-                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border border-white/5">
-                    <Lock className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="font-display tracking-widest text-lg text-white font-bold">LOCKED</p>
-                    <p className="text-sm text-muted-foreground mt-2">Requires {boss.xpThreshold.toLocaleString()} total XP</p>
-                  </div>
+                  <InfoTooltip
+                    what="Locked — this boss is not yet accessible."
+                    fn={`You must accumulate ${boss.xpThreshold.toLocaleString()} total XP to unlock this boss.`}
+                    usage="Keep completing quests to earn XP. Once you reach the threshold, the boss unlocks automatically."
+                  >
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border border-white/5">
+                      <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+                      <p className="font-display tracking-widest text-lg text-white font-bold">LOCKED</p>
+                      <p className="text-sm text-muted-foreground mt-2">Requires {boss.xpThreshold.toLocaleString()} total XP</p>
+                    </div>
+                  </InfoTooltip>
                 )}
 
                 {bossImage && (
@@ -104,9 +117,15 @@ export default function BossArena() {
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90" />
                     <div className="absolute bottom-0 left-0 p-4 flex items-end justify-between w-full">
                       <div>
-                        <Badge className="bg-destructive/70 text-white border-destructive/50 mb-1 px-3 tracking-widest font-bold text-xs backdrop-blur-sm">
-                          RANK {boss.rank}
-                        </Badge>
+                        <InfoTooltip
+                          what={`Rank ${boss.rank} Boss — difficulty tier of this encounter.`}
+                          fn="Higher rank bosses require more XP to unlock and offer greater rewards, but also harsher defeat penalties."
+                          usage="Attempt lower-rank bosses first to build experience and XP before taking on elite-rank encounters."
+                        >
+                          <Badge className="bg-destructive/70 text-white border-destructive/50 mb-1 px-3 tracking-widest font-bold text-xs backdrop-blur-sm">
+                            RANK {boss.rank}
+                          </Badge>
+                        </InfoTooltip>
                         <h2 className="text-2xl font-black font-display text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{boss.name}</h2>
                       </div>
                       {boss.isDefeated && (
@@ -147,27 +166,45 @@ export default function BossArena() {
                   </div>
 
                   <div className="flex items-center justify-between text-sm mb-6 border-t border-b border-white/5 py-4">
-                    <div className="space-y-1">
-                      <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Victory</p>
-                      <p className="text-primary font-bold">+{boss.xpReward} XP</p>
-                      <p className="text-gold font-bold">+{boss.goldReward} G</p>
-                    </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Defeat</p>
-                      <p className="text-destructive font-bold">-{boss.xpPenalty} XP</p>
-                      <p className="text-muted-foreground">- Stats drop</p>
-                    </div>
+                    <InfoTooltip
+                      what="Victory Reward — what you earn if you win."
+                      fn={`Defeating this boss awards +${boss.xpReward} XP and +${boss.goldReward} Gold. These are credited immediately after you confirm success.`}
+                      usage="Only confirm victory if you genuinely completed the real-world challenge. Integrity is the foundation of the system."
+                    >
+                      <div className="space-y-1">
+                        <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Victory</p>
+                        <p className="text-primary font-bold">+{boss.xpReward} XP</p>
+                        <p className="text-gold font-bold">+{boss.goldReward} G</p>
+                      </div>
+                    </InfoTooltip>
+                    <InfoTooltip
+                      what="Defeat Penalty — what you lose if you fail."
+                      fn={`Failing this boss costs ${boss.xpPenalty} XP and randomly reduces one or more character stats.`}
+                      usage="The penalty is applied automatically when you click ENTER DUNGEON and later admit defeat. This risk/reward mechanic makes victories meaningful."
+                    >
+                      <div className="text-right space-y-1">
+                        <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Defeat</p>
+                        <p className="text-destructive font-bold">-{boss.xpPenalty} XP</p>
+                        <p className="text-muted-foreground">- Stats drop</p>
+                      </div>
+                    </InfoTooltip>
                   </div>
 
                   <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 tracking-widest font-bold font-display"
-                        disabled={!boss.isUnlocked || boss.isDefeated}
-                      >
-                        {boss.isDefeated ? "ALREADY CONQUERED" : "INITIATE CHALLENGE"}
-                      </Button>
-                    </DialogTrigger>
+                    <InfoTooltip
+                      what={boss.isDefeated ? "Already Conquered — this boss has been defeated." : "Initiate Challenge — start this boss encounter."}
+                      fn={boss.isDefeated ? "You have already proven yourself against this boss. Each boss can only be defeated once." : "Opens a confirmation dialog. If you proceed, you are committing to attempt the real-world challenge."}
+                      usage={boss.isDefeated ? "Look for higher-rank bosses to continue pushing your limits." : "Press only when you are ready to start the challenge immediately in the real world. Back out if you are not prepared."}
+                    >
+                      <DialogTrigger asChild>
+                        <Button 
+                          className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 tracking-widest font-bold font-display"
+                          disabled={!boss.isUnlocked || boss.isDefeated}
+                        >
+                          {boss.isDefeated ? "ALREADY CONQUERED" : "INITIATE CHALLENGE"}
+                        </Button>
+                      </DialogTrigger>
+                    </InfoTooltip>
                     <DialogContent className="glass-panel border-destructive/50 bg-background/95">
                       <DialogHeader>
                         <DialogTitle className="text-2xl font-display font-black text-destructive flex items-center gap-3">

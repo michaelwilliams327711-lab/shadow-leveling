@@ -122,103 +122,101 @@ export default function AnalyticsDashboard() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight mb-1">
-          ANALYTICS
-        </h1>
         <InfoTooltip
-          what="Analytics — a full breakdown of your progression data."
-          fn="Aggregates your XP gains, gold, streaks, quest outcomes, and activity over time into charts and summaries."
-          usage="Use this page to identify trends, spot weaknesses, and optimize which quests you're prioritizing."
+          what="Analytics — your player progression overview."
+          fn="Aggregates all your quest activity into charts and metrics: streak, gold, XP progress, activity, and outcome history."
+          usage="Review this dashboard regularly to understand your growth trajectory and identify areas that need more consistency."
         >
-          <p className="text-muted-foreground text-lg tracking-widest uppercase cursor-default w-fit">
-            <BarChart2 className="inline w-4 h-4 mr-2 text-primary" />
-            Player Progression Overview
-          </p>
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight mb-1">
+            ANALYTICS
+          </h1>
         </InfoTooltip>
+        <p className="text-muted-foreground text-lg tracking-widest uppercase">
+          <BarChart2 className="inline w-4 h-4 mr-2 text-primary" />
+          Player Progression Overview
+        </p>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="glass-panel border border-orange-500/20">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
-                <Flame className="w-7 h-7 text-orange-500" />
-              </div>
-              <div>
-                <InfoTooltip
-                  what="Current Streak — consecutive days you've checked in without missing."
-                  fn="Resets to 0 if you skip a daily check-in. Longer streaks grow your XP/Gold reward multiplier."
-                  usage="Check in every day using the 'Daily Arise' button on the Status page to keep your streak alive."
-                >
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Current Streak</p>
-                </InfoTooltip>
-                <p className="text-3xl font-display font-bold text-orange-400">{data.character.streak}</p>
-                <p className="text-xs text-muted-foreground">days in a row</p>
-              </div>
-            </CardContent>
-          </Card>
+          <InfoTooltip
+            what="Current Streak — consecutive days with at least one quest completed."
+            fn="Increments by 1 each day you complete a quest. Resets to 0 if a full day passes without any quest completion."
+            usage="Maintain your streak by completing at least one quest each day, even on low-energy days."
+          >
+            <Card className="glass-panel border border-orange-500/20">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                  <Flame className="w-7 h-7 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Current Streak</p>
+                  <p className="text-3xl font-display font-bold text-orange-400">{data.character.streak}</p>
+                  <p className="text-xs text-muted-foreground">days in a row</p>
+                </div>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="glass-panel border border-yellow-500/20">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                <Coins className="w-7 h-7 text-yellow-400" />
-              </div>
-              <div>
-                <InfoTooltip
-                  what="Treasury / Gold — your total accumulated in-game currency."
-                  fn="Earned by completing quests. Higher-rank quests award more Gold per run."
-                  usage="Spend Gold in the Shop to redeem real-life rewards you've defined for yourself."
-                >
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Treasury / Gold</p>
-                </InfoTooltip>
-                <p className="text-3xl font-display font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">gold coins</p>
-              </div>
-            </CardContent>
-          </Card>
+          <InfoTooltip
+            what="Treasury / Gold — your current gold balance."
+            fn="Gold is earned by completing quests and spent in the System Shop on real-life rewards."
+            usage="Monitor your balance to plan purchases. Avoid spending all your Gold — save for higher-cost rewards."
+          >
+            <Card className="glass-panel border border-yellow-500/20">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                  <Coins className="w-7 h-7 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Treasury / Gold</p>
+                  <p className="text-3xl font-display font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">gold coins</p>
+                </div>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card className="glass-panel border border-primary/20">
-            <CardContent className="p-5 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-                  <Zap className="w-7 h-7 text-primary" />
+          <InfoTooltip
+            what="Next Level XP — your progress toward the next character level."
+            fn={`You currently have ${data.character.xp.toLocaleString()} XP out of ${data.character.xpToNextLevel.toLocaleString()} needed. Each level requires more XP than the last.`}
+            usage="Complete higher-rank quests and boss encounters to earn XP faster. Watch your level rise as you grind."
+          >
+            <Card className="glass-panel border border-primary/20">
+              <CardContent className="p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                    <Zap className="w-7 h-7 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Next Level XP</p>
+                    <p className="text-xl font-display font-bold text-primary">
+                      {data.character.xp.toLocaleString()} <span className="text-sm text-muted-foreground font-normal">/ {data.character.xpToNextLevel.toLocaleString()}</span>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <InfoTooltip
-                    what="Next Level XP — your current XP progress toward the next level."
-                    fn="XP accumulates from completed quests and resets per-level (not globally). The bar shows how far you are."
-                    usage="Focus on higher-rank quests and maintain your streak multiplier to level up faster."
-                  >
-                    <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Next Level XP</p>
-                  </InfoTooltip>
-                  <p className="text-xl font-display font-bold text-primary">
-                    {data.character.xp.toLocaleString()} <span className="text-sm text-muted-foreground font-normal">/ {data.character.xpToNextLevel.toLocaleString()}</span>
-                  </p>
-                </div>
-              </div>
-              <Progress value={xpPercent} className="h-2" indicatorClassName="bg-primary shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
-              <p className="text-xs text-muted-foreground">{xpPercent}% to next level</p>
-            </CardContent>
-          </Card>
+                <Progress value={xpPercent} className="h-2" indicatorClassName="bg-primary shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+                <p className="text-xs text-muted-foreground">{xpPercent}% to next level</p>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">
-              <InfoTooltip
-                what="Progression Curve — your XP earned per day over the last 30 days."
-                fn="Each point on the chart represents net XP gained that day from completed quests. Flat lines mean no activity."
-                usage="Look for consistent peaks — they indicate your most productive days. Aim to reduce gaps between peaks."
-              >
-                <span className="cursor-default">Progression Curve — 30-Day XP</span>
-              </InfoTooltip>
-            </CardTitle>
+            <InfoTooltip
+              what="Progression Curve — your daily XP gains over the past 30 days."
+              fn="Each point on the area chart represents the total XP earned on that calendar day from all quest completions and boss victories."
+              usage="Look for consistent daily gains. Flat areas indicate inactive days; peaks indicate heavy grinding sessions."
+            >
+              <CardTitle className="font-display tracking-widest text-lg">Progression Curve — 30-Day XP</CardTitle>
+            </InfoTooltip>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={240}>
@@ -259,15 +257,13 @@ export default function AnalyticsDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card className="glass-panel h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg">
-                <InfoTooltip
-                  what="Grind Breakdown — total XP earned broken down by which stat category the quests targeted."
-                  fn="Shows whether your grind is balanced across Strength, Intellect, Endurance, Agility, and Discipline."
-                  usage="If one bar dominates, consider adding quests in other categories to develop a well-rounded character."
-                >
-                  <span className="cursor-default">Grind Breakdown — XP by Stat</span>
-                </InfoTooltip>
-              </CardTitle>
+              <InfoTooltip
+                what="Grind Breakdown — total XP earned per character stat."
+                fn="Each bar shows how much XP has been attributed to a specific stat (Strength, Agility, Endurance, Intellect, Discipline) from all your quest completions."
+                usage="Use this to identify which stats you are neglecting. Create quests in the corresponding categories to balance your character."
+              >
+                <CardTitle className="font-display tracking-widest text-lg">Grind Breakdown — XP by Stat</CardTitle>
+              </InfoTooltip>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
@@ -295,15 +291,13 @@ export default function AnalyticsDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass-panel h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg">
-                <InfoTooltip
-                  what="Quest Outcome Breakdown — a pie chart of all your quest results to date."
-                  fn="Segments show counts of Completed, Failed, Missed, and Boss Defeated outcomes across your entire history."
-                  usage="A high Failed or Missed ratio signals quests that may be too ambitious — consider adjusting difficulty or deadlines."
-                >
-                  <span className="cursor-default">Quest Outcome Breakdown</span>
-                </InfoTooltip>
-              </CardTitle>
+              <InfoTooltip
+                what="Quest Outcome Breakdown — distribution of all quest results."
+                fn="A pie chart showing how many quests ended in Completed, Boss Defeated, Failed, or Missed Day outcomes."
+                usage="Aim for the green (Completed) slice to dominate. Large red or yellow slices indicate habits worth reviewing."
+              >
+                <CardTitle className="font-display tracking-widest text-lg">Quest Outcome Breakdown</CardTitle>
+              </InfoTooltip>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row items-center gap-4">
               {outcomeChartData.length === 0 ? (
@@ -368,15 +362,13 @@ export default function AnalyticsDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">
-              <InfoTooltip
-                what="Activity Heatmap — a full-year view of your daily quest activity."
-                fn="Each cell is one day. Darker green means more quests completed. The label shows your total quest count for the year."
-                usage="Identify your most active weeks and any streaks of inactivity. Consistency over the year is the goal."
-              >
-                <span className="cursor-default">Activity Heatmap — Past Year</span>
-              </InfoTooltip>
-            </CardTitle>
+            <InfoTooltip
+              what="Activity Heatmap — quest completions over the past year."
+              fn="Each square represents a calendar day. Darker green = more quests completed that day; empty = no activity."
+              usage="Use this to see your long-term consistency at a glance. Identify months or weeks where you went dark and build new habits to fill those gaps."
+            >
+              <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
+            </InfoTooltip>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <ActivityCalendar
@@ -403,15 +395,13 @@ export default function AnalyticsDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card className="glass-panel">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">
-              <InfoTooltip
-                what="Raid Schedule — an interactive monthly calendar for planning and reviewing your quest timeline."
-                fn="Navigate months to see which days you were active. Today is highlighted in green, selected days in purple."
-                usage="Use it to plan ahead — spot upcoming gaps in your schedule and decide which quests to tackle each day."
-              >
-                <span className="cursor-default">Raid Schedule — Monthly View</span>
-              </InfoTooltip>
-            </CardTitle>
+            <InfoTooltip
+              what="Raid Schedule — a monthly calendar for planning your challenges."
+              fn="A navigable calendar showing the current month. Use it to plan boss challenges, track deadlines, and schedule recurring quests."
+              usage="Click a day to select it as a reference point. Use quest deadlines and recurrence settings to populate your schedule in the Quest Log."
+            >
+              <CardTitle className="font-display tracking-widest text-lg">Raid Schedule — Monthly View</CardTitle>
+            </InfoTooltip>
           </CardHeader>
           <CardContent>
             <style>{`

@@ -713,10 +713,16 @@ export default function Quests() {
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
-            <ScrollText className="w-8 h-8 text-primary" />
-            QUEST LOG
-          </h1>
+          <InfoTooltip
+            what="Quest Log — your personal mission board."
+            fn="Tracks all real-world tasks as game quests. Completing quests earns XP and Gold; failing costs them."
+            usage="Add quests with the ADD QUEST button. Complete or Fail them from the Active tab to update your stats."
+          >
+            <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
+              <ScrollText className="w-8 h-8 text-primary" />
+              QUEST LOG
+            </h1>
+          </InfoTooltip>
           <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">System missions and daily tasks</p>
         </div>
 
@@ -1003,9 +1009,27 @@ export default function Quests() {
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="bg-card border border-white/5 mb-6 w-full justify-start rounded-xl p-1">
-          <TabsTrigger value="active" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-primary/20 data-[state=active]:text-primary">ACTIVE</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">CLEARED</TabsTrigger>
-          <TabsTrigger value="failed" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive">FAILED</TabsTrigger>
+          <InfoTooltip
+            what="ACTIVE tab — quests currently in progress."
+            fn="Lists all quests that have not yet been completed, failed, or paused."
+            usage="Complete or Fail a quest from here. Use Pause to temporarily remove it from your active rotation."
+          >
+            <TabsTrigger value="active" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-primary/20 data-[state=active]:text-primary">ACTIVE</TabsTrigger>
+          </InfoTooltip>
+          <InfoTooltip
+            what="CLEARED tab — successfully completed quests."
+            fn="Shows every quest you have marked as complete. Completion awards XP and Gold."
+            usage="Review your cleared missions here. Delete old entries to keep the log clean."
+          >
+            <TabsTrigger value="completed" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">CLEARED</TabsTrigger>
+          </InfoTooltip>
+          <InfoTooltip
+            what="FAILED tab — quests you did not complete."
+            fn="Lists quests that were manually failed or auto-failed when their deadline passed."
+            usage="Review failed quests to spot patterns. Each failure cost you XP and Gold."
+          >
+            <TabsTrigger value="failed" className="rounded-lg tracking-widest font-semibold data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive">FAILED</TabsTrigger>
+          </InfoTooltip>
         </TabsList>
 
         {(['active', 'completed', 'failed'] as const).map((status) => (
@@ -1041,10 +1065,16 @@ export default function Quests() {
                               {quest.category}
                             </Badge>
                             {recLabel && (
-                              <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-none flex items-center gap-1">
-                                <RotateCcw className="w-2.5 h-2.5" />
-                                {recLabel}
-                              </Badge>
+                              <InfoTooltip
+                                what="Recurrence — this quest repeats automatically."
+                                fn="After completion or failure, the quest resets and reappears in your Active list on the next scheduled date."
+                                usage="Set recurring quests for daily habits or weekly reviews so they auto-regenerate without manual re-entry."
+                              >
+                                <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-none flex items-center gap-1">
+                                  <RotateCcw className="w-2.5 h-2.5" />
+                                  {recLabel}
+                                </Badge>
+                              </InfoTooltip>
                             )}
                             {quest.isPaused && (
                               <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400 border-none flex items-center gap-1">
@@ -1056,10 +1086,16 @@ export default function Quests() {
                               const statKey = getEffectiveStat(quest.category, quest.statBoost);
                               const { label, icon: StatIcon, color } = STAT_DISPLAY[statKey] ?? STAT_DISPLAY["strength"];
                               return (
-                                <span className={`flex items-center gap-1 text-xs ${color}`}>
-                                  <StatIcon className="w-3 h-3" />
-                                  {label}
-                                </span>
+                                <InfoTooltip
+                                  what={`Stat Boost: ${label} — the attribute this quest trains.`}
+                                  fn="Completing this quest contributes XP toward your character's stat distribution. Each stat represents a real-world skill area."
+                                  usage="Create quests in matching categories to build balanced stats. Override the auto-assignment via the Stat Boost field when editing."
+                                >
+                                  <span className={`flex items-center gap-1 text-xs ${color}`}>
+                                    <StatIcon className="w-3 h-3" />
+                                    {label}
+                                  </span>
+                                </InfoTooltip>
                               );
                             })()}
                           </div>
@@ -1069,13 +1105,31 @@ export default function Quests() {
                           )}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
                             <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {quest.durationMinutes}m</span>
-                            <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {quest.xpReward} XP</span>
-                            <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {quest.goldReward} G</span>
+                            <InfoTooltip
+                              what="XP Reward — experience points awarded on completion."
+                              fn="XP accumulates toward your next level. Higher rank quests award more XP."
+                              usage="Complete quests to earn XP. Failing a quest deducts XP instead."
+                            >
+                              <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {quest.xpReward} XP</span>
+                            </InfoTooltip>
+                            <InfoTooltip
+                              what="Gold Reward — currency awarded on completion."
+                              fn="Gold is spent in the System Shop to purchase real-life rewards."
+                              usage="Complete quests to earn Gold. Failing deducts Gold. Spend it in the Shop."
+                            >
+                              <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {quest.goldReward} G</span>
+                            </InfoTooltip>
                             {quest.targetAmount != null && (
-                              <span className="flex items-center gap-1.5 text-cyan-400">
-                                <Target className="w-4 h-4" />
-                                Target: {quest.targetAmount}{quest.amountUnit ? ` ${quest.amountUnit}` : ""}
-                              </span>
+                              <InfoTooltip
+                                what="Completion Goal — the measurable target for this quest."
+                                fn="A numeric target you must hit (e.g. 100 pages, 10 oz). Tracks quantified progress."
+                                usage="Use this to set a concrete benchmark. Hit the target before marking the quest complete."
+                              >
+                                <span className="flex items-center gap-1.5 text-cyan-400">
+                                  <Target className="w-4 h-4" />
+                                  Target: {quest.targetAmount}{quest.amountUnit ? ` ${quest.amountUnit}` : ""}
+                                </span>
+                              </InfoTooltip>
                             )}
                           </div>
                         </div>
@@ -1083,57 +1137,87 @@ export default function Quests() {
                         <div className="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
                           {status === 'active' && (
                             <>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
-                                onClick={() => setEditingQuest(quest)}
-                                title="Edit quest"
+                              <InfoTooltip
+                                what="Edit — modify this quest's details."
+                                fn="Opens the edit form where you can change the name, difficulty, duration, category, and recurrence."
+                                usage="Use to correct mistakes or adjust a quest as your goals evolve."
                               >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className={cn(
-                                  "border-yellow-500/30 hover:border-yellow-500/60 hover:bg-yellow-500/10",
-                                  quest.isPaused ? "text-yellow-400" : "text-yellow-400/60 hover:text-yellow-400"
-                                )}
-                                onClick={() => onTogglePause(quest)}
-                                title={quest.isPaused ? "Resume quest" : "Pause quest"}
-                                disabled={updateQuest.isPending}
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
+                                  onClick={() => setEditingQuest(quest)}
+                                  title="Edit quest"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </InfoTooltip>
+                              <InfoTooltip
+                                what={quest.isPaused ? "Resume — reactivate this paused quest." : "Pause — temporarily suspend this quest."}
+                                fn={quest.isPaused ? "Moves the quest back to Active so it can be completed or failed." : "Hides the quest from your active rotation without deleting it."}
+                                usage={quest.isPaused ? "Resume when you are ready to tackle the quest again." : "Pause seasonal or low-priority quests you don't want to fail."}
                               >
-                                {quest.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
-                                onClick={() => onFail(quest.id)}
-                                disabled={failQuest.isPending || completeQuest.isPending}
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className={cn(
+                                    "border-yellow-500/30 hover:border-yellow-500/60 hover:bg-yellow-500/10",
+                                    quest.isPaused ? "text-yellow-400" : "text-yellow-400/60 hover:text-yellow-400"
+                                  )}
+                                  onClick={() => onTogglePause(quest)}
+                                  title={quest.isPaused ? "Resume quest" : "Pause quest"}
+                                  disabled={updateQuest.isPending}
+                                >
+                                  {quest.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                                </Button>
+                              </InfoTooltip>
+                              <InfoTooltip
+                                what="Fail — mark this quest as failed."
+                                fn="Immediately deducts XP and Gold as a penalty. Quest moves to the Failed tab."
+                                usage="Press if you know you won't complete the quest. Repeated failures increase the penalty streak."
                               >
-                                <XCircle className="w-4 h-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Fail</span>
-                              </Button>
-                              <Button
-                                className="flex-1 sm:flex-none bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 hover:text-green-300"
-                                onClick={() => onComplete(quest.id)}
-                                disabled={failQuest.isPending || completeQuest.isPending}
+                                <Button
+                                  variant="outline"
+                                  className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                                  onClick={() => onFail(quest.id)}
+                                  disabled={failQuest.isPending || completeQuest.isPending}
+                                >
+                                  <XCircle className="w-4 h-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Fail</span>
+                                </Button>
+                              </InfoTooltip>
+                              <InfoTooltip
+                                what="Clear — mark this quest as successfully completed."
+                                fn="Awards the listed XP and Gold immediately. Quest moves to the Cleared tab."
+                                usage="Press only when you have genuinely finished the real-world task."
                               >
-                                <CheckCircle2 className="w-4 h-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Clear</span>
-                              </Button>
+                                <Button
+                                  className="flex-1 sm:flex-none bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 hover:text-green-300"
+                                  onClick={() => onComplete(quest.id)}
+                                  disabled={failQuest.isPending || completeQuest.isPending}
+                                >
+                                  <CheckCircle2 className="w-4 h-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Clear</span>
+                                </Button>
+                              </InfoTooltip>
                             </>
                           )}
                           {(status === 'completed' || status === 'failed') && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
-                              onClick={() => onDelete(quest.id)}
-                              title="Delete quest"
+                            <InfoTooltip
+                              what="Delete — permanently remove this quest record."
+                              fn="Deletes the quest entry from the system. This cannot be undone."
+                              usage="Use to clean up your log after reviewing completed or failed quests."
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+                                onClick={() => onDelete(quest.id)}
+                                title="Delete quest"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </InfoTooltip>
                           )}
                         </div>
                       </CardContent>

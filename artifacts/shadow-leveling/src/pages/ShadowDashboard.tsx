@@ -233,107 +233,107 @@ export default function ShadowDashboard() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1
-          className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-1"
-          style={{ color: "#ef4444", textShadow: "0 0 30px rgba(239,68,68,0.4)" }}
-        >
-          SHADOW DASHBOARD
-        </h1>
         <InfoTooltip
-          what="Shadow Dashboard — a brutally honest view of your failures over the last 30 days."
-          fn="Aggregates every failed quest, missed day, and XP penalty into charts and summaries so nothing gets buried."
-          usage="Use it to confront patterns — if the same stat or category keeps appearing, that's where your discipline is breaking down."
+          what="Shadow Dashboard — your failure analytics hub."
+          fn="Aggregates all XP losses, missed days, and failed quests from the past 30 days into a single dark-mode reckoning screen."
+          usage="Use this weekly to confront your failures honestly. The insights here directly guide what to fix in your Quest Log."
         >
-          <p className="text-muted-foreground text-lg tracking-widest uppercase cursor-default w-fit">
-            <TrendingDown className="inline w-4 h-4 mr-2 text-red-500" />
-            Failure Analytics — 30-Day Reckoning
-          </p>
+          <h1
+            className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-1"
+            style={{ color: "#ef4444", textShadow: "0 0 30px rgba(239,68,68,0.4)" }}
+          >
+            SHADOW DASHBOARD
+          </h1>
         </InfoTooltip>
+        <p className="text-muted-foreground text-lg tracking-widest uppercase">
+          <TrendingDown className="inline w-4 h-4 mr-2 text-red-500" />
+          Failure Analytics — 30-Day Reckoning
+        </p>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="glass-panel border border-red-500/30" style={{ boxShadow: "0 0 20px rgba(239,68,68,0.07)" }}>
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                <TrendingDown className="w-7 h-7 text-red-500" />
-              </div>
-              <div>
-                <InfoTooltip
-                  what="Total XP Bled — the sum of all XP lost to failed quests and missed days over the last 30 days."
-                  fn="Each failed or missed quest deducts XP from your total. Higher fail streaks apply a multiplier that worsens the loss."
-                  usage="Minimize this by completing quests before deadlines and keeping your fail streak at zero."
-                >
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Total XP Bled</p>
-                </InfoTooltip>
-                <p className="text-3xl font-display font-bold text-red-400">
-                  -{data.totalXpBled.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">last 30 days</p>
-              </div>
-            </CardContent>
-          </Card>
+          <InfoTooltip
+            what="Total XP Bled — XP lost to failures in the last 30 days."
+            fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
+            usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
+          >
+            <Card className="glass-panel border border-red-500/30" style={{ boxShadow: "0 0 20px rgba(239,68,68,0.07)" }}>
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <TrendingDown className="w-7 h-7 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
+                  <p className="text-3xl font-display font-bold text-red-400">
+                    -{data.totalXpBled.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">last 30 days</p>
+                </div>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px rgba(153,27,27,0.07)" }}>
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
-                <Skull className="w-7 h-7 text-red-700" />
-              </div>
-              <div>
-                <InfoTooltip
-                  what="Streaks Shattered — the number of days in the last 30 where you missed your daily check-in entirely."
-                  fn="Each missed day breaks your streak, resets your multiplier bonus, and often triggers automatic quest failures for any active deadlines."
-                  usage="Even a single check-in per day keeps your streak alive. Use the 'Daily Arise' button on the Status page."
-                >
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Streaks Shattered</p>
-                </InfoTooltip>
-                <p className="text-3xl font-display font-bold" style={{ color: "#dc2626" }}>
-                  {data.streaksShattered}
-                </p>
-                <p className="text-xs text-muted-foreground">missed days recorded</p>
-              </div>
-            </CardContent>
-          </Card>
+          <InfoTooltip
+            what="Streaks Shattered — days where your streak was broken."
+            fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
+            usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
+          >
+            <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px rgba(153,27,27,0.07)" }}>
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
+                  <Skull className="w-7 h-7 text-red-700" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
+                  <p className="text-3xl font-display font-bold" style={{ color: "#dc2626" }}>
+                    {data.streaksShattered}
+                  </p>
+                  <p className="text-xs text-muted-foreground">missed days recorded</p>
+                </div>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px rgba(234,88,12,0.07)" }}>
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
-                <AlertTriangle className="w-7 h-7 text-orange-500" />
-              </div>
-              <div>
-                <InfoTooltip
-                  what="Greatest Weakness — the stat category where you've failed the most quests this month."
-                  fn="Calculated from the category of every manually failed quest in the last 30 days. Ties are broken by whichever appeared first."
-                  usage="This is your blind spot. Either assign easier quests in this category or double down to conquer it."
-                >
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5 cursor-default">Greatest Weakness</p>
-                </InfoTooltip>
-                <p className="text-xl font-display font-bold text-orange-400 truncate max-w-[140px]">
-                  {data.greatestWeakness}
-                </p>
-                <p className="text-xs text-muted-foreground">most failures here</p>
-              </div>
-            </CardContent>
-          </Card>
+          <InfoTooltip
+            what="Greatest Weakness — the stat category with the most failures."
+            fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
+            usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
+          >
+            <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px rgba(234,88,12,0.07)" }}>
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
+                  <AlertTriangle className="w-7 h-7 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Greatest Weakness</p>
+                  <p className="text-xl font-display font-bold text-orange-400 truncate max-w-[140px]">
+                    {data.greatestWeakness}
+                  </p>
+                  <p className="text-xs text-muted-foreground">most failures here</p>
+                </div>
+              </CardContent>
+            </Card>
+          </InfoTooltip>
         </motion.div>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="glass-panel border border-red-900/30">
           <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg text-red-400">
-              <InfoTooltip
-                what="XP Bleed — a day-by-day chart of XP lost to failures and missed days over the last 30 days."
-                fn="Each data point shows the net negative XP for that day. Deeper dips mean more severe penalty events occurred."
-                usage="Look for clusters of loss — they reveal rough patches where multiple quests failed in the same period."
-              >
-                <span className="cursor-default">XP Bleed — 30-Day Loss Curve</span>
-              </InfoTooltip>
-            </CardTitle>
+            <InfoTooltip
+              what="XP Bleed — your daily XP losses over the past 30 days."
+              fn="Each point shows how much XP was lost on that day due to failed quests or missed days. The area fills downward, representing loss."
+              usage="Clusters of loss reveal your worst periods. Cross-reference with the Graveyard below to understand what habits caused each drop."
+            >
+              <CardTitle className="font-display tracking-widest text-lg text-red-400">
+                XP Bleed — 30-Day Loss Curve
+              </CardTitle>
+            </InfoTooltip>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={240}>
@@ -385,15 +385,15 @@ export default function ShadowDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg text-red-400">
-                <InfoTooltip
-                  what="Time Sink — which stat categories your failed quests belong to, ranked by failure count."
-                  fn="Each segment represents a category (Strength, Intellect, etc.) and its share of total failures this month."
-                  usage="The largest slice is where your efforts are consistently not paying off — consider adjusting quest difficulty or swapping categories."
-                >
-                  <span className="cursor-default">Time Sink — Failures by Category</span>
-                </InfoTooltip>
-              </CardTitle>
+              <InfoTooltip
+                what="Time Sink — your failures broken down by quest category."
+                fn="A doughnut chart showing which stat categories (Strength, Intellect, etc.) account for the most failed or missed quests."
+                usage="The largest slice is your biggest time sink. Focus improvement efforts there — either reduce difficulty or increase accountability for tasks in that category."
+              >
+                <CardTitle className="font-display tracking-widest text-lg text-red-400">
+                  Time Sink — Failures by Category
+                </CardTitle>
+              </InfoTooltip>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
               {data.failuresByCategory.length === 0 ? (
@@ -460,15 +460,15 @@ export default function ShadowDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
-              <CardTitle className="font-display tracking-widest text-lg text-red-400">
-                <InfoTooltip
-                  what="Graveyard — a log of your most recent failed quests and missed days."
-                  fn="Shows up to 20 entries sorted by date. Each entry includes the action type (FAILED or MISSED_DAY), stat category, quest description, date, and XP lost."
-                  usage="Review this to understand exactly what slipped and when — use patterns here to adjust your quest list or schedule."
-                >
-                  <span className="cursor-default">Graveyard — Recent Failures</span>
-                </InfoTooltip>
-              </CardTitle>
+              <InfoTooltip
+                what="Graveyard — a log of your most recent failures."
+                fn="Lists the last 20 failed quests and missed days, including the date, category, description, and XP penalty incurred."
+                usage="Review this regularly to spot recurring failure patterns. If the same description appears repeatedly, that task needs to be restructured or broken into smaller steps."
+              >
+                <CardTitle className="font-display tracking-widest text-lg text-red-400">
+                  Graveyard — Recent Failures
+                </CardTitle>
+              </InfoTooltip>
             </CardHeader>
             <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">
               {data.entries.length === 0 ? (

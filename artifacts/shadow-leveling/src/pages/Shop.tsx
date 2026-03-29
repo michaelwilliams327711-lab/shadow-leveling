@@ -90,10 +90,16 @@ export default function Shop() {
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
-            <Store className="w-8 h-8 text-primary" />
-            SYSTEM SHOP
-          </h1>
+          <InfoTooltip
+            what="System Shop — exchange Gold for real-life rewards."
+            fn="A catalog of rewards you define. Each item has a Gold cost. Purchasing deducts Gold from your treasury."
+            usage="Add rewards with the + button. Complete quests to earn Gold, then spend it here on treats you've decided to allow yourself."
+          >
+            <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
+              <Store className="w-8 h-8 text-primary" />
+              SYSTEM SHOP
+            </h1>
+          </InfoTooltip>
           <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">Exchange Gold for real-life rewards</p>
         </div>
 
@@ -161,26 +167,44 @@ export default function Shop() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">{reward.name}</h3>
-                    <span className="text-xs uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">{reward.category}</span>
+                    <InfoTooltip
+                      what={`Category: ${reward.category} — the type of real-life reward.`}
+                      fn="Organizes rewards so you can spot which areas you are rewarding yourself in."
+                      usage="Set the category when adding a reward to group similar items together in your shop."
+                    >
+                      <span className="text-xs uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">{reward.category}</span>
+                    </InfoTooltip>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-lg border border-gold/20">
-                    <Coins className="w-4 h-4 text-gold" />
-                    <span className="font-bold text-gold">{reward.goldCost}</span>
-                  </div>
+                  <InfoTooltip
+                    what="Gold Cost — the price of this reward."
+                    fn="The number of Gold coins required to purchase this item. Deducted from your treasury on purchase."
+                    usage="Set prices that feel proportional to the real value of the reward. Higher prices make rewards feel more earned."
+                  >
+                    <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-lg border border-gold/20">
+                      <Coins className="w-4 h-4 text-gold" />
+                      <span className="font-bold text-gold">{reward.goldCost}</span>
+                    </div>
+                  </InfoTooltip>
                 </div>
                 
-                <Button 
-                  onClick={() => onPurchase(reward.id, reward.goldCost)}
-                  disabled={!canAfford || purchaseReward.isPending}
-                  className={`w-full mt-4 flex items-center justify-center gap-2 font-bold tracking-widest transition-all ${
-                    canAfford 
-                      ? 'bg-primary/20 text-primary border border-primary/50 hover:bg-primary/30' 
-                      : 'bg-background text-muted-foreground border border-border'
-                  }`}
+                <InfoTooltip
+                  what={canAfford ? "Purchase — buy this reward with your Gold." : "Insufficient Gold — you cannot afford this item yet."}
+                  fn={canAfford ? "Deducts the Gold cost from your treasury and records the purchase." : "You need more Gold to buy this. Complete more quests to earn Gold."}
+                  usage={canAfford ? "Click to redeem this reward. Only buy it when you've truly earned it — this is part of the system." : "Keep completing quests to accumulate the Gold needed. Check the Quest Log to find high-reward missions."}
                 >
-                  <ShoppingCart className="w-4 h-4" />
-                  {canAfford ? "PURCHASE" : "INSUFFICIENT GOLD"}
-                </Button>
+                  <Button 
+                    onClick={() => onPurchase(reward.id, reward.goldCost)}
+                    disabled={!canAfford || purchaseReward.isPending}
+                    className={`w-full mt-4 flex items-center justify-center gap-2 font-bold tracking-widest transition-all ${
+                      canAfford 
+                        ? 'bg-primary/20 text-primary border border-primary/50 hover:bg-primary/30' 
+                        : 'bg-background text-muted-foreground border border-border'
+                    }`}
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    {canAfford ? "PURCHASE" : "INSUFFICIENT GOLD"}
+                  </Button>
+                </InfoTooltip>
               </CardContent>
             </Card>
           );
