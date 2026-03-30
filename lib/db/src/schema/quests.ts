@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -57,9 +57,36 @@ export const questDailyLogTable = pgTable("quest_daily_log", {
   unique("quest_daily_log_quest_id_date_unique").on(table.questId, table.date),
 ]);
 
+export const dailyOrdersTable = pgTable("daily_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  characterId: integer("character_id").notNull(),
+  name: text("name").notNull(),
+  statCategory: text("stat_category").notNull().default("discipline"),
+  completed: boolean("completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  date: text("date").notNull(),
+});
+
+export const dailyHiddenBoxRewardsTable = pgTable("daily_hidden_box_rewards", {
+  id: serial("id").primaryKey(),
+  characterId: integer("character_id").notNull(),
+  date: text("date").notNull(),
+  type: text("type").notNull(),
+  goldBonus: integer("gold_bonus"),
+  statBoost: integer("stat_boost"),
+  stat: text("stat"),
+  claimed: boolean("claimed").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  claimedAt: timestamp("claimed_at"),
+}, (table) => [
+  unique("daily_hidden_box_rewards_char_date_unique").on(table.characterId, table.date),
+]);
+
 export const insertQuestSchema = createInsertSchema(questsTable).omit({ id: true, createdAt: true, completedAt: true });
 export type InsertQuest = z.infer<typeof insertQuestSchema>;
 export type Quest = typeof questsTable.$inferSelect;
 export type QuestLog = typeof questLogTable.$inferSelect;
 export type PenaltyLog = typeof penaltyLogTable.$inferSelect;
 export type QuestDailyLog = typeof questDailyLogTable.$inferSelect;
+export type DailyOrder = typeof dailyOrdersTable.$inferSelect;

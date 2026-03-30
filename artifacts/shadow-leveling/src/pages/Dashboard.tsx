@@ -24,6 +24,7 @@ import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
+import { DailyOrders } from "@/components/DailyOrders";
 
 function formatRelativeTime(isoString: string): string {
   const now = Date.now();
@@ -350,6 +351,8 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+
+          <DailyOrders />
 
           <Card className="glass-panel">
             <CardHeader>

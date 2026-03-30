@@ -12,6 +12,7 @@ import {
   processOverdueQuests,
   getGetCharacterQueryKey,
   getListQuestsWindowedQueryKey,
+  getDailyOrdersTodayQueryKey,
 } from "@workspace/api-client-react";
 
 // Pages
@@ -57,8 +58,13 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
 
     const runChecks = async () => {
       try {
-        const loginResult = await characterLogin();
-        const overdueResult = await processOverdueQuests();
+        const localDate = getLocalDateStr();
+        const headers = { "x-local-date": localDate };
+
+        const [loginResult, overdueResult] = await Promise.all([
+          characterLogin({ headers }),
+          processOverdueQuests({ headers }),
+        ]);
 
         const allPenalties: PenaltyEvent[] = [
           ...(loginResult.penalties ?? []),
@@ -70,6 +76,11 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
           queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
           onPenalties(allPenalties);
         }
+
+        fetch("/api/daily-orders/expire-stale", { method: "POST", headers }).then(() => {
+          queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
+        }).catch(() => {});
+
       } catch {
         // silently ignore startup check errors
       }

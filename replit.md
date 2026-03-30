@@ -37,12 +37,13 @@ artifacts-monorepo/
 ## Features
 
 1. **Character Dashboard** - Level, XP progress, Gold, streak counter, stats (STR/INT/END/AGI/DIS), Radar chart, GitHub-style activity heatmap, daily check-in button, RNG event banner
-2. **Quest System** - CRUD quests with Rank (F-SSS), category, duration. Complete/Fail with XP+Gold rewards/penalties scaled to difficulty. Quest log history.
-3. **Streak System** - Daily check-in builds streak, multipliers (1x-3x), milestone bonuses at 7/14/30/60/100 days
-4. **RNG Events** - Deterministic daily random events (30% chance): Surge Day, Treasure Surge, Awakening Pulse, Chaos Rift
-5. **Rewards Shop** - Spend Gold on custom guilt-free rewards
-6. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
-7. **The Awakening** - Vision/Anti-Vision journaling page
+2. **Daily Orders** - Lightweight quick-add tasks on Dashboard. Type name, pick stat, press Enter. Awards E-rank XP (25) + 1 stat point. X/5 counter; at 5/5 a Hidden Box triggers with Gold or stat boost reward revealed via Solo Leveling-style animation. Orders vanish at midnight with zero penalty.
+3. **Quest System** - CRUD quests with Rank (F-SSS), category, duration. Complete/Fail with XP+Gold rewards/penalties scaled to difficulty. Quest log history.
+4. **Streak System** - Daily check-in builds streak, multipliers (1x-3x), milestone bonuses at 7/14/30/60/100 days
+5. **RNG Events** - Deterministic daily random events (30% chance): Surge Day, Treasure Surge, Awakening Pulse, Chaos Rift
+6. **Rewards Shop** - Spend Gold on custom guilt-free rewards
+7. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
+8. **The Awakening** - Vision/Anti-Vision journaling page
 
 ## API Routes
 
@@ -62,12 +63,17 @@ All at `/api`:
 - `POST /bosses/:id/challenge` - Challenge a boss
 - `GET/PUT /awakening` - Vision journal
 - `GET /rng/daily-event` - Daily RNG event
+- `GET /daily-orders/today` - Today's daily orders
+- `POST /daily-orders` - Create daily order (body: { name, statCategory })
+- `POST /daily-orders/:id/complete` - Complete an order (awards XP + stat; checks 5/5 Hidden Box)
+- `DELETE /daily-orders/:id` - Delete uncompleted order
 
 ## Database Tables
 
 - `character` - Single row, all player stats
 - `quests` - All quests with difficulty/category/rewards
 - `quest_log` - Immutable history of completions/failures
+- `daily_orders` - UUID PK, daily quick-add tasks (expire at midnight, never appear in failure logs)
 - `rewards` - Shop items
 - `bosses` - Boss challenges with defeat records
 - `awakening` - Single row, vision journal
