@@ -747,7 +747,9 @@ export default function Quests() {
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 pt-4">
                 <FormField control={createForm.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quest Objective</FormLabel>
+                    <InfoTooltip what="The name of the task you want to track." fn="Displayed on your quest card and used as the primary identifier in your log." usage="Be specific — 'Read 20 pages of Atomic Habits' is better than 'Read'.">
+                      <FormLabel>Quest Objective</FormLabel>
+                    </InfoTooltip>
                     <FormControl><Input {...field} placeholder="e.g. 1 Hour of C++ Programming" className="bg-background/50" /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -755,7 +757,9 @@ export default function Quests() {
 
                 <FormField control={createForm.control} name="description" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <InfoTooltip what="Extra context about what this mission involves." fn="Shown beneath the quest title on your card as a supporting note." usage="Use this to clarify conditions, tools needed, or any rule you want to remember when completing the task.">
+                      <FormLabel>Description <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    </InfoTooltip>
                     <FormControl>
                       <Textarea {...field} placeholder="What does this mission entail?" className="bg-background/50 resize-none" rows={2} />
                     </FormControl>
@@ -766,7 +770,9 @@ export default function Quests() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={createForm.control} name="category" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <InfoTooltip what="The life domain this quest belongs to." fn="Groups your quest under a stat category — Strength, Intelligence, Discipline, etc. Determines which stat grows when you complete it." usage="Pick the category that best matches the real-world skill or habit the quest is training.">
+                        <FormLabel>Category</FormLabel>
+                      </InfoTooltip>
                       <FormControl>
                         <CategoryCombobox value={field.value} onChange={field.onChange} />
                       </FormControl>
@@ -775,7 +781,9 @@ export default function Quests() {
                   )} />
                   <FormField control={createForm.control} name="difficulty" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Rank</FormLabel>
+                      <InfoTooltip what="The difficulty tier of this quest." fn="Ranks run E → D → C → B → A → S. Higher ranks award significantly more XP and Gold on completion but also penalize more on failure." usage="Match the rank to the actual effort required. Under-ranking easy tasks wastes potential; over-ranking impossible tasks leads to repeated failures.">
+                        <FormLabel>Rank</FormLabel>
+                      </InfoTooltip>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
@@ -791,7 +799,9 @@ export default function Quests() {
 
                 <FormField control={createForm.control} name="statBoost" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                    <InfoTooltip what="Which character stat this quest boosts on completion." fn="Overrides the stat automatically assigned by the category. Useful when a quest spans multiple domains and you want to direct the XP to a specific stat." usage="Leave on Auto unless the default stat assignment doesn't reflect the primary skill being trained.">
+                      <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                    </InfoTooltip>
                     <Select onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)} value={field.value ?? "__none__"}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Auto (from category)" /></SelectTrigger></FormControl>
                       <SelectContent>
@@ -816,7 +826,9 @@ export default function Quests() {
 
                 <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Duration (minutes)</FormLabel>
+                    <InfoTooltip what="How long you plan to spend on this quest." fn="Logged in minutes. Used to track total time invested per category over time." usage="Set a realistic target. If a task consistently takes longer than the duration you set, increase it to keep your log accurate.">
+                      <FormLabel>Duration (minutes)</FormLabel>
+                    </InfoTooltip>
                     <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -825,7 +837,9 @@ export default function Quests() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={createForm.control} name="targetAmount" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <InfoTooltip what="A numeric target that defines quest completion." fn="Pairs with Unit of Measure to create a trackable progress goal — e.g. 100 pages, 5 sets, 2000 words." usage="Use this for measurable tasks where time alone doesn't capture progress. Leave blank for time-only quests.">
+                        <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      </InfoTooltip>
                       <FormControl>
                         <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} className="bg-background/50" />
                       </FormControl>
@@ -834,7 +848,9 @@ export default function Quests() {
                   )} />
                   <FormField control={createForm.control} name="amountUnit" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      <InfoTooltip what="The unit for your completion goal." fn="Labels the Completion Goal number — e.g. pages, oz, reps, words, km. Shown on the quest card next to your progress." usage="Set this whenever you have a Completion Goal. Without a unit the number lacks context.">
+                        <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
+                      </InfoTooltip>
                       <FormControl>
                         <Input placeholder="e.g. oz, pages" {...field} className="bg-background/50" />
                       </FormControl>
@@ -845,9 +861,11 @@ export default function Quests() {
 
                 <FormField control={createForm.control} name="deadline" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Deadline <span className="text-muted-foreground">(optional)</span>
-                    </FormLabel>
+                    <InfoTooltip what="A hard cutoff date and time for this quest." fn="When the deadline passes, the quest is automatically marked as Failed, deducting XP and Gold as a penalty." usage="Only set a deadline if the task genuinely must be done by that time. Deadlines add real stakes — don't set them casually.">
+                      <FormLabel>
+                        Deadline <span className="text-muted-foreground">(optional)</span>
+                      </FormLabel>
+                    </InfoTooltip>
                     <FormControl>
                       <Input
                         type="datetime-local"
@@ -893,7 +911,9 @@ export default function Quests() {
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 pt-4">
               <FormField control={editForm.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quest Objective</FormLabel>
+                  <InfoTooltip what="The name of the task you want to track." fn="Displayed on your quest card and used as the primary identifier in your log." usage="Be specific — 'Read 20 pages of Atomic Habits' is better than 'Read'.">
+                    <FormLabel>Quest Objective</FormLabel>
+                  </InfoTooltip>
                   <FormControl><Input {...field} className="bg-background/50" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -901,7 +921,9 @@ export default function Quests() {
 
               <FormField control={editForm.control} name="description" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description <span className="text-muted-foreground">(optional)</span></FormLabel>
+                  <InfoTooltip what="Extra context about what this mission involves." fn="Shown beneath the quest title on your card as a supporting note." usage="Use this to clarify conditions, tools needed, or any rule you want to remember when completing the task.">
+                    <FormLabel>Description <span className="text-muted-foreground">(optional)</span></FormLabel>
+                  </InfoTooltip>
                   <FormControl>
                     <Textarea {...field} value={field.value ?? ""} placeholder="What does this mission entail?" className="bg-background/50 resize-none" rows={2} />
                   </FormControl>
@@ -912,7 +934,9 @@ export default function Quests() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editForm.control} name="category" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <InfoTooltip what="The life domain this quest belongs to." fn="Groups your quest under a stat category — Strength, Intelligence, Discipline, etc. Determines which stat grows when you complete it." usage="Pick the category that best matches the real-world skill or habit the quest is training.">
+                      <FormLabel>Category</FormLabel>
+                    </InfoTooltip>
                     <FormControl>
                       <CategoryCombobox value={field.value ?? ""} onChange={field.onChange} />
                     </FormControl>
@@ -921,7 +945,9 @@ export default function Quests() {
                 )} />
                 <FormField control={editForm.control} name="difficulty" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rank</FormLabel>
+                    <InfoTooltip what="The difficulty tier of this quest." fn="Ranks run E → D → C → B → A → S. Higher ranks award significantly more XP and Gold on completion but also penalize more on failure." usage="Match the rank to the actual effort required. Under-ranking easy tasks wastes potential; over-ranking impossible tasks leads to repeated failures.">
+                      <FormLabel>Rank</FormLabel>
+                    </InfoTooltip>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
@@ -937,7 +963,9 @@ export default function Quests() {
 
               <FormField control={editForm.control} name="statBoost" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                  <InfoTooltip what="Which character stat this quest boosts on completion." fn="Overrides the stat automatically assigned by the category. Useful when a quest spans multiple domains and you want to direct the XP to a specific stat." usage="Leave on Auto unless the default stat assignment doesn't reflect the primary skill being trained.">
+                    <FormLabel>Stat Boost <span className="text-muted-foreground">(optional override)</span></FormLabel>
+                  </InfoTooltip>
                   <Select onValueChange={(v) => field.onChange(v === "__none__" ? null : v)} value={field.value ?? "__none__"}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Auto (from category)" /></SelectTrigger></FormControl>
                     <SelectContent>
@@ -962,7 +990,9 @@ export default function Quests() {
 
               <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Duration (minutes)</FormLabel>
+                  <InfoTooltip what="How long you plan to spend on this quest." fn="Logged in minutes. Used to track total time invested per category over time." usage="Set a realistic target. If a task consistently takes longer than the duration you set, increase it to keep your log accurate.">
+                    <FormLabel>Duration (minutes)</FormLabel>
+                  </InfoTooltip>
                   <FormControl><Input type="number" min={1} {...field} className="bg-background/50" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -971,7 +1001,9 @@ export default function Quests() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={editForm.control} name="targetAmount" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <InfoTooltip what="A numeric target that defines quest completion." fn="Pairs with Unit of Measure to create a trackable progress goal — e.g. 100 pages, 5 sets, 2000 words." usage="Use this for measurable tasks where time alone doesn't capture progress. Leave blank for time-only quests.">
+                      <FormLabel>Completion Goal <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    </InfoTooltip>
                     <FormControl>
                       <Input type="number" min={1} placeholder="e.g. 100" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)} className="bg-background/50" />
                     </FormControl>
@@ -980,7 +1012,9 @@ export default function Quests() {
                 )} />
                 <FormField control={editForm.control} name="amountUnit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <InfoTooltip what="The unit for your completion goal." fn="Labels the Completion Goal number — e.g. pages, oz, reps, words, km. Shown on the quest card next to your progress." usage="Set this whenever you have a Completion Goal. Without a unit the number lacks context.">
+                      <FormLabel>Unit of Measure <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    </InfoTooltip>
                     <FormControl>
                       <Input placeholder="e.g. oz, pages" {...field} value={field.value ?? ""} className="bg-background/50" />
                     </FormControl>

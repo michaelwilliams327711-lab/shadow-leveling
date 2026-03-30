@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { characterTable, activityTable, penaltyLogTable, questLogTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   GetCharacterResponse,
   UpdateCharacterBody,
@@ -36,14 +36,15 @@ async function getOrCreateCharacter() {
 }
 
 async function upsertActivity(date: string) {
-  const existing = await db.select().from(activityTable).where(eq(activityTable.date, date));
-  if (existing.length > 0) {
-    await db.update(activityTable)
-      .set({ count: existing[0].count + 1, level: Math.min(4, Math.floor((existing[0].count + 1) / 2)) })
-      .where(eq(activityTable.date, date));
-  } else {
-    await db.insert(activityTable).values({ date, count: 1, level: 1 });
-  }
+  await db.insert(activityTable)
+    .values({ date, count: 1, level: 1 })
+    .onConflictDoUpdate({
+      target: activityTable.date,
+      set: {
+        count: sql`${activityTable.count} + 1`,
+        level: sql`LEAST(4, (${activityTable.count} + 1) / 2)`,
+      },
+    });
 }
 
 router.get("/character", async (req, res) => {
@@ -293,7 +294,7 @@ router.get("/activity", async (req, res) => {
 
     const result = [];
     const today = new Date();
-    for (let i = 364; i >= 0; i--) {
+    for (let i = 363; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];

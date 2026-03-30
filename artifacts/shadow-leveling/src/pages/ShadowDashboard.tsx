@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { TrendingDown, Skull, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,136 +41,14 @@ interface ApiDashboardStats {
   };
 }
 
-interface PenaltyData {
-  entries: GraveyardEntry[];
-  xpByDate: { date: string; xp: number }[];
-  failuresByCategory: { category: string; count: number }[];
-  totalXpBled: number;
-  streaksShattered: number;
-  greatestWeakness: string;
+function parseDateLabel(dateStr: string): string {
+  const [y, mo, dy] = dateStr.split("-").map(Number);
+  return new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-const CATEGORIES = ["Strength", "Intelligence", "Endurance", "Agility", "Discipline"];
-const FAILED_DESCS = [
-  "Skipped morning workout",
-  "Missed study session",
-  "Failed to meditate",
-  "Skipped daily run",
-  "Ignored reading goal",
-  "Broke diet commitment",
-  "Skipped cold shower",
-  "Failed sleep schedule",
-];
-
-function buildMockEntries(): GraveyardEntry[] {
-  const today = new Date();
-  const entries: GraveyardEntry[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (Math.random() < 0.45) {
-      const isMissedDay = Math.random() < 0.3;
-      entries.push({
-        date: dateStr,
-        xp_change: isMissedDay
-          ? -(Math.floor(Math.random() * 40) + 20)
-          : -(Math.floor(Math.random() * 25) + 5),
-        action_type: isMissedDay ? "MISSED_DAY" : "FAILED",
-        description: FAILED_DESCS[Math.floor(Math.random() * FAILED_DESCS.length)],
-        stat_category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-      });
-    }
-  }
-  return entries;
-}
-
-function deriveMetricsFromEntries(entries: GraveyardEntry[]): PenaltyData {
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-  const xpByDateMap: Record<string, number> = {};
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    xpByDateMap[d.toISOString().split("T")[0]] = 0;
-  }
-
-  let totalXpBled = 0;
-  let streaksShattered = 0;
-  const categoryFailCounts: Record<string, number> = {};
-
-  for (const e of entries) {
-    const entryDate = new Date(e.date);
-    if (entryDate >= thirtyDaysAgo) {
-      const dateKey = e.date.split("T")[0];
-      if (dateKey in xpByDateMap) {
-        xpByDateMap[dateKey] += e.xp_change;
-      }
-      if (e.xp_change < 0) totalXpBled += Math.abs(e.xp_change);
-      if (e.action_type === "MISSED_DAY") streaksShattered++;
-      if (e.action_type === "FAILED") {
-        const cat = e.stat_category || "Unknown";
-        categoryFailCounts[cat] = (categoryFailCounts[cat] ?? 0) + 1;
-      }
-    }
-  }
-
-  const xpByDate = Object.entries(xpByDateMap).map(([date, xp]) => ({
-    date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    xp,
-  }));
-
-  const failuresByCategory = Object.entries(categoryFailCounts)
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const greatestWeakness = failuresByCategory[0]?.category ?? "None";
-
-  const recentEntries = [...entries]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 20);
-
-  return { entries: recentEntries, xpByDate, failuresByCategory, totalXpBled, streaksShattered, greatestWeakness };
-}
-
-async function fetchPenaltyData(): Promise<PenaltyData> {
-  let apiData: ApiDashboardStats | null = null;
-
-  try {
-    const res = await fetch("/api/dashboard-stats");
-    if (res.ok) {
-      apiData = await res.json();
-    }
-  } catch {
-  }
-
-  const failedCount = apiData?.outcomeBreakdown?.FAILED ?? 0;
-  const missedCount = apiData?.outcomeBreakdown?.MISSED_DAY ?? 0;
-  const hasRealFailures = failedCount > 0 || missedCount > 0;
-
-  if (!apiData || !hasRealFailures) {
-    return deriveMetricsFromEntries(buildMockEntries());
-  }
-
-  const failuresByCategory = apiData.failuresByCategory ?? [];
-  const greatestWeakness = failuresByCategory[0]?.category ?? "None";
-
-  const xpByDate = (apiData.xpBledByDate ?? []).map((d) => ({
-    date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    xp: d.xp,
-  }));
-
-  return {
-    entries: apiData.recentPenalties ?? [],
-    xpByDate,
-    failuresByCategory,
-    totalXpBled: apiData.totalXpBled ?? 0,
-    streaksShattered: missedCount,
-    greatestWeakness,
-  };
+function parseDateFull(dateStr: string): string {
+  const [y, mo, dy] = dateStr.split("-").map(Number);
+  return new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 const SHADOW_THEME = {
@@ -216,13 +94,17 @@ function ShadowTooltip({
 }
 
 export default function ShadowDashboard() {
-  const [data, setData] = useState<PenaltyData | null>(null);
+  const { data: apiData, isLoading } = useQuery<ApiDashboardStats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/dashboard-stats", { signal });
+      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchPenaltyData().then(setData);
-  }, []);
-
-  if (!data) {
+  if (isLoading || !apiData) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-red-500" />
@@ -230,10 +112,22 @@ export default function ShadowDashboard() {
     );
   }
 
+  const failuresByCategory = apiData.failuresByCategory ?? [];
+  const greatestWeakness = failuresByCategory[0]?.category ?? "None";
+  const missedCount = apiData.outcomeBreakdown?.MISSED_DAY ?? 0;
+  const totalXpBled = apiData.totalXpBled ?? 0;
+
+  const xpByDate = (apiData.xpBledByDate ?? []).map((d) => ({
+    date: parseDateLabel(d.date),
+    xp: d.xp,
+  }));
+
+  const entries = apiData.recentPenalties ?? [];
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <InfoTooltip
+        <InfoTooltip variant="shadow"
           what="Shadow Dashboard — your failure analytics hub."
           fn="Aggregates all XP losses, missed days, and failed quests from the past 30 days into a single dark-mode reckoning screen."
           usage="Use this weekly to confront your failures honestly. The insights here directly guide what to fix in your Quest Log."
@@ -253,7 +147,7 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <InfoTooltip
+          <InfoTooltip variant="shadow"
             what="Total XP Bled — XP lost to failures in the last 30 days."
             fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
@@ -266,7 +160,7 @@ export default function ShadowDashboard() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
                   <p className="text-3xl font-display font-bold text-red-400">
-                    -{data.totalXpBled.toLocaleString()}
+                    {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
                   </p>
                   <p className="text-xs text-muted-foreground">last 30 days</p>
                 </div>
@@ -276,7 +170,7 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <InfoTooltip
+          <InfoTooltip variant="shadow"
             what="Streaks Shattered — days where your streak was broken."
             fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
@@ -289,7 +183,7 @@ export default function ShadowDashboard() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
                   <p className="text-3xl font-display font-bold" style={{ color: "#dc2626" }}>
-                    {data.streaksShattered}
+                    {missedCount}
                   </p>
                   <p className="text-xs text-muted-foreground">missed days recorded</p>
                 </div>
@@ -299,7 +193,7 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <InfoTooltip
+          <InfoTooltip variant="shadow"
             what="Greatest Weakness — the stat category with the most failures."
             fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
@@ -312,7 +206,7 @@ export default function ShadowDashboard() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Greatest Weakness</p>
                   <p className="text-xl font-display font-bold text-orange-400 truncate max-w-[140px]">
-                    {data.greatestWeakness}
+                    {greatestWeakness}
                   </p>
                   <p className="text-xs text-muted-foreground">most failures here</p>
                 </div>
@@ -325,7 +219,7 @@ export default function ShadowDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="glass-panel border border-red-900/30">
           <CardHeader>
-            <InfoTooltip
+            <InfoTooltip variant="shadow"
               what="XP Bleed — your daily XP losses over the past 30 days."
               fn="Each point shows how much XP was lost on that day due to failed quests or missed days. The area fills downward, representing loss."
               usage="Clusters of loss reveal your worst periods. Cross-reference with the Graveyard below to understand what habits caused each drop."
@@ -336,47 +230,51 @@ export default function ShadowDashboard() {
             </InfoTooltip>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart
-                data={data.xpByDate}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="bleedGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#991b1b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={SHADOW_THEME.grid} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: SHADOW_THEME.text, fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={4}
-                />
-                <YAxis
-                  tick={{ fill: SHADOW_THEME.text, fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={[
-                    (dataMin: number) => Math.floor(dataMin * 1.1),
-                    0,
-                  ]}
-                />
-                <Tooltip content={<ShadowTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="xp"
-                  name="XP Lost"
-                  stroke="#ef4444"
-                  strokeWidth={2.5}
-                  fill="url(#bleedGradient)"
-                  dot={false}
-                  activeDot={{ r: 5, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {xpByDate.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-10">No XP losses recorded in the last 30 days.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart
+                  data={xpByDate}
+                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="bleedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#991b1b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={SHADOW_THEME.grid} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: SHADOW_THEME.text, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={4}
+                  />
+                  <YAxis
+                    tick={{ fill: SHADOW_THEME.text, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={[
+                      (dataMin: number) => Math.floor(dataMin * 1.1),
+                      0,
+                    ]}
+                  />
+                  <Tooltip content={<ShadowTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="xp"
+                    name="XP Lost"
+                    stroke="#ef4444"
+                    strokeWidth={2.5}
+                    fill="url(#bleedGradient)"
+                    dot={false}
+                    activeDot={{ r: 5, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -385,7 +283,7 @@ export default function ShadowDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
-              <InfoTooltip
+              <InfoTooltip variant="shadow"
                 what="Time Sink — your failures broken down by quest category."
                 fn="A doughnut chart showing which stat categories (Strength, Intellect, etc.) account for the most failed or missed quests."
                 usage="The largest slice is your biggest time sink. Focus improvement efforts there — either reduce difficulty or increase accountability for tasks in that category."
@@ -396,13 +294,13 @@ export default function ShadowDashboard() {
               </InfoTooltip>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
-              {data.failuresByCategory.length === 0 ? (
+              {failuresByCategory.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. For now.</p>
               ) : (
                 <>
                   <PieChart width={220} height={220}>
                     <Pie
-                      data={data.failuresByCategory}
+                      data={failuresByCategory}
                       cx={110}
                       cy={110}
                       innerRadius={65}
@@ -412,9 +310,9 @@ export default function ShadowDashboard() {
                       nameKey="category"
                       stroke="none"
                     >
-                      {data.failuresByCategory.map((_, i) => (
+                      {failuresByCategory.map((item, i) => (
                         <Cell
-                          key={i}
+                          key={item.category}
                           fill={DOUGHNUT_COLORS[i % DOUGHNUT_COLORS.length]}
                           fillOpacity={0.9}
                         />
@@ -434,7 +332,7 @@ export default function ShadowDashboard() {
                     />
                   </PieChart>
                   <div className="w-full grid grid-cols-2 gap-x-6 gap-y-2">
-                    {data.failuresByCategory.map((item, i) => (
+                    {failuresByCategory.map((item, i) => (
                       <div key={item.category} className="flex items-center gap-2">
                         <span
                           style={{
@@ -460,7 +358,7 @@ export default function ShadowDashboard() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
-              <InfoTooltip
+              <InfoTooltip variant="shadow"
                 what="Graveyard — a log of your most recent failures."
                 fn="Lists the last 20 failed quests and missed days, including the date, category, description, and XP penalty incurred."
                 usage="Review this regularly to spot recurring failure patterns. If the same description appears repeatedly, that task needs to be restructured or broken into smaller steps."
@@ -471,14 +369,15 @@ export default function ShadowDashboard() {
               </InfoTooltip>
             </CardHeader>
             <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">
-              {data.entries.length === 0 ? (
+              {entries.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. Stay weak.</p>
               ) : (
-                data.entries.map((entry, i) => {
+                entries.map((entry) => {
                   const isMissed = entry.action_type === "MISSED_DAY";
+                  const entryKey = `${entry.date}-${entry.action_type}-${entry.description}`;
                   return (
                     <div
-                      key={i}
+                      key={entryKey}
                       className="rounded-md px-3 py-2.5 border flex items-start gap-3"
                       style={{
                         background: isMissed ? "rgba(153,27,27,0.12)" : "rgba(239,68,68,0.06)",
@@ -495,11 +394,7 @@ export default function ShadowDashboard() {
                         </p>
                         <p className="text-sm text-zinc-300 truncate">{entry.description}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(entry.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}{" "}
+                          {parseDateFull(entry.date)}{" "}
                           &mdash;{" "}
                           <span style={{ color: "#ef4444" }}>
                             {entry.xp_change} XP

@@ -196,8 +196,9 @@ router.post("/quests/process-overdue", async (req, res) => {
       return false;
     });
 
+    const char = await getOrCreateCharacter();
+
     if (overdueQuests.length === 0) {
-      const char = await getOrCreateCharacter();
       return res.json({
         penalties: [],
         autoFailedQuests: [],
@@ -208,8 +209,6 @@ router.post("/quests/process-overdue", async (req, res) => {
         },
       });
     }
-
-    const char = await getOrCreateCharacter();
 
     const penalties: Array<{
       type: string;

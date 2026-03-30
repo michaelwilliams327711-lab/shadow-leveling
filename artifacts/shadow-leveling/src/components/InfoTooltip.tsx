@@ -6,6 +6,7 @@ interface InfoTooltipProps {
   fn: string;
   usage: string;
   children: React.ReactNode;
+  variant?: "default" | "shadow";
 }
 
 interface TooltipPos {
@@ -17,35 +18,65 @@ interface TooltipPos {
 const TOOLTIP_WIDTH = 260;
 const TOOLTIP_OFFSET = 14;
 
-export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
+const THEMES = {
+  default: {
+    panel: "rounded-xl border border-primary/30 bg-[#0d0d1a]/95 backdrop-blur-md shadow-[0_0_20px_rgba(124,58,237,0.2)] p-3 text-xs",
+    dot: "#7c3aed",
+    badgeLabel: "#7c3aed",
+    badgeBg: "transparent",
+    whatColor: "#7c3aed",
+    dividerColor: "rgba(124,58,237,0.2)",
+    labelColor: "#a1a1aa",
+    valueColor: "#ffffff",
+  },
+  shadow: {
+    panel: "rounded-xl p-3 text-xs backdrop-blur-md",
+    panelStyle: {
+      background: "#1c0a0a",
+      border: "1px solid #ef4444",
+      boxShadow: "0 0 20px rgba(239,68,68,0.2)",
+    },
+    dot: "#ef4444",
+    badgeLabel: "#ef4444",
+    whatColor: "#ef4444",
+    dividerColor: "rgba(239,68,68,0.25)",
+    labelColor: "#a1a1aa",
+    valueColor: "#fca5a5",
+  },
+};
+
+function flipX(cursorX: number): number {
+  const rightEdge = cursorX + TOOLTIP_OFFSET + TOOLTIP_WIDTH;
+  if (rightEdge > window.innerWidth) {
+    return Math.max(8, cursorX - TOOLTIP_OFFSET - TOOLTIP_WIDTH);
+  }
+  return cursorX + TOOLTIP_OFFSET;
+}
+
+function clampY(rawY: number, height: number): number {
+  const margin = 8;
+  if (rawY + height > window.innerHeight - margin) {
+    return Math.max(8, rawY - height - TOOLTIP_OFFSET * 2);
+  }
+  return rawY;
+}
+
+export function InfoTooltip({ what, fn, usage, children, variant = "default" }: InfoTooltipProps) {
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState<TooltipPos>({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const theme = THEMES[variant];
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(hover: none)").matches);
   }, []);
 
-  const clampX = (rawX: number) => {
-    const margin = 8;
-    const maxX = window.innerWidth - TOOLTIP_WIDTH - margin;
-    return Math.max(margin, Math.min(rawX, maxX));
-  };
-
-  const clampY = (rawY: number, height: number) => {
-    const margin = 8;
-    if (rawY + height > window.innerHeight - margin) {
-      return Math.max(8, rawY - height - TOOLTIP_OFFSET * 2);
-    }
-    return rawY;
-  };
-
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const tipHeight = tooltipRef.current?.offsetHeight ?? 120;
     setPos({
-      x: clampX(e.clientX + TOOLTIP_OFFSET),
+      x: flipX(e.clientX),
       y: clampY(e.clientY + TOOLTIP_OFFSET, tipHeight),
     });
   }, []);
@@ -53,7 +84,7 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
   const handleMouseEnter = useCallback((e: React.MouseEvent) => {
     const tipHeight = tooltipRef.current?.offsetHeight ?? 120;
     setPos({
-      x: clampX(e.clientX + TOOLTIP_OFFSET),
+      x: flipX(e.clientX),
       y: clampY(e.clientY + TOOLTIP_OFFSET, tipHeight),
     });
     setVisible(true);
@@ -85,14 +116,11 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
     return () => document.removeEventListener("touchstart", dismiss);
   }, [isMobile, visible]);
 
-  const tooltipStyle: React.CSSProperties = isMobile
+  const basePositionStyle: React.CSSProperties = isMobile
     ? pos.anchorRect
       ? {
           position: "fixed",
-          top: Math.min(
-            pos.anchorRect.bottom + 8,
-            window.innerHeight - 200
-          ),
+          top: Math.min(pos.anchorRect.bottom + 8, window.innerHeight - 200),
           left: Math.max(
             8,
             Math.min(
@@ -102,6 +130,9 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
           ),
           width: TOOLTIP_WIDTH,
           zIndex: 9999,
+          opacity: visible ? 1 : 0,
+          pointerEvents: visible ? "auto" : "none",
+          transition: "opacity 0.15s ease",
         }
       : { display: "none" }
     : {
@@ -111,36 +142,56 @@ export function InfoTooltip({ what, fn, usage, children }: InfoTooltipProps) {
         width: TOOLTIP_WIDTH,
         zIndex: 9999,
         pointerEvents: "none",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.15s ease",
       };
 
-  const tooltip = visible ? (
+  const tooltipStyle: React.CSSProperties = {
+    ...basePositionStyle,
+    ...(variant === "shadow" ? THEMES.shadow.panelStyle : {}),
+  };
+
+  const tooltip = (
     <div
       ref={tooltipRef}
       style={tooltipStyle}
-      className="rounded-xl border border-primary/30 bg-[#0d0d1a]/95 backdrop-blur-md shadow-[0_0_20px_rgba(124,58,237,0.2)] p-3 text-xs"
+      className={theme.panel}
     >
-      <div className="mb-2 flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
-        <span className="font-display font-bold uppercase tracking-widest text-primary text-[10px]">
-          System Info
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span
+          className="h-1.5 w-1.5 rounded-full inline-block"
+          style={{ background: theme.dot }}
+        />
+        <span
+          className="font-display font-bold uppercase tracking-widest text-[10px]"
+          style={{ color: theme.badgeLabel }}
+        >
+          {variant === "shadow" ? "Shadow Intel" : "System Info"}
+        </span>
+      </div>
+      <div
+        className="mb-2 pb-2"
+        style={{ borderBottom: `1px solid ${theme.dividerColor}` }}
+      >
+        <span
+          className="font-bold text-[11px] leading-snug"
+          style={{ color: theme.whatColor }}
+        >
+          {what}
         </span>
       </div>
       <div className="space-y-1.5">
         <div>
-          <span className="text-muted-foreground">What: </span>
-          <span className="text-white">{what}</span>
+          <span style={{ color: theme.labelColor }}>Function: </span>
+          <span style={{ color: theme.valueColor }}>{fn}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">Function: </span>
-          <span className="text-white">{fn}</span>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Usage: </span>
-          <span className="text-white">{usage}</span>
+          <span style={{ color: theme.labelColor }}>Usage: </span>
+          <span style={{ color: theme.valueColor }}>{usage}</span>
         </div>
       </div>
     </div>
-  ) : null;
+  );
 
   return (
     <>

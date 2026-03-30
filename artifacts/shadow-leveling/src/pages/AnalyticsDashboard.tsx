@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Flame, Coins, Zap, BarChart2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
 } from "recharts";
 import { ActivityCalendar } from "react-activity-calendar";
 import Calendar from "react-calendar";
+import "./analytics-calendar.css";
 
 interface DashboardStats {
   xpByDate: { date: string; xp: number }[];
@@ -33,12 +35,6 @@ interface DashboardStats {
     xpToNextLevel: number;
     level: number;
   };
-}
-
-async function fetchDashboardStats(): Promise<DashboardStats> {
-  const res = await fetch("/api/dashboard-stats");
-  if (!res.ok) throw new Error("Failed to fetch dashboard stats");
-  return res.json();
 }
 
 const CHART_THEME = {
@@ -74,25 +70,27 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function AnalyticsDashboard() {
-  const [data, setData] = useState<DashboardStats | null>(null);
   const [calDate, setCalDate] = useState(new Date());
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDashboardStats()
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
+  const { data, isLoading, isError, error } = useQuery<DashboardStats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/dashboard-stats", { signal });
+      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  if (error) {
+  if (isError) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <p className="text-red-400">Failed to load analytics: {error}</p>
+        <p className="text-red-400">Failed to load analytics: {(error as Error).message}</p>
       </div>
     );
   }
 
-  if (!data) {
+  if (isLoading || !data) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary" />
@@ -109,10 +107,13 @@ export default function AnalyticsDashboard() {
     { name: "Missed Day", value: data.outcomeBreakdown.MISSED_DAY ?? 0, color: "#f59e0b" },
   ].filter((d) => d.value > 0);
 
-  const xpByDateFormatted = data.xpByDate.map((d) => ({
-    ...d,
-    date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-  }));
+  const xpByDateFormatted = data.xpByDate.map((d) => {
+    const [y, mo, dy] = d.date.split("-").map(Number);
+    return {
+      ...d,
+      date: new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    };
+  });
 
   const xpByStatFormatted = data.xpByStatCategory.map((d) => ({
     stat: d.category,
@@ -277,9 +278,9 @@ export default function AnalyticsDashboard() {
                   <YAxis dataKey="stat" type="category" tick={{ fill: CHART_THEME.text, fontSize: 12 }} tickLine={false} axisLine={false} width={75} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="xp" name="XP" radius={[0, 6, 6, 0]}>
-                    {xpByStatFormatted.map((_, i) => {
+                    {xpByStatFormatted.map((entry, i) => {
                       const colors = ["#8b5cf6", "#10b981", "#6366f1", "#f59e0b", "#ec4899"];
-                      return <Cell key={i} fill={colors[i % colors.length]} fillOpacity={0.85} />;
+                      return <Cell key={entry.stat} fill={colors[i % colors.length]} fillOpacity={0.85} />;
                     })}
                   </Bar>
                 </BarChart>
@@ -316,8 +317,8 @@ export default function AnalyticsDashboard() {
                         dataKey="value"
                         stroke="none"
                       >
-                        {outcomeChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} fillOpacity={0.9} />
+                        {outcomeChartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} fillOpacity={0.9} />
                         ))}
                       </Pie>
                       <Tooltip
@@ -404,81 +405,6 @@ export default function AnalyticsDashboard() {
             </InfoTooltip>
           </CardHeader>
           <CardContent>
-            <style>{`
-              .analytics-calendar .react-calendar {
-                background: transparent;
-                border: none;
-                width: 100%;
-                font-family: inherit;
-                color: #e4e4e7;
-              }
-              .analytics-calendar .react-calendar__navigation {
-                display: flex;
-                align-items: center;
-                margin-bottom: 12px;
-              }
-              .analytics-calendar .react-calendar__navigation button {
-                background: transparent;
-                border: none;
-                color: #a1a1aa;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                padding: 6px 10px;
-                border-radius: 6px;
-                transition: background 0.15s, color 0.15s;
-              }
-              .analytics-calendar .react-calendar__navigation button:hover {
-                background: rgba(139,92,246,0.15);
-                color: #8b5cf6;
-              }
-              .analytics-calendar .react-calendar__navigation__label {
-                flex: 1;
-                font-size: 15px !important;
-                font-weight: 700 !important;
-                color: #e4e4e7 !important;
-                letter-spacing: 0.05em;
-                text-align: center;
-              }
-              .analytics-calendar .react-calendar__month-view__weekdays {
-                text-align: center;
-                font-size: 11px;
-                color: #71717a;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                margin-bottom: 6px;
-              }
-              .analytics-calendar .react-calendar__month-view__weekdays abbr {
-                text-decoration: none;
-              }
-              .analytics-calendar .react-calendar__tile {
-                background: transparent;
-                border: none;
-                color: #e4e4e7;
-                padding: 8px 4px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 13px;
-                transition: background 0.15s;
-                text-align: center;
-              }
-              .analytics-calendar .react-calendar__tile:hover {
-                background: rgba(139,92,246,0.15);
-              }
-              .analytics-calendar .react-calendar__tile--active {
-                background: rgba(139,92,246,0.3) !important;
-                color: #a78bfa !important;
-                font-weight: 700;
-              }
-              .analytics-calendar .react-calendar__tile--now {
-                background: rgba(16,185,129,0.1);
-                color: #10b981;
-                font-weight: 700;
-              }
-              .analytics-calendar .react-calendar__month-view__days__day--neighboringMonth {
-                color: #3f3f46;
-              }
-            `}</style>
             <div className="analytics-calendar max-w-md mx-auto">
               <Calendar
                 value={calDate}

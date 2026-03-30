@@ -46,9 +46,9 @@ export function PenaltyModal({ penalties, onDismiss }: PenaltyModalProps) {
         </DialogHeader>
 
         <div className="space-y-3 py-2 max-h-64 overflow-y-auto">
-          {penalties.map((penalty, i) => (
+          {penalties.map((penalty) => (
             <div
-              key={i}
+              key={`${penalty.occurredAt}-${penalty.type}-${penalty.description}`}
               className="rounded border border-destructive/30 bg-destructive/5 p-3"
             >
               <div className="flex items-start gap-2">

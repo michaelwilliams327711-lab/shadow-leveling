@@ -16,7 +16,7 @@ router.get("/dashboard-stats", async (req, res) => {
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     const oneYearAgo = new Date(today);
-    oneYearAgo.setDate(oneYearAgo.getDate() - 364);
+    oneYearAgo.setDate(oneYearAgo.getDate() - 363);
     oneYearAgo.setHours(0, 0, 0, 0);
 
     const xpByDateRaw = await db
@@ -63,7 +63,7 @@ router.get("/dashboard-stats", async (req, res) => {
 
     const activityMap = new Map(activityCountRaw.map((r) => [r.date, Number(r.count)]));
     const activityCalendar: { date: string; count: number; level: number }[] = [];
-    for (let i = 364; i >= 0; i--) {
+    for (let i = 363; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];

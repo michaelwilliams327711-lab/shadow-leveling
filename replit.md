@@ -49,7 +49,7 @@ artifacts-monorepo/
 All at `/api`:
 - `GET/PATCH /character` - Character stats
 - `POST /character/checkin` - Daily check-in (streak tracking)
-- `GET /activity` - Heatmap data (365 days)
+- `GET /activity` - Heatmap data (364 days, matching frontend window)
 - `GET/POST /quests` - List/create quests
 - `GET/PATCH/DELETE /quests/:id` - CRUD quest
 - `POST /quests/:id/complete` - Complete quest (awards XP/Gold, applies multiplier)

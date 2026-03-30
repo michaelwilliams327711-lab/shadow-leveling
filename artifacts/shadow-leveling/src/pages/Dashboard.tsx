@@ -51,6 +51,8 @@ function getOutcomeBadge(entry: QuestLogEntry) {
   return { label: "FAILED", className: "bg-red-500/20 text-red-400 border border-red-500/40" };
 }
 
+const STAT_CAP = 110_000;
+
 export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
   const { data: heatmap } = useGetActivityHeatmap();
@@ -96,7 +98,7 @@ export default function Dashboard() {
     return <div className="p-8 flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div></div>;
   }
 
-  const xpPercent = (character.xp / (character.xp + character.xpToNextLevel)) * 100;
+  const xpPercent = Math.round((character.xp / character.xpToNextLevel) * 100);
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;
@@ -360,9 +362,9 @@ export default function Dashboard() {
                         <div className="flex-1">
                           <div className="flex justify-between mb-1">
                             <span className={`text-sm font-semibold tracking-wide ${stat.color}`}>{stat.name}</span>
-                            <span className="text-xs text-muted-foreground">{stat.val.toLocaleString()} / 110,000</span>
+                            <span className="text-xs text-muted-foreground">{stat.val.toLocaleString()} / {STAT_CAP.toLocaleString()}</span>
                           </div>
-                          <Progress value={Math.min(100, (stat.val / 110000) * 100)} className="h-1.5" indicatorClassName={stat.barColor} />
+                          <Progress value={Math.min(100, (stat.val / STAT_CAP) * 100)} className="h-1.5" indicatorClassName={stat.barColor} />
                         </div>
                       </div>
                     </InfoTooltip>
