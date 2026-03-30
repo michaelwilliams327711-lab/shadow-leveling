@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { badHabitsTable, badHabitLogTable, characterTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { CreateBadHabitBody, UpdateBadHabitBody } from "@workspace/api-zod";
 import { corruptionConfig, type HabitSeverity } from "../corruptionConfig.js";
 import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
@@ -78,20 +78,30 @@ router.get("/bad-habits", async (req, res) => {
   try {
     const habits = await db.select().from(badHabitsTable).orderBy(desc(badHabitsTable.createdAt));
 
-    const result = await Promise.all(
-      habits.map(async (habit) => {
-        const logs = await db
-          .select({ date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
-          .from(badHabitLogTable)
-          .where(eq(badHabitLogTable.habitId, habit.id))
-          .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
+    if (!habits.length) {
+      return res.json([]);
+    }
 
-        const cleanStreak = computeCleanStreak(logs);
-        const longestStreak = computeLongestStreak(logs);
+    const habitIds = habits.map((h) => h.id);
+    const allLogs = await db
+      .select({ habitId: badHabitLogTable.habitId, date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
+      .from(badHabitLogTable)
+      .where(inArray(badHabitLogTable.habitId, habitIds))
+      .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-        return { ...habit, cleanStreak, longestStreak };
-      })
-    );
+    const logsByHabitId = new Map<string, LogRow[]>();
+    for (const log of allLogs) {
+      const existing = logsByHabitId.get(log.habitId) ?? [];
+      existing.push({ date: log.date, type: log.type, occurredAt: log.occurredAt });
+      logsByHabitId.set(log.habitId, existing);
+    }
+
+    const result = habits.map((habit) => {
+      const logs = logsByHabitId.get(habit.id) ?? [];
+      const cleanStreak = computeCleanStreak(logs);
+      const longestStreak = computeLongestStreak(logs);
+      return { ...habit, cleanStreak, longestStreak };
+    });
 
     res.json(result);
   } catch (err) {
