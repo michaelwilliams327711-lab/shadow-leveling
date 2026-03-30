@@ -15,6 +15,13 @@
       "when": 1774679862526,
       "tag": "0001_easy_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1743350400000,
+      "tag": "0002_drop_is_daily",
+      "breakpoints": true
     }
   ]
 }

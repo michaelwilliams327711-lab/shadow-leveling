@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getOrCreateCharacter, XP_PER_LEVEL } from "./character.js";
+import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
 
 const router: IRouter = Router();
 
@@ -54,12 +54,19 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     let newGold = char.gold;
     let newLevel = char.level;
 
+    const MAX_LEVELUP_ITERATIONS = 100;
     if (victory) {
       newXp += boss.xpReward;
       newGold += boss.goldReward;
+      let levelupIterations = 0;
       while (newXp >= XP_PER_LEVEL(newLevel)) {
+        if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
+          console.warn(`[boss challenge] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
+          break;
+        }
         newXp -= XP_PER_LEVEL(newLevel);
         newLevel++;
+        levelupIterations++;
       }
     } else {
       newXp = Math.max(0, char.xp - boss.xpPenalty);
@@ -69,6 +76,7 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       .set({ xp: newXp, gold: newGold, level: newLevel })
       .where(eq(characterTable.id, char.id))
       .returning();
+    invalidateCharacterCache();
 
     await db.update(bossesTable)
       .set(

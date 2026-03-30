@@ -13,7 +13,6 @@ export const questsTable = pgTable("quests", {
   xpPenalty: integer("xp_penalty").notNull().default(25),
   goldPenalty: integer("gold_penalty").notNull().default(10),
   status: text("status").notNull().default("active"),
-  isDaily: boolean("is_daily").notNull().default(false),
   description: text("description"),
   deadline: timestamp("deadline"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

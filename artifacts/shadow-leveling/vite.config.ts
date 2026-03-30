@@ -50,6 +50,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@workspace/shared": path.resolve(import.meta.dirname, "../../lib/shared/src/index.ts"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -65,6 +66,11 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
+      allow: [
+        path.resolve(import.meta.dirname),
+        path.resolve(import.meta.dirname, "../../lib/shared"),
+        path.resolve(import.meta.dirname, "../../lib/api-client-react"),
+      ],
     },
   },
   preview: {

@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, lt, lte } from "drizzle-orm";
+import { eq, and, isNotNull, lt, lte, or } from "drizzle-orm";
+import { CATEGORY_STAT_MAP } from "@workspace/shared";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -9,7 +10,7 @@ import {
   FailQuestResponse,
   UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
-import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr } from "./character.js";
+import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 
 const router: IRouter = Router();
 
@@ -39,15 +40,6 @@ function calculateRewards(difficulty: string, durationMinutes: number) {
   };
 }
 
-const CATEGORY_STAT_GAINS: Record<string, string> = {
-  Financial: "intellect",
-  Productivity: "intellect",
-  Study: "intellect",
-  Health: "endurance",
-  Creative: "agility",
-  Social: "agility",
-  Other: "strength",
-};
 
 function getAttributePenaltyMultiplier(failStreak: number): number {
   if (failStreak >= 10) return 3.0;
@@ -247,7 +239,7 @@ router.post("/quests/process-overdue", async (req, res) => {
         totalXpDeducted += xpDeducted;
         totalGoldDeducted += goldDeducted;
 
-        const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+        const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
         const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
         const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
         const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
@@ -268,7 +260,7 @@ router.post("/quests/process-overdue", async (req, res) => {
           goldChange: -goldDeducted,
           multiplierApplied: xpGoldMult,
           actionType: "MISSED_DAY",
-          statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
+          statCategory: quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength",
         });
 
         const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
@@ -312,6 +304,7 @@ router.post("/quests/process-overdue", async (req, res) => {
 
       return updated;
     });
+    invalidateCharacterCache();
 
     res.json({
       penalties,
@@ -364,9 +357,13 @@ function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date): Date |
   let candidate = getNextOccurrenceDate(recurrence, baseDate);
   if (!candidate) return null;
 
-  // Advance until we reach today or a future date (cap iterations to avoid infinite loop)
+  const MAX_ITERATIONS = 100;
   let iterations = 0;
-  while (candidate < today && iterations < 10000) {
+  while (candidate < today) {
+    if (iterations >= MAX_ITERATIONS) {
+      console.warn(`[getNextDueFromNow] Hit MAX_ITERATIONS cap (${MAX_ITERATIONS}). Breaking loop.`);
+      break;
+    }
     candidate = getNextOccurrenceDate(recurrence, candidate);
     if (!candidate) return null;
     iterations++;
@@ -380,16 +377,61 @@ router.get("/quests", async (req, res) => {
     const windowDaysParam = req.query.windowDays;
     const windowDays = windowDaysParam ? parseInt(String(windowDaysParam), 10) : null;
 
-    const allQuests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
-
     if (windowDays != null && !isNaN(windowDays) && windowDays > 0) {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
       const windowEnd = new Date(now);
       windowEnd.setDate(windowEnd.getDate() + windowDays);
 
-      const filtered = allQuests.filter((q) => {
-        // Always return non-active quests (completed/failed history is always visible)
+      // SQL pre-filter: targeted queries instead of one full-table scan.
+      // 1) Non-active quests (completed/failed) are always included.
+      // 2) Active one-time quests with a deadline up to windowEnd.
+      // 3) Active recurring quests (have recurrence JSONB) — narrowed in JS below.
+      const [nonActive, activeWithDeadline, activeNullDeadline] = await Promise.all([
+        db
+          .select()
+          .from(questsTable)
+          .where(
+            or(
+              eq(questsTable.status, "completed"),
+              eq(questsTable.status, "failed"),
+            ),
+          )
+          .orderBy(questsTable.createdAt),
+        db
+          .select()
+          .from(questsTable)
+          .where(
+            and(
+              eq(questsTable.status, "active"),
+              isNotNull(questsTable.deadline),
+              lte(questsTable.deadline, windowEnd),
+            ),
+          )
+          .orderBy(questsTable.createdAt),
+        db
+          .select()
+          .from(questsTable)
+          .where(
+            and(
+              eq(questsTable.status, "active"),
+              isNotNull(questsTable.recurrence),
+            ),
+          )
+          .orderBy(questsTable.createdAt),
+      ]);
+
+      // Merge, deduplicate, then narrow recurring quests in JS
+      const seen = new Set<number>();
+      const merged: (typeof questsTable.$inferSelect)[] = [];
+      for (const q of [...nonActive, ...activeWithDeadline, ...activeNullDeadline]) {
+        if (!seen.has(q.id)) {
+          seen.add(q.id);
+          merged.push(q);
+        }
+      }
+
+      const filtered = merged.filter((q) => {
         if (q.status !== "active") return true;
 
         const recurrence = q.recurrence as RecurrenceConfig | null;
@@ -401,21 +443,17 @@ router.get("/quests", async (req, res) => {
           return nextDue <= windowEnd;
         }
 
-        // One-time quests with a deadline: include if past-due or due within window
-        if (q.deadline) {
-          const deadline = new Date(q.deadline);
-          deadline.setHours(0, 0, 0, 0);
-          return deadline <= windowEnd; // past-due (< now) or within window
-        }
+        // One-time quests with a deadline: already SQL-filtered to <= windowEnd
+        if (q.deadline) return true;
 
-        // One-time quests with no deadline: exclude from windowed view
-        // (they have no scheduled date; user can see them with "Show all quests")
+        // One-time quests with no deadline and no recurrence: exclude from windowed view
         return false;
       });
 
       return res.json(filtered.map(serializeQuest));
     }
 
+    const allQuests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
     res.json(allQuests.map(serializeQuest));
   } catch (err) {
     req.log.error({ err }, "Error listing quests");
@@ -434,7 +472,6 @@ router.post("/quests", async (req, res) => {
         category: body.category,
         difficulty: body.difficulty,
         durationMinutes: body.durationMinutes,
-        isDaily: (body.recurrence as RecurrenceConfig)?.type === "daily",
         description: body.description ?? null,
         deadline: body.deadline ? new Date(body.deadline as string) : null,
         statBoost: body.statBoost ?? null,
@@ -489,7 +526,6 @@ router.patch("/quests/:id", async (req, res) => {
     if (body.amountUnit !== undefined) updates.amountUnit = body.amountUnit ?? null;
     if (body.recurrence !== undefined) {
       updates.recurrence = body.recurrence ?? null;
-      updates.isDaily = (body.recurrence as RecurrenceConfig)?.type === "daily";
     }
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
@@ -581,7 +617,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     const xpAwarded = Math.floor(quest.xpReward * totalMultiplier);
     const goldAwarded = Math.floor(quest.goldReward * totalMultiplier);
 
-    const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+    const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
     const streakMult = getStreakStatMultiplier(char.streak);
     const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
@@ -599,9 +635,16 @@ router.post("/quests/:id/complete", async (req, res) => {
 
     let newXp = char.xp + xpAwarded;
     let newLevel = char.level;
+    const MAX_LEVELUP_ITERATIONS = 100;
+    let levelupIterations = 0;
     while (newXp >= XP_PER_LEVEL(newLevel)) {
+      if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
+        console.warn(`[completeQuest] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
+        break;
+      }
       newXp -= XP_PER_LEVEL(newLevel);
       newLevel++;
+      levelupIterations++;
     }
 
     const leveledUp = newLevel > char.level;
@@ -622,6 +665,7 @@ router.post("/quests/:id/complete", async (req, res) => {
       })
       .where(eq(characterTable.id, char.id))
       .returning();
+    invalidateCharacterCache();
 
     await db.update(questsTable)
       .set({ status: "completed", completedAt: new Date() })
@@ -636,7 +680,7 @@ router.post("/quests/:id/complete", async (req, res) => {
       goldChange: goldAwarded,
       multiplierApplied: totalMultiplier,
       actionType: "COMPLETED",
-      statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
+      statCategory: quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength",
     });
 
     await upsertActivity(today);
@@ -687,7 +731,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     const xpDeducted = Math.min(char.xp, Math.floor(quest.xpPenalty * xpGoldMult));
     const goldDeducted = Math.min(char.gold, Math.floor(quest.goldPenalty * xpGoldMult));
 
-    const statField = quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength";
+    const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
     const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
     const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
     const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
@@ -717,6 +761,7 @@ router.post("/quests/:id/fail", async (req, res) => {
       })
       .where(eq(characterTable.id, char.id))
       .returning();
+    invalidateCharacterCache();
 
     await db.update(questsTable)
       .set({ status: "failed" })
@@ -731,7 +776,7 @@ router.post("/quests/:id/fail", async (req, res) => {
       goldChange: -goldDeducted,
       multiplierApplied: xpGoldMult,
       actionType: "FAILED",
-      statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
+      statCategory: quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength",
     });
 
     await upsertActivity(today);

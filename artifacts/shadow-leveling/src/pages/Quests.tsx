@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { CATEGORY_STAT_MAP } from "@workspace/shared";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -68,15 +69,6 @@ const QuestCategory = {
 
 const CATEGORY_PRESETS = Object.values(QuestCategory);
 
-const CATEGORY_STAT_MAP: Record<string, string> = {
-  Financial: "intellect",
-  Productivity: "intellect",
-  Study: "intellect",
-  Health: "endurance",
-  Creative: "agility",
-  Social: "agility",
-  Other: "strength",
-};
 
 const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = {
   strength:   { label: "Strength",   icon: Dumbbell, color: "text-red-400" },

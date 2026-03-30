@@ -110,7 +110,6 @@ export interface Quest {
   xpPenalty: number;
   goldPenalty: number;
   status: QuestStatus;
-  isDaily: boolean;
   isPaused: boolean;
   description?: string | null;
   createdAt: string;
@@ -142,7 +141,6 @@ export interface CreateQuestRequest {
   category: string;
   difficulty: CreateQuestRequestDifficulty;
   durationMinutes: number;
-  isDaily?: boolean;
   description?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;

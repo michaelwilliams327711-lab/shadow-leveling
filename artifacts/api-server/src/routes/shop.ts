@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { rewardsTable, characterTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateRewardBody } from "@workspace/api-zod";
-import { getOrCreateCharacter } from "./character.js";
+import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 
 const router: IRouter = Router();
 
@@ -65,6 +65,7 @@ router.post("/shop/rewards/:id/purchase", async (req, res) => {
     await db.update(characterTable)
       .set({ gold: newGold })
       .where(eq(characterTable.id, char.id));
+    invalidateCharacterCache();
 
     await db.update(rewardsTable)
       .set({ timesRedeemed: reward.timesRedeemed + 1 })

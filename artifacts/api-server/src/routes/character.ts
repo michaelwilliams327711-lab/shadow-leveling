@@ -28,11 +28,25 @@ const MILESTONE_STREAKS: Record<number, { xp: number; gold: number }> = {
   100: { xp: 2500, gold: 5000 },
 };
 
-async function getOrCreateCharacter() {
+type CharacterRow = typeof characterTable.$inferSelect;
+let _characterCache: { value: CharacterRow; expiresAt: number } | null = null;
+const CHARACTER_CACHE_TTL_MS = 2000;
+
+export function invalidateCharacterCache() {
+  _characterCache = null;
+}
+
+async function getOrCreateCharacter(): Promise<CharacterRow> {
+  const now = Date.now();
+  if (_characterCache && now < _characterCache.expiresAt) {
+    return _characterCache.value;
+  }
   const chars = await db.select().from(characterTable).limit(1);
-  if (chars.length > 0) return chars[0];
-  const [newChar] = await db.insert(characterTable).values({ name: "Hunter" }).returning();
-  return newChar;
+  const char = chars.length > 0
+    ? chars[0]
+    : (await db.insert(characterTable).values({ name: "Hunter" }).returning())[0];
+  _characterCache = { value: char, expiresAt: now + CHARACTER_CACHE_TTL_MS };
+  return char;
 }
 
 async function upsertActivity(date: string) {
@@ -71,6 +85,7 @@ router.patch("/character", async (req, res) => {
       .set({ name: body.name })
       .where(eq(characterTable.id, char.id))
       .returning();
+    invalidateCharacterCache();
     const data = UpdateCharacterResponse.parse({
       ...updated,
       xpToNextLevel: XP_PER_LEVEL(updated.level),
@@ -161,9 +176,16 @@ router.post("/character/checkin", async (req, res) => {
     const xpGain = milestoneBonusXp;
     let newLevel = char.level;
     let newXp = char.xp + xpGain;
+    const MAX_LEVELUP_ITERATIONS = 100;
+    let levelupIterations = 0;
     while (newXp >= XP_PER_LEVEL(newLevel)) {
+      if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
+        console.warn(`[checkin] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
+        break;
+      }
       newXp -= XP_PER_LEVEL(newLevel);
       newLevel++;
+      levelupIterations++;
     }
 
     await db.update(characterTable)
@@ -177,6 +199,7 @@ router.post("/character/checkin", async (req, res) => {
         level: newLevel,
       })
       .where(eq(characterTable.id, char.id));
+    invalidateCharacterCache();
 
     await upsertActivity(todayStr);
 
@@ -267,6 +290,7 @@ router.post("/character/login", async (req, res) => {
           .returning();
 
         updatedChar = updated;
+        invalidateCharacterCache();
 
         penalties.push({
           type: "missed_day",
@@ -279,11 +303,13 @@ router.post("/character/login", async (req, res) => {
         await db.update(characterTable)
           .set({ lastLoginDate: now })
           .where(eq(characterTable.id, char.id));
+        invalidateCharacterCache();
       }
     } else {
       await db.update(characterTable)
         .set({ lastLoginDate: now })
         .where(eq(characterTable.id, char.id));
+      invalidateCharacterCache();
     }
 
     res.json({
@@ -323,4 +349,4 @@ router.get("/activity", async (req, res) => {
 });
 
 export default router;
-export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr };
+export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache };
