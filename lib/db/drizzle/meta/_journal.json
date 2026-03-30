@@ -43,6 +43,13 @@
       "when": 1743393600000,
       "tag": "0005_corruption_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1743480000000,
+      "tag": "0006_drop_quest_reward_columns",
+      "breakpoints": true
     }
   ]
 }

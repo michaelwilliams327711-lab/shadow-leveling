@@ -8,25 +8,9 @@ import {
   UpdateCharacterResponse,
   DailyCheckinResponse,
 } from "@workspace/api-zod";
+import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS } from "@workspace/shared";
 
 const router: IRouter = Router();
-
-const XP_PER_LEVEL = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
-const STREAK_MULTIPLIER = (streak: number) => {
-  if (streak >= 30) return 3.0;
-  if (streak >= 14) return 2.5;
-  if (streak >= 7) return 2.0;
-  if (streak >= 3) return 1.5;
-  return 1.0;
-};
-
-const MILESTONE_STREAKS: Record<number, { xp: number; gold: number }> = {
-  7: { xp: 200, gold: 500 },
-  14: { xp: 350, gold: 750 },
-  30: { xp: 500, gold: 1000 },
-  60: { xp: 1000, gold: 2000 },
-  100: { xp: 2500, gold: 5000 },
-};
 
 type CharacterRow = typeof characterTable.$inferSelect;
 let _characterCache: { value: CharacterRow; expiresAt: number } | null = null;
@@ -174,19 +158,7 @@ router.post("/character/checkin", async (req, res) => {
 
     const goldGain = milestoneBonusGold;
     const xpGain = milestoneBonusXp;
-    let newLevel = char.level;
-    let newXp = char.xp + xpGain;
-    const MAX_LEVELUP_ITERATIONS = 100;
-    let levelupIterations = 0;
-    while (newXp >= XP_PER_LEVEL(newLevel)) {
-      if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
-        console.warn(`[checkin] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
-        break;
-      }
-      newXp -= XP_PER_LEVEL(newLevel);
-      newLevel++;
-      levelupIterations++;
-    }
+    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpGain, char.level);
 
     await db.update(characterTable)
       .set({

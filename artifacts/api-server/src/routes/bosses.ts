@@ -2,7 +2,8 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
+import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
+import { processLevelUp, totalXpEarned, XP_PER_LEVEL } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -12,7 +13,7 @@ router.get("/bosses", async (req, res) => {
     const bosses = await db.select().from(bossesTable).orderBy(bossesTable.xpThreshold);
     const mapped = bosses.map((b) => ({
       ...b,
-      isUnlocked: char.xp + (char.level - 1) * 200 >= b.xpThreshold,
+      isUnlocked: totalXpEarned(char.xp, char.level) >= b.xpThreshold,
       defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
       failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
     }));
@@ -30,7 +31,7 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     if (!boss) return res.status(404).json({ error: "Boss not found" });
 
     const char = await getOrCreateCharacter();
-    const totalXpEquiv = char.xp + (char.level - 1) * 200;
+    const totalXpEquiv = totalXpEarned(char.xp, char.level);
 
     if (totalXpEquiv < boss.xpThreshold) {
       return res.json({
@@ -54,20 +55,12 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     let newGold = char.gold;
     let newLevel = char.level;
 
-    const MAX_LEVELUP_ITERATIONS = 100;
     if (victory) {
       newXp += boss.xpReward;
       newGold += boss.goldReward;
-      let levelupIterations = 0;
-      while (newXp >= XP_PER_LEVEL(newLevel)) {
-        if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
-          console.warn(`[boss challenge] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
-          break;
-        }
-        newXp -= XP_PER_LEVEL(newLevel);
-        newLevel++;
-        levelupIterations++;
-      }
+      const result = processLevelUp(newXp, newLevel);
+      newXp = result.xp;
+      newLevel = result.level;
     } else {
       newXp = Math.max(0, char.xp - boss.xpPenalty);
     }

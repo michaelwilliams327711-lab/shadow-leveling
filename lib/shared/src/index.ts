@@ -1,12 +1,4 @@
-export const CATEGORY_STAT_MAP: Record<string, string> = {
-  Financial: "intellect",
-  Productivity: "intellect",
-  Study: "intellect",
-  Health: "endurance",
-  Creative: "agility",
-  Social: "agility",
-  Other: "strength",
-};
+export { CATEGORY_STAT_MAP } from "./economy.js";
 
 export const STAT_KEYS = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
 export type StatKey = typeof STAT_KEYS[number];
@@ -18,3 +10,6 @@ export const STAT_META: Record<StatKey, { label: string; abbr: string; color: st
   intellect:  { label: "Intellect",  abbr: "INT", color: "#60a5fa" },
   discipline: { label: "Discipline", abbr: "DIS", color: "#c084fc" },
 };
+
+export * from "./levelUp.js";
+export * from "./economy.js";

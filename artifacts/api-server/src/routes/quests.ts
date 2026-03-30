@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
 import { eq, and, isNotNull, lt, lte, or } from "drizzle-orm";
-import { CATEGORY_STAT_MAP } from "@workspace/shared";
+import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL } from "@workspace/shared";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -10,24 +10,10 @@ import {
   FailQuestResponse,
   UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
-import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
+import { getOrCreateCharacter, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { awardVocXp } from "./vocations.js";
 
 const router: IRouter = Router();
-
-const RANK_BASE_REWARDS: Record<string, { xp: number; gold: number }> = {
-  F:   { xp: 10,  gold: 5   },
-  E:   { xp: 25,  gold: 12  },
-  D:   { xp: 50,  gold: 25  },
-  C:   { xp: 100, gold: 50  },
-  B:   { xp: 175, gold: 85  },
-  A:   { xp: 275, gold: 135 },
-  S:   { xp: 350, gold: 175 },
-  SS:  { xp: 425, gold: 210 },
-  SSS: { xp: 500, gold: 250 },
-};
-
-const DURATION_BONUS_PER_MINUTE = { xp: 0.3, gold: 0.15 };
 
 function calculateRewards(difficulty: string, durationMinutes: number) {
   const base = RANK_BASE_REWARDS[difficulty] ?? { xp: 50, gold: 25 };
@@ -36,8 +22,8 @@ function calculateRewards(difficulty: string, durationMinutes: number) {
   return {
     xpReward,
     goldReward,
-    xpPenalty: Math.floor(xpReward * 0.5),
-    goldPenalty: Math.floor(goldReward * 0.3),
+    xpPenalty: Math.floor(xpReward * XP_PENALTY_RATIO),
+    goldPenalty: Math.floor(goldReward * GOLD_PENALTY_RATIO),
   };
 }
 
@@ -62,14 +48,6 @@ function getDifficultyStatPenalty(difficulty: string): number {
   if (difficulty === "S" || difficulty === "SS" || difficulty === "SSS") return 3;
   if (difficulty === "A" || difficulty === "B") return 2;
   return 1;
-}
-
-function getStreakStatMultiplier(streak: number): number {
-  if (streak >= 60) return 2.0;
-  if (streak >= 30) return 1.5;
-  if (streak >= 14) return 1.25;
-  if (streak >= 7) return 1.1;
-  return 1.0;
 }
 
 function serializeQuest(q: typeof questsTable.$inferSelect) {
@@ -236,13 +214,15 @@ export async function processOverdueQuestsLogic(): Promise<ProcessOverdueResult>
       const xpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
       const attrMult = getAttributePenaltyMultiplier(runningFailStreak);
 
+      const { xpPenalty, goldPenalty } = calculateRewards(quest.difficulty, quest.durationMinutes);
+
       const xpDeducted = Math.min(
         Math.max(0, char.xp - totalXpDeducted),
-        Math.floor(quest.xpPenalty * xpGoldMult)
+        Math.floor(xpPenalty * xpGoldMult)
       );
       const goldDeducted = Math.min(
         Math.max(0, char.gold - totalGoldDeducted),
-        Math.floor(quest.goldPenalty * xpGoldMult)
+        Math.floor(goldPenalty * xpGoldMult)
       );
       totalXpDeducted += xpDeducted;
       totalGoldDeducted += goldDeducted;
@@ -344,27 +324,7 @@ router.post("/quests/process-overdue", async (req, res) => {
 });
 
 router.post("/quests/recalculate-rewards", async (req, res) => {
-  try {
-    const activeQuests = await db
-      .select()
-      .from(questsTable)
-      .where(eq(questsTable.status, "active"));
-
-    let updatedCount = 0;
-    for (const quest of activeQuests) {
-      const rewards = calculateRewards(quest.difficulty, quest.durationMinutes);
-      await db
-        .update(questsTable)
-        .set(rewards)
-        .where(eq(questsTable.id, quest.id));
-      updatedCount++;
-    }
-
-    res.json({ success: true, updatedCount });
-  } catch (err) {
-    req.log.error({ err }, "Error recalculating quest rewards");
-    res.status(500).json({ error: "Internal server error" });
-  }
+  res.json({ success: true, updatedCount: 0, message: "Reward columns removed; rewards are now derived dynamically at runtime." });
 });
 
 /**
@@ -405,10 +365,6 @@ router.get("/quests", async (req, res) => {
       const windowEnd = new Date(now);
       windowEnd.setDate(windowEnd.getDate() + windowDays);
 
-      // SQL pre-filter: targeted queries instead of one full-table scan.
-      // 1) Non-active quests (completed/failed) are always included.
-      // 2) Active one-time quests with a deadline up to windowEnd.
-      // 3) Active recurring quests (have recurrence JSONB) — narrowed in JS below.
       const [nonActive, activeWithDeadline, activeNullDeadline] = await Promise.all([
         db
           .select()
@@ -443,7 +399,6 @@ router.get("/quests", async (req, res) => {
           .orderBy(questsTable.createdAt),
       ]);
 
-      // Merge, deduplicate, then narrow recurring quests in JS
       const seen = new Set<number>();
       const merged: (typeof questsTable.$inferSelect)[] = [];
       for (const q of [...nonActive, ...activeWithDeadline, ...activeNullDeadline]) {
@@ -458,17 +413,14 @@ router.get("/quests", async (req, res) => {
 
         const recurrence = q.recurrence as RecurrenceConfig | null;
 
-        // Recurring active quests: include if next occurrence falls within window
         if (recurrence && recurrence.type !== "none") {
           const nextDue = getNextDueFromNow(recurrence, q.completedAt ?? q.createdAt);
           if (!nextDue) return false;
           return nextDue <= windowEnd;
         }
 
-        // One-time quests with a deadline: already SQL-filtered to <= windowEnd
         if (q.deadline) return true;
 
-        // One-time quests with no deadline and no recurrence: exclude from windowed view
         return false;
       });
 
@@ -487,7 +439,6 @@ router.post("/quests", async (req, res) => {
   try {
     const body = CreateQuestBody.parse(req.body);
     const vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
-    const rewards = calculateRewards(body.difficulty, body.durationMinutes);
     const [quest] = await db
       .insert(questsTable)
       .values({
@@ -503,7 +454,6 @@ router.post("/quests", async (req, res) => {
         recurrence: (body.recurrence as RecurrenceConfig) ?? null,
         isPaused: false,
         vocationId: vocationId ?? null,
-        ...rewards,
         status: "active",
       })
       .returning();
@@ -533,16 +483,8 @@ router.patch("/quests/:id", async (req, res) => {
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
     if (body.category !== undefined) updates.category = body.category;
-    if (body.difficulty !== undefined || body.durationMinutes !== undefined) {
-      const [existing] = await db.select().from(questsTable).where(eq(questsTable.id, id));
-      if (!existing) return res.status(404).json({ error: "Quest not found" });
-      const diff = body.difficulty ?? existing.difficulty;
-      const dur = body.durationMinutes ?? existing.durationMinutes;
-      const rewards = calculateRewards(diff, dur);
-      Object.assign(updates, rewards);
-      if (body.difficulty !== undefined) updates.difficulty = body.difficulty;
-      if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
-    }
+    if (body.difficulty !== undefined) updates.difficulty = body.difficulty;
+    if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
     if (body.isPaused !== undefined) updates.isPaused = body.isPaused;
     if (body.description !== undefined) updates.description = body.description;
     if (body.statBoost !== undefined) updates.statBoost = body.statBoost ?? null;
@@ -636,13 +578,15 @@ router.post("/quests/:id/complete", async (req, res) => {
     const char = await getOrCreateCharacter();
     const today = getLocalDateStr(req);
 
+    const { xpReward, goldReward } = calculateRewards(quest.difficulty, quest.durationMinutes);
+
     const rngRoll = Math.random();
     const rngBonus = rngRoll < 0.1;
     const rngMultiplier = rngBonus ? 1.5 : 1.0;
     const totalMultiplier = char.multiplier * rngMultiplier;
 
-    const xpAwarded = Math.floor(quest.xpReward * totalMultiplier);
-    const goldAwarded = Math.floor(quest.goldReward * totalMultiplier);
+    const xpAwarded = Math.floor(xpReward * totalMultiplier);
+    const goldAwarded = Math.floor(goldReward * totalMultiplier);
 
     const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
@@ -660,19 +604,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     statUpdates[statField] = statUpdates[statField] + statGain;
     statUpdates.discipline = statUpdates.discipline + disciplineGain;
 
-    let newXp = char.xp + xpAwarded;
-    let newLevel = char.level;
-    const MAX_LEVELUP_ITERATIONS = 100;
-    let levelupIterations = 0;
-    while (newXp >= XP_PER_LEVEL(newLevel)) {
-      if (levelupIterations >= MAX_LEVELUP_ITERATIONS) {
-        console.warn(`[completeQuest] Level-up loop hit MAX_ITERATIONS cap (${MAX_LEVELUP_ITERATIONS}). Breaking.`);
-        break;
-      }
-      newXp -= XP_PER_LEVEL(newLevel);
-      newLevel++;
-      levelupIterations++;
-    }
+    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpAwarded, char.level);
 
     const leveledUp = newLevel > char.level;
 
@@ -766,12 +698,14 @@ router.post("/quests/:id/fail", async (req, res) => {
     const char = await getOrCreateCharacter();
     const today = getLocalDateStr(req);
 
+    const { xpPenalty, goldPenalty } = calculateRewards(quest.difficulty, quest.durationMinutes);
+
     const newFailStreak = char.failStreak + 1;
     const xpGoldMult = getXpGoldPenaltyMultiplier(newFailStreak);
     const attrMult = getAttributePenaltyMultiplier(newFailStreak);
 
-    const xpDeducted = Math.min(char.xp, Math.floor(quest.xpPenalty * xpGoldMult));
-    const goldDeducted = Math.min(char.gold, Math.floor(quest.goldPenalty * xpGoldMult));
+    const xpDeducted = Math.min(char.xp, Math.floor(xpPenalty * xpGoldMult));
+    const goldDeducted = Math.min(char.gold, Math.floor(goldPenalty * xpGoldMult));
 
     const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
     const baseStatPenalty = getDifficultyStatPenalty(quest.difficulty);
