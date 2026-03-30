@@ -3,8 +3,10 @@ import { useForm, type Control, type UseFormWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { 
-  useCompleteQuest, 
+  useCompleteQuest,
+  completeQuest,
   useFailQuest,
+  failQuest,
   useCreateQuest,
   useUpdateQuest,
   useDeleteQuest,
@@ -482,8 +484,18 @@ export default function Quests() {
   const createQuest = useCreateQuest();
   const updateQuest = useUpdateQuest();
   const deleteQuest = useDeleteQuest();
-  const completeQuest = useCompleteQuest();
-  const failQuest = useFailQuest();
+  const completeQuestMutation = useCompleteQuest({
+    mutation: {
+      mutationFn: ({ id }: { id: number }) =>
+        completeQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+    },
+  });
+  const failQuestMutation = useFailQuest({
+    mutation: {
+      mutationFn: ({ id }: { id: number }) =>
+        failQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+    },
+  });
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -546,7 +558,7 @@ export default function Quests() {
   };
 
   const onComplete = (id: number) => {
-    completeQuest.mutate({ id }, {
+    completeQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
         invalidateQuests();
         toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
@@ -558,7 +570,7 @@ export default function Quests() {
   };
 
   const onFail = (id: number) => {
-    failQuest.mutate({ id }, {
+    failQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
         invalidateQuests();
         toast({ title: "Quest Failed", description: `-${res.xpDeducted} XP | -${res.goldDeducted} Gold`, variant: "destructive" });
@@ -1039,7 +1051,7 @@ export default function Quests() {
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 mt-4"
-                disabled={updateQuest.isPending || completeQuest.isPending || failQuest.isPending}
+                disabled={updateQuest.isPending || completeQuestMutation.isPending || failQuestMutation.isPending}
               >
                 {updateQuest.isPending ? "Updating..." : "Save Changes"}
               </Button>
@@ -1233,7 +1245,7 @@ export default function Quests() {
                                   variant="outline"
                                   className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
                                   onClick={() => onFail(quest.id)}
-                                  disabled={failQuest.isPending || completeQuest.isPending}
+                                  disabled={failQuestMutation.isPending || completeQuestMutation.isPending}
                                 >
                                   <XCircle className="w-4 h-4 sm:mr-2" />
                                   <span className="hidden sm:inline">Fail</span>
@@ -1247,7 +1259,7 @@ export default function Quests() {
                                 <Button
                                   className="flex-1 sm:flex-none bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 hover:text-green-300"
                                   onClick={() => onComplete(quest.id)}
-                                  disabled={failQuest.isPending || completeQuest.isPending}
+                                  disabled={failQuestMutation.isPending || completeQuestMutation.isPending}
                                 >
                                   <CheckCircle2 className="w-4 h-4 sm:mr-2" />
                                   <span className="hidden sm:inline">Clear</span>

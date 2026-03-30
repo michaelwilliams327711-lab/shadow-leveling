@@ -10,7 +10,7 @@ import {
   characterLogin,
   processOverdueQuests,
   getGetCharacterQueryKey,
-  getListQuestsQueryKey,
+  getListQuestsWindowedQueryKey,
 } from "@workspace/api-client-react";
 
 // Pages
@@ -61,7 +61,7 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
 
         if (allPenalties.length > 0) {
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
           onPenalties(allPenalties);
         }
       } catch {

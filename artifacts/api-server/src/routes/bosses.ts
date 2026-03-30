@@ -12,7 +12,7 @@ router.get("/bosses", async (req, res) => {
     const bosses = await db.select().from(bossesTable).orderBy(bossesTable.xpThreshold);
     const mapped = bosses.map((b) => ({
       ...b,
-      isUnlocked: char.xp >= b.xpThreshold || char.level * 200 >= b.xpThreshold,
+      isUnlocked: char.xp + (char.level - 1) * 200 >= b.xpThreshold,
       defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
       failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
     }));

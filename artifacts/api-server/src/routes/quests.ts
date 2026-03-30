@@ -9,7 +9,7 @@ import {
   FailQuestResponse,
   UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
-import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity } from "./character.js";
+import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr } from "./character.js";
 
 const router: IRouter = Router();
 
@@ -571,7 +571,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     if (!quest) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateStr(req);
 
     const rngRoll = Math.random();
     const rngBonus = rngRoll < 0.1;
@@ -678,6 +678,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     if (!quest) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
+    const today = getLocalDateStr(req);
 
     const newFailStreak = char.failStreak + 1;
     const xpGoldMult = getXpGoldPenaltyMultiplier(newFailStreak);
@@ -732,6 +733,8 @@ router.post("/quests/:id/fail", async (req, res) => {
       actionType: "FAILED",
       statCategory: quest.statBoost ?? CATEGORY_STAT_GAINS[quest.category] ?? "strength",
     });
+
+    await upsertActivity(today);
 
     const statPenalties = {
       strength: statField === "strength" ? catStatPenalty : 0,

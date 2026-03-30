@@ -3,6 +3,7 @@ import {
   useGetActivityHeatmap, 
   useGetDailyRngEvent, 
   useDailyCheckin,
+  dailyCheckin,
   useGetQuestLog,
   getGetCharacterQueryKey,
   getGetActivityHeatmapQueryKey,
@@ -58,7 +59,11 @@ export default function Dashboard() {
   const { data: heatmap } = useGetActivityHeatmap();
   const { data: rngEvent } = useGetDailyRngEvent();
   const { data: questLogRaw } = useGetQuestLog();
-  const checkinMutation = useDailyCheckin();
+  const checkinMutation = useDailyCheckin({
+    mutation: {
+      mutationFn: () => dailyCheckin({ headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+    },
+  });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -226,7 +231,7 @@ export default function Dashboard() {
                 >
                   <div className="text-right">
                     <span className="text-primary font-bold text-xl">{character.xp.toLocaleString()}</span>
-                    <span className="text-muted-foreground text-sm"> / {(character.xp + character.xpToNextLevel).toLocaleString()} XP</span>
+                    <span className="text-muted-foreground text-sm"> / {character.xpToNextLevel.toLocaleString()} XP</span>
                   </div>
                 </InfoTooltip>
               </div>

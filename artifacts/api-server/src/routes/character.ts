@@ -83,18 +83,30 @@ router.patch("/character", async (req, res) => {
   }
 });
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function getLocalDateStr(req: import("express").Request): string {
+  const header = req.headers["x-local-date"];
+  const headerVal = Array.isArray(header) ? header[0] : header;
+  if (headerVal && DATE_REGEX.test(headerVal)) return headerVal;
+  const queryVal = typeof req.query.localDate === "string" ? req.query.localDate : undefined;
+  if (queryVal && DATE_REGEX.test(queryVal)) return queryVal;
+  return new Date().toISOString().split("T")[0];
+}
+
+function getLastCheckinDateStr(lastCheckin: Date): string {
+  return lastCheckin.toISOString().split("T")[0];
+}
+
 router.post("/character/checkin", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = getLocalDateStr(req);
 
     let alreadyCheckedIn = false;
     if (char.lastCheckin) {
-      const lastDate = new Date(char.lastCheckin);
-      lastDate.setHours(0, 0, 0, 0);
-      if (lastDate.getTime() === today.getTime()) {
+      const lastCheckinDateStr = getLastCheckinDateStr(char.lastCheckin);
+      if (lastCheckinDateStr === todayStr) {
         alreadyCheckedIn = true;
       }
     }
@@ -117,11 +129,12 @@ router.post("/character/checkin", async (req, res) => {
     let streakBroken = false;
 
     if (char.lastCheckin) {
-      const lastDate = new Date(char.lastCheckin);
-      lastDate.setHours(0, 0, 0, 0);
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      if (lastDate.getTime() === yesterday.getTime()) {
+      const lastCheckinDateStr = getLastCheckinDateStr(char.lastCheckin);
+      const todayDate = new Date(todayStr + "T00:00:00.000Z");
+      const yesterdayDate = new Date(todayDate);
+      yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split("T")[0];
+      if (lastCheckinDateStr === yesterdayStr) {
         newStreak = char.streak + 1;
       } else {
         newStreak = 1;
@@ -158,7 +171,7 @@ router.post("/character/checkin", async (req, res) => {
         streak: newStreak,
         longestStreak,
         multiplier: newMultiplier,
-        lastCheckin: new Date(),
+        lastCheckin: new Date(todayStr + "T00:00:00.000Z"),
         gold: char.gold + goldGain,
         xp: newXp,
         level: newLevel,
@@ -310,4 +323,4 @@ router.get("/activity", async (req, res) => {
 });
 
 export default router;
-export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity };
+export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr };
