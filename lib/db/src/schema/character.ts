@@ -22,6 +22,7 @@ export const characterTable = pgTable("character", {
   totalQuestsFailed: integer("total_quests_failed").notNull().default(0),
   failStreak: integer("fail_streak").notNull().default(0),
   penaltyMultiplier: real("penalty_multiplier").notNull().default(1.0),
+  corruption: integer("corruption").notNull().default(0),
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

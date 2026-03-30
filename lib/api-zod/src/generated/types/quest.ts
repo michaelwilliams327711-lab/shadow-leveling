@@ -21,6 +21,7 @@ export interface Quest {
   xpPenalty: number;
   goldPenalty: number;
   status: QuestStatus;
+  isDaily: boolean;
   isPaused: boolean;
   description?: string | null;
   createdAt: string;

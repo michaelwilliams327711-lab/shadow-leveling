@@ -9,10 +9,14 @@ import {
   getGetCharacterQueryKey,
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
+  useListBadHabits,
+  useRecordCleanDay,
+  useGetCorruptionConfig,
+  getListBadHabitsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, Sword, SkullIcon, TrendingDown } from "lucide-react";
+import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +71,9 @@ export default function Dashboard() {
   const { data: heatmap } = useGetActivityHeatmap();
   const { data: rngEvent } = useGetDailyRngEvent();
   const { data: questLogRaw } = useGetQuestLog();
+  const { data: badHabits } = useListBadHabits();
+  const { data: corruptionConfigData } = useGetCorruptionConfig();
+  const recordCleanDayMutation = useRecordCleanDay();
   const checkinMutation = useDailyCheckin({
     mutation: {
       mutationFn: () => dailyCheckin({ headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
@@ -87,6 +94,21 @@ export default function Dashboard() {
     setAriseAnimating(true);
     setTimeout(() => setAriseAnimating(false), 1400);
 
+    if ((badHabits?.length ?? 0) > 0) {
+      recordCleanDayMutation.mutate(undefined, {
+        onSuccess: (res) => {
+          queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+          if (res.purified) {
+            toast({
+              title: "PURIFICATION COMPLETE",
+              description: "All bad habits maintained a clean streak. Corruption reset to 0.",
+              className: "border-green-600 bg-green-950/80 text-green-200",
+            });
+          }
+        },
+      });
+    }
     checkinMutation.mutate(undefined, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
@@ -161,6 +183,11 @@ export default function Dashboard() {
     { name: "Intellect", val: character.intellect, icon: Brain, color: "text-blue-400", barColor: "bg-blue-400" },
     { name: "Discipline", val: character.discipline, icon: Target, color: "text-purple-400", barColor: "bg-purple-400" },
   ];
+
+  const corruption = character.corruption ?? 0;
+  const thresholds = corruptionConfigData?.thresholds ?? { high: 80, mid: 50, low: 20 };
+  const corruptionTier = corruption >= thresholds.high ? "high" : corruption >= thresholds.mid ? "mid" : corruption >= thresholds.low ? "low" : "none";
+  const corruptionOverlayClass = corruptionTier === "high" ? "corruption-high" : corruptionTier === "mid" ? "corruption-mid" : corruptionTier === "low" ? "corruption-low" : "";
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -270,7 +297,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Level & Checkin */}
         <div className="space-y-8 lg:col-span-2">
-          <Card className="glass-panel overflow-hidden relative">
+          <Card className={`glass-panel overflow-hidden relative ${corruptionOverlayClass}`}>
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
               <Sword className="w-48 h-48" />
             </div>
@@ -471,6 +498,58 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {corruption > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="glass-panel border border-red-700/50" style={{ boxShadow: "0 0 20px rgba(239,68,68,0.12)" }}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="font-display tracking-widest text-lg flex items-center gap-2 text-red-400">
+                    <InfoTooltip
+                      what="Corruption — a dark stat driven by bad habit relapses."
+                      fn={`Increases when you log a relapse on a registered bad habit. High corruption degrades the status window with a visual overlay. Resets to 0 when ALL active bad habits reach a ${corruptionConfigData?.purificationStreakDays ?? 3}-day clean streak simultaneously.`}
+                      usage="Register bad habits and avoid relapses to keep corruption low. Visit the Bad Habits page to manage your habits."
+                    >
+                      <span className="flex items-center gap-2">
+                        <ShieldAlert className="w-5 h-5 text-red-500" />
+                        Corruption
+                      </span>
+                    </InfoTooltip>
+                    <span className={`text-xs font-sans px-2 py-0.5 rounded-full ml-auto ${
+                      corruptionTier === "high" ? "bg-red-900/60 text-red-300" :
+                      corruptionTier === "mid" ? "bg-red-800/40 text-red-400" :
+                      "bg-red-900/20 text-red-500"
+                    }`}>
+                      {corruptionTier === "high" ? "CRITICAL" : corruptionTier === "mid" ? "CORRUPTED" : "TAINTED"}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Corruption Level</span>
+                    <span className="text-2xl font-stat font-bold text-red-400">{corruption}<span className="text-base text-muted-foreground">/100</span></span>
+                  </div>
+                  <div className="relative h-3 bg-secondary rounded-full overflow-hidden border border-red-900/30">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${corruption}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="absolute top-0 left-0 h-full rounded-full"
+                      style={{
+                        background: "linear-gradient(90deg, #7f1d1d, #b91c1c, #ef4444)",
+                        boxShadow: "0 0 8px rgba(239,68,68,0.6)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground/70 text-center">
+                    Caused by bad habit relapses. Purified at {corruptionConfigData?.purificationStreakDays ?? 3}-day clean streak.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {failStreak > 0 && (
             <motion.div

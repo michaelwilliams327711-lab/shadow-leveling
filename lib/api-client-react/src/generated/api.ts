@@ -19,10 +19,14 @@ import type {
 import type {
   ActivityDay,
   Awakening,
+  BadHabit,
   Boss,
   BossChallengeResult,
   Character,
   CheckinResult,
+  CorruptionConfig,
+  CorruptionHistory,
+  CreateBadHabitRequest,
   CreateQuestRequest,
   CreateRewardRequest,
   DeleteResult,
@@ -35,9 +39,12 @@ import type {
   QuestDailyLog,
   QuestFailResult,
   QuestLogEntry,
+  RecordCleanDayResult,
+  RelapseResult,
   Reward,
   RngEventResponse,
   SaveAwakeningRequest,
+  UpdateBadHabitRequest,
   UpdateCharacterRequest,
   UpdateQuestRequest,
   UpsertQuestDailyLogRequest,
@@ -2159,3 +2166,650 @@ export function useGetActivityHeatmap<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get corruption system configuration
+ */
+export const getGetCorruptionConfigUrl = () => {
+  return `/api/corruption-config`;
+};
+
+export const getCorruptionConfig = async (
+  options?: RequestInit,
+): Promise<CorruptionConfig> => {
+  return customFetch<CorruptionConfig>(getGetCorruptionConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCorruptionConfigQueryKey = () => {
+  return [`/api/corruption-config`] as const;
+};
+
+export const getGetCorruptionConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCorruptionConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCorruptionConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCorruptionConfig>>
+  > = ({ signal }) => getCorruptionConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCorruptionConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCorruptionConfig>>
+>;
+export type GetCorruptionConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get corruption system configuration
+ */
+
+export function useGetCorruptionConfig<
+  TData = Awaited<ReturnType<typeof getCorruptionConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCorruptionConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all bad habits
+ */
+export const getListBadHabitsUrl = () => {
+  return `/api/bad-habits`;
+};
+
+export const listBadHabits = async (
+  options?: RequestInit,
+): Promise<BadHabit[]> => {
+  return customFetch<BadHabit[]>(getListBadHabitsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBadHabitsQueryKey = () => {
+  return [`/api/bad-habits`] as const;
+};
+
+export const getListBadHabitsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBadHabits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBadHabits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBadHabitsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBadHabits>>> = ({
+    signal,
+  }) => listBadHabits({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBadHabits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBadHabitsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBadHabits>>
+>;
+export type ListBadHabitsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all bad habits
+ */
+
+export function useListBadHabits<
+  TData = Awaited<ReturnType<typeof listBadHabits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBadHabits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBadHabitsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a bad habit
+ */
+export const getCreateBadHabitUrl = () => {
+  return `/api/bad-habits`;
+};
+
+export const createBadHabit = async (
+  createBadHabitRequest: CreateBadHabitRequest,
+  options?: RequestInit,
+): Promise<BadHabit> => {
+  return customFetch<BadHabit>(getCreateBadHabitUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBadHabitRequest),
+  });
+};
+
+export const getCreateBadHabitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBadHabit>>,
+    TError,
+    { data: BodyType<CreateBadHabitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBadHabit>>,
+  TError,
+  { data: BodyType<CreateBadHabitRequest> },
+  TContext
+> => {
+  const mutationKey = ["createBadHabit"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBadHabit>>,
+    { data: BodyType<CreateBadHabitRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBadHabit(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBadHabitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBadHabit>>
+>;
+export type CreateBadHabitMutationBody = BodyType<CreateBadHabitRequest>;
+export type CreateBadHabitMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a bad habit
+ */
+export const useCreateBadHabit = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBadHabit>>,
+    TError,
+    { data: BodyType<CreateBadHabitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBadHabit>>,
+  TError,
+  { data: BodyType<CreateBadHabitRequest> },
+  TContext
+> => {
+  return useMutation(getCreateBadHabitMutationOptions(options));
+};
+
+/**
+ * @summary Record a clean day for all active habits and check for purification
+ */
+export const getRecordCleanDayUrl = () => {
+  return `/api/bad-habits/record-clean-day`;
+};
+
+export const recordCleanDay = async (
+  options?: RequestInit,
+): Promise<RecordCleanDayResult> => {
+  return customFetch<RecordCleanDayResult>(getRecordCleanDayUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRecordCleanDayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordCleanDay>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordCleanDay>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["recordCleanDay"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordCleanDay>>,
+    void
+  > = () => {
+    return recordCleanDay(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordCleanDayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordCleanDay>>
+>;
+
+export type RecordCleanDayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Record a clean day for all active habits and check for purification
+ */
+export const useRecordCleanDay = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordCleanDay>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordCleanDay>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getRecordCleanDayMutationOptions(options));
+};
+
+/**
+ * @summary Get corruption history chart data and relapse log
+ */
+export const getGetCorruptionHistoryUrl = () => {
+  return `/api/bad-habits/corruption-history`;
+};
+
+export const getCorruptionHistory = async (
+  options?: RequestInit,
+): Promise<CorruptionHistory> => {
+  return customFetch<CorruptionHistory>(getGetCorruptionHistoryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCorruptionHistoryQueryKey = () => {
+  return [`/api/bad-habits/corruption-history`] as const;
+};
+
+export const getGetCorruptionHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCorruptionHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCorruptionHistoryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCorruptionHistory>>
+  > = ({ signal }) => getCorruptionHistory({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCorruptionHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCorruptionHistory>>
+>;
+export type GetCorruptionHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get corruption history chart data and relapse log
+ */
+
+export function useGetCorruptionHistory<
+  TData = Awaited<ReturnType<typeof getCorruptionHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCorruptionHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCorruptionHistoryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a bad habit
+ */
+export const getUpdateBadHabitUrl = (id: string) => {
+  return `/api/bad-habits/${id}`;
+};
+
+export const updateBadHabit = async (
+  id: string,
+  updateBadHabitRequest: UpdateBadHabitRequest,
+  options?: RequestInit,
+): Promise<BadHabit> => {
+  return customFetch<BadHabit>(getUpdateBadHabitUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateBadHabitRequest),
+  });
+};
+
+export const getUpdateBadHabitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBadHabit>>,
+    TError,
+    { id: string; data: BodyType<UpdateBadHabitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBadHabit>>,
+  TError,
+  { id: string; data: BodyType<UpdateBadHabitRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateBadHabit"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBadHabit>>,
+    { id: string; data: BodyType<UpdateBadHabitRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateBadHabit(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBadHabitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateBadHabit>>
+>;
+export type UpdateBadHabitMutationBody = BodyType<UpdateBadHabitRequest>;
+export type UpdateBadHabitMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a bad habit
+ */
+export const useUpdateBadHabit = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBadHabit>>,
+    TError,
+    { id: string; data: BodyType<UpdateBadHabitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateBadHabit>>,
+  TError,
+  { id: string; data: BodyType<UpdateBadHabitRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateBadHabitMutationOptions(options));
+};
+
+/**
+ * @summary Delete a bad habit
+ */
+export const getDeleteBadHabitUrl = (id: string) => {
+  return `/api/bad-habits/${id}`;
+};
+
+export const deleteBadHabit = async (
+  id: string,
+  options?: RequestInit,
+): Promise<DeleteResult> => {
+  return customFetch<DeleteResult>(getDeleteBadHabitUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBadHabitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBadHabit>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBadHabit>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteBadHabit"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBadHabit>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBadHabit(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBadHabitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBadHabit>>
+>;
+
+export type DeleteBadHabitMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a bad habit
+ */
+export const useDeleteBadHabit = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBadHabit>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBadHabit>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteBadHabitMutationOptions(options));
+};
+
+/**
+ * @summary Log a relapse for a bad habit
+ */
+export const getLogRelapseUrl = (id: string) => {
+  return `/api/bad-habits/${id}/relapse`;
+};
+
+export const logRelapse = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RelapseResult> => {
+  return customFetch<RelapseResult>(getLogRelapseUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLogRelapseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logRelapse>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof logRelapse>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["logRelapse"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof logRelapse>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return logRelapse(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LogRelapseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof logRelapse>>
+>;
+
+export type LogRelapseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Log a relapse for a bad habit
+ */
+export const useLogRelapse = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logRelapse>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof logRelapse>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getLogRelapseMutationOptions(options));
+};

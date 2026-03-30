@@ -36,6 +36,13 @@
       "when": 1774843290455,
       "tag": "0004_daily_hidden_box_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1743393600000,
+      "tag": "0005_corruption_tables",
+      "breakpoints": true
     }
   ]
 }

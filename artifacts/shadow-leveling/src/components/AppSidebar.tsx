@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   BarChart2,
   TrendingDown,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,6 +29,7 @@ const navItems = [
   { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
   { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
   { title: "Hunter's Chronicle", href: "/analytics", icon: BarChart2, shadow: false },
+  { title: "Bad Habits", href: "/bad-habits", icon: ShieldAlert, shadow: true },
   { title: "The Void", href: "/shadow", icon: TrendingDown, shadow: true },
 ];
 

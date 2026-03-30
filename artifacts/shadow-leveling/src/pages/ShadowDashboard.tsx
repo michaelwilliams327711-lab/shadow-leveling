@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingDown, Skull, AlertTriangle } from "lucide-react";
+import { TrendingDown, Skull, AlertTriangle, ShieldAlert, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   AreaChart,
   Area,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -15,6 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useGetCorruptionHistory } from "@workspace/api-client-react";
 
 interface GraveyardEntry {
   date: string;
@@ -104,6 +107,8 @@ export default function ShadowDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: corruptionData } = useGetCorruptionHistory({ query: { staleTime: 5 * 60 * 1000 } });
+
   if (isLoading || !apiData) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
@@ -123,6 +128,12 @@ export default function ShadowDashboard() {
   }));
 
   const entries = apiData.recentPenalties ?? [];
+
+  const corruptionChartData = (corruptionData?.chartData ?? []).map((d) => ({
+    date: parseDateLabel(d.date),
+    corruption: d.corruption,
+  }));
+  const relapseEvents = corruptionData?.relapseEvents ?? [];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -409,6 +420,91 @@ export default function ShadowDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <Card className="glass-panel border border-red-900/30">
+          <CardHeader>
+            <InfoTooltip variant="shadow"
+              what="Corruption History — your corruption score over time."
+              fn="A line chart plotting how your Corruption stat has changed with each relapse or purification event. The log below shows each relapse event."
+              usage="Use this to see patterns in your relapses and measure your progress in keeping corruption low."
+            >
+              <CardTitle className="font-display tracking-widest text-lg text-red-400 flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5" />
+                Corruption History
+              </CardTitle>
+            </InfoTooltip>
+          </CardHeader>
+          <CardContent>
+            {corruptionChartData.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-10">No corruption events recorded yet.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={corruptionChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="corruptionGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#991b1b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={SHADOW_THEME.grid} />
+                  <XAxis dataKey="date" tick={{ fill: SHADOW_THEME.text, fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: SHADOW_THEME.text, fontSize: 11 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip content={<ShadowTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="corruption"
+                    name="Corruption"
+                    stroke="#ef4444"
+                    strokeWidth={2.5}
+                    dot={{ fill: "#ef4444", r: 4, stroke: "#fff", strokeWidth: 1.5 }}
+                    activeDot={{ r: 6, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {relapseEvents.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card className="glass-panel border border-red-900/30">
+            <CardHeader>
+              <InfoTooltip variant="shadow"
+                what="Relapse Log — every relapse event recorded."
+                fn="Shows date, habit name, and corruption increase for each logged relapse."
+                usage="Review this log to identify which habits are causing the most damage and focus your effort there."
+              >
+                <CardTitle className="font-display tracking-widest text-lg text-red-400 flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Relapse Log
+                </CardTitle>
+              </InfoTooltip>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">
+              {relapseEvents.map((event, i) => (
+                <div
+                  key={`${event.occurredAt}-${i}`}
+                  className="rounded-md px-3 py-2.5 border flex items-start gap-3"
+                  style={{ background: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.2)" }}
+                >
+                  <span className="text-lg mt-0.5 select-none">☠️</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs uppercase tracking-widest font-bold mb-0.5 text-red-400">
+                      RELAPSE — {event.habitName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {parseDateFull(event.date)} &mdash;{" "}
+                      <span style={{ color: "#ef4444" }}>+{event.delta} Corruption</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

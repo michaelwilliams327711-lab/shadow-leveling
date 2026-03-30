@@ -166,3 +166,65 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Corruption overlay tiers */
+@keyframes corruption-pulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.38; }
+}
+
+@keyframes corruption-flicker {
+  0% { opacity: 0.25; transform: translate(0, 0) skew(0deg); }
+  10% { opacity: 0.4; transform: translate(-1px, 0.5px) skew(0.3deg); }
+  20% { opacity: 0.22; transform: translate(1px, -0.5px) skew(-0.2deg); }
+  30% { opacity: 0.38; transform: translate(-0.5px, 1px) skew(0.1deg); }
+  40% { opacity: 0.28; transform: translate(0.5px, 0) skew(-0.3deg); }
+  50% { opacity: 0.42; transform: translate(1px, 0.5px) skew(0.2deg); }
+  60% { opacity: 0.26; transform: translate(0, -0.5px) skew(-0.1deg); }
+  70% { opacity: 0.35; transform: translate(-1px, 0) skew(0.3deg); }
+  80% { opacity: 0.3; transform: translate(0.5px, 0.5px) skew(-0.2deg); }
+  90% { opacity: 0.44; transform: translate(-0.5px, -1px) skew(0.1deg); }
+  100% { opacity: 0.25; transform: translate(0, 0) skew(0deg); }
+}
+
+.corruption-low,
+.corruption-mid,
+.corruption-high {
+  position: relative;
+  overflow: visible;
+}
+
+.corruption-low::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at center, rgba(239,68,68,0.06) 0%, rgba(239,68,68,0.12) 100%);
+  border: 2px solid rgba(239,68,68,0.1);
+}
+
+.corruption-mid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at center, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.22) 100%);
+  border: 2px solid rgba(239,68,68,0.2);
+  animation: corruption-pulse 2.5s ease-in-out infinite;
+}
+
+.corruption-high::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at center, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.35) 100%);
+  border: 3px solid rgba(239,68,68,0.35);
+  animation: corruption-flicker 0.8s linear infinite;
+}

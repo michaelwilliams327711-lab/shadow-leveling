@@ -461,6 +461,138 @@ paths:
                 items:
                   $ref: "#/components/schemas/ActivityDay"
 
+  /corruption-config:
+    get:
+      operationId: getCorruptionConfig
+      tags: [badHabits]
+      summary: Get corruption system configuration
+      responses:
+        "200":
+          description: Corruption configuration values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorruptionConfig"
+
+  /bad-habits:
+    get:
+      operationId: listBadHabits
+      tags: [badHabits]
+      summary: List all bad habits
+      responses:
+        "200":
+          description: List of bad habits with streak info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BadHabit"
+    post:
+      operationId: createBadHabit
+      tags: [badHabits]
+      summary: Create a bad habit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBadHabitRequest"
+      responses:
+        "201":
+          description: Created bad habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadHabit"
+
+  /bad-habits/record-clean-day:
+    post:
+      operationId: recordCleanDay
+      tags: [badHabits]
+      summary: Record a clean day for all active habits and check for purification
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordCleanDayResult"
+
+  /bad-habits/corruption-history:
+    get:
+      operationId: getCorruptionHistory
+      tags: [badHabits]
+      summary: Get corruption history chart data and relapse log
+      responses:
+        "200":
+          description: Corruption history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorruptionHistory"
+
+  /bad-habits/{id}:
+    patch:
+      operationId: updateBadHabit
+      tags: [badHabits]
+      summary: Update a bad habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBadHabitRequest"
+      responses:
+        "200":
+          description: Updated bad habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadHabit"
+    delete:
+      operationId: deleteBadHabit
+      tags: [badHabits]
+      summary: Delete a bad habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /bad-habits/{id}/relapse:
+    post:
+      operationId: logRelapse
+      tags: [badHabits]
+      summary: Log a relapse for a bad habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Relapse result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelapseResult"
+
 components:
   schemas:
     HealthStatus:
@@ -512,8 +644,10 @@ components:
           type: integer
         penaltyMultiplier:
           type: number
+        corruption:
+          type: integer
       required:
-        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier]
+        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
 
     UpdateCharacterRequest:
       type: object
@@ -1013,3 +1147,144 @@ components:
         character:
           $ref: "#/components/schemas/Character"
       required: [penalties, autoFailedQuests, character]
+
+    BadHabit:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        severity:
+          type: string
+          enum: [Low, Medium, High]
+        createdAt:
+          type: string
+        isActive:
+          type: integer
+        cleanStreak:
+          type: integer
+        longestStreak:
+          type: integer
+      required: [id, name, category, severity, createdAt, isActive, cleanStreak, longestStreak]
+
+    CreateBadHabitRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        severity:
+          type: string
+          enum: [Low, Medium, High]
+      required: [name, category, severity]
+
+    UpdateBadHabitRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        severity:
+          type: string
+          enum: [Low, Medium, High]
+        isActive:
+          type: integer
+
+    RelapseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        corruptionDelta:
+          type: integer
+        xpPenalty:
+          type: integer
+        newCorruption:
+          type: integer
+      required: [success, corruptionDelta, xpPenalty, newCorruption]
+
+    RecordCleanDayResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        purified:
+          type: boolean
+      required: [success, purified]
+
+    CorruptionHistoryPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        corruption:
+          type: integer
+      required: [date, corruption]
+
+    RelapseEvent:
+      type: object
+      properties:
+        date:
+          type: string
+        habitName:
+          type: string
+        delta:
+          type: integer
+        occurredAt:
+          type: string
+      required: [date, habitName, delta, occurredAt]
+
+    CorruptionHistory:
+      type: object
+      properties:
+        chartData:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorruptionHistoryPoint"
+        relapseEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelapseEvent"
+      required: [chartData, relapseEvents]
+
+    CorruptionConfig:
+      type: object
+      properties:
+        corruptionDelta:
+          type: object
+          properties:
+            Low:
+              type: integer
+            Medium:
+              type: integer
+            High:
+              type: integer
+          required: [Low, Medium, High]
+        xpPenalty:
+          type: object
+          properties:
+            Low:
+              type: integer
+            Medium:
+              type: integer
+            High:
+              type: integer
+          required: [Low, Medium, High]
+        purificationStreakDays:
+          type: integer
+        thresholds:
+          type: object
+          properties:
+            low:
+              type: integer
+            mid:
+              type: integer
+            high:
+              type: integer
+          required: [low, mid, high]
+      required: [corruptionDelta, xpPenalty, purificationStreakDays, thresholds]

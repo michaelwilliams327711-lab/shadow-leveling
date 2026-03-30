@@ -37,6 +37,7 @@ export const GetCharacterResponse = zod.object({
   totalQuestsFailed: zod.number(),
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
+  corruption: zod.number(),
 });
 
 /**
@@ -66,6 +67,7 @@ export const UpdateCharacterResponse = zod.object({
   totalQuestsFailed: zod.number(),
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
+  corruption: zod.number(),
 });
 
 /**
@@ -117,6 +119,7 @@ export const CharacterLoginResponse = zod.object({
     totalQuestsFailed: zod.number(),
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
+    corruption: zod.number(),
   }),
 });
 
@@ -134,6 +137,7 @@ export const ListQuestsResponseItem = zod.object({
   xpPenalty: zod.number(),
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
+  isDaily: zod.boolean(),
   isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
@@ -165,6 +169,7 @@ export const CreateQuestBody = zod.object({
   category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
+  isDaily: zod.boolean().optional(),
   description: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
@@ -202,6 +207,7 @@ export const GetQuestResponse = zod.object({
   xpPenalty: zod.number(),
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
+  isDaily: zod.boolean(),
   isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
@@ -268,6 +274,7 @@ export const UpdateQuestResponse = zod.object({
   xpPenalty: zod.number(),
   goldPenalty: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
+  isDaily: zod.boolean(),
   isPaused: zod.boolean(),
   description: zod.string().nullish(),
   createdAt: zod.string(),
@@ -381,6 +388,7 @@ export const CompleteQuestResponse = zod.object({
     totalQuestsFailed: zod.number(),
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
+    corruption: zod.number(),
   }),
 });
 
@@ -422,6 +430,7 @@ export const FailQuestResponse = zod.object({
     totalQuestsFailed: zod.number(),
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
+    corruption: zod.number(),
   }),
 });
 
@@ -467,6 +476,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
       xpPenalty: zod.number(),
       goldPenalty: zod.number(),
       status: zod.enum(["active", "completed", "failed"]),
+      isDaily: zod.boolean(),
       isPaused: zod.boolean(),
       description: zod.string().nullish(),
       createdAt: zod.string(),
@@ -509,6 +519,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
     totalQuestsFailed: zod.number(),
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
+    corruption: zod.number(),
   }),
 });
 
@@ -616,6 +627,7 @@ export const ChallengeBossResponse = zod.object({
     totalQuestsFailed: zod.number(),
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
+    corruption: zod.number(),
   }),
 });
 
@@ -678,3 +690,127 @@ export const GetActivityHeatmapResponseItem = zod.object({
 export const GetActivityHeatmapResponse = zod.array(
   GetActivityHeatmapResponseItem,
 );
+
+/**
+ * @summary Get corruption system configuration
+ */
+export const GetCorruptionConfigResponse = zod.object({
+  corruptionDelta: zod.object({
+    Low: zod.number(),
+    Medium: zod.number(),
+    High: zod.number(),
+  }),
+  xpPenalty: zod.object({
+    Low: zod.number(),
+    Medium: zod.number(),
+    High: zod.number(),
+  }),
+  purificationStreakDays: zod.number(),
+  thresholds: zod.object({
+    low: zod.number(),
+    mid: zod.number(),
+    high: zod.number(),
+  }),
+});
+
+/**
+ * @summary List all bad habits
+ */
+export const ListBadHabitsResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.string(),
+  severity: zod.enum(["Low", "Medium", "High"]),
+  createdAt: zod.string(),
+  isActive: zod.number(),
+  cleanStreak: zod.number(),
+  longestStreak: zod.number(),
+});
+export const ListBadHabitsResponse = zod.array(ListBadHabitsResponseItem);
+
+/**
+ * @summary Create a bad habit
+ */
+export const CreateBadHabitBody = zod.object({
+  name: zod.string(),
+  category: zod.string(),
+  severity: zod.enum(["Low", "Medium", "High"]),
+});
+
+/**
+ * @summary Record a clean day for all active habits and check for purification
+ */
+export const RecordCleanDayResponse = zod.object({
+  success: zod.boolean(),
+  purified: zod.boolean(),
+});
+
+/**
+ * @summary Get corruption history chart data and relapse log
+ */
+export const GetCorruptionHistoryResponse = zod.object({
+  chartData: zod.array(
+    zod.object({
+      date: zod.string(),
+      corruption: zod.number(),
+    }),
+  ),
+  relapseEvents: zod.array(
+    zod.object({
+      date: zod.string(),
+      habitName: zod.string(),
+      delta: zod.number(),
+      occurredAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update a bad habit
+ */
+export const UpdateBadHabitParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateBadHabitBody = zod.object({
+  name: zod.string().optional(),
+  category: zod.string().optional(),
+  severity: zod.enum(["Low", "Medium", "High"]).optional(),
+  isActive: zod.number().optional(),
+});
+
+export const UpdateBadHabitResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.string(),
+  severity: zod.enum(["Low", "Medium", "High"]),
+  createdAt: zod.string(),
+  isActive: zod.number(),
+  cleanStreak: zod.number(),
+  longestStreak: zod.number(),
+});
+
+/**
+ * @summary Delete a bad habit
+ */
+export const DeleteBadHabitParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteBadHabitResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Log a relapse for a bad habit
+ */
+export const LogRelapseParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const LogRelapseResponse = zod.object({
+  success: zod.boolean(),
+  corruptionDelta: zod.number(),
+  xpPenalty: zod.number(),
+  newCorruption: zod.number(),
+});

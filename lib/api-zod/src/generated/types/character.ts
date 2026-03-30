@@ -26,4 +26,5 @@ export interface Character {
   totalQuestsFailed: number;
   failStreak: number;
   penaltyMultiplier: number;
+  corruption: number;
 }

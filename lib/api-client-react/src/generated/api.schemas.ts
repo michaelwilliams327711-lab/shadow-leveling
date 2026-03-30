@@ -29,6 +29,7 @@ export interface Character {
   totalQuestsFailed: number;
   failStreak: number;
   penaltyMultiplier: number;
+  corruption: number;
 }
 
 export interface UpdateCharacterRequest {
@@ -112,6 +113,7 @@ export interface Quest {
   xpPenalty: number;
   goldPenalty: number;
   status: QuestStatus;
+  isDaily: boolean;
   isPaused: boolean;
   description?: string | null;
   createdAt: string;
@@ -143,6 +145,7 @@ export interface CreateQuestRequest {
   category: string;
   difficulty: CreateQuestRequestDifficulty;
   durationMinutes: number;
+  isDaily?: boolean;
   description?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;
@@ -393,4 +396,109 @@ export interface ProcessOverdueResult {
   penalties: PenaltyEvent[];
   autoFailedQuests: Quest[];
   character: Character;
+}
+
+export type BadHabitSeverity =
+  (typeof BadHabitSeverity)[keyof typeof BadHabitSeverity];
+
+export const BadHabitSeverity = {
+  Low: "Low",
+  Medium: "Medium",
+  High: "High",
+} as const;
+
+export interface BadHabit {
+  id: string;
+  name: string;
+  category: string;
+  severity: BadHabitSeverity;
+  createdAt: string;
+  isActive: number;
+  cleanStreak: number;
+  longestStreak: number;
+}
+
+export type CreateBadHabitRequestSeverity =
+  (typeof CreateBadHabitRequestSeverity)[keyof typeof CreateBadHabitRequestSeverity];
+
+export const CreateBadHabitRequestSeverity = {
+  Low: "Low",
+  Medium: "Medium",
+  High: "High",
+} as const;
+
+export interface CreateBadHabitRequest {
+  name: string;
+  category: string;
+  severity: CreateBadHabitRequestSeverity;
+}
+
+export type UpdateBadHabitRequestSeverity =
+  (typeof UpdateBadHabitRequestSeverity)[keyof typeof UpdateBadHabitRequestSeverity];
+
+export const UpdateBadHabitRequestSeverity = {
+  Low: "Low",
+  Medium: "Medium",
+  High: "High",
+} as const;
+
+export interface UpdateBadHabitRequest {
+  name?: string;
+  category?: string;
+  severity?: UpdateBadHabitRequestSeverity;
+  isActive?: number;
+}
+
+export interface RelapseResult {
+  success: boolean;
+  corruptionDelta: number;
+  xpPenalty: number;
+  newCorruption: number;
+}
+
+export interface RecordCleanDayResult {
+  success: boolean;
+  purified: boolean;
+}
+
+export interface CorruptionHistoryPoint {
+  date: string;
+  corruption: number;
+}
+
+export interface RelapseEvent {
+  date: string;
+  habitName: string;
+  delta: number;
+  occurredAt: string;
+}
+
+export interface CorruptionHistory {
+  chartData: CorruptionHistoryPoint[];
+  relapseEvents: RelapseEvent[];
+}
+
+export type CorruptionConfigCorruptionDelta = {
+  Low: number;
+  Medium: number;
+  High: number;
+};
+
+export type CorruptionConfigXpPenalty = {
+  Low: number;
+  Medium: number;
+  High: number;
+};
+
+export type CorruptionConfigThresholds = {
+  low: number;
+  mid: number;
+  high: number;
+};
+
+export interface CorruptionConfig {
+  corruptionDelta: CorruptionConfigCorruptionDelta;
+  xpPenalty: CorruptionConfigXpPenalty;
+  purificationStreakDays: number;
+  thresholds: CorruptionConfigThresholds;
 }
