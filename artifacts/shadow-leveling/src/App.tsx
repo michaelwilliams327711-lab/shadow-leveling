@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PenaltyModal } from "@/components/PenaltyModal";
+import { toast } from "@/hooks/use-toast";
 import {
   characterLogin,
   processOverdueQuests,
@@ -33,6 +34,11 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function getLocalDateStr(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 
 interface PenaltyEvent {
   type: string;
@@ -71,6 +77,32 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
 
     runChecks();
   }, [onPenalties]);
+
+  return null;
+}
+
+function DayChangeDetector() {
+  const lastViewedDate = useRef<string>(getLocalDateStr());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const today = getLocalDateStr();
+      if (today !== lastViewedDate.current) {
+        lastViewedDate.current = today;
+
+        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+
+        toast({
+          title: "[SYSTEM] A new day has begun.",
+          description: "Daily quests have been reset.",
+          duration: 6000,
+        });
+      }
+    }, 60_000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return null;
 }
@@ -124,6 +156,7 @@ function App() {
           </SidebarProvider>
           <Toaster />
           <PenaltyChecker onPenalties={setPenalties} />
+          <DayChangeDetector />
           {penalties.length > 0 && (
             <PenaltyModal
               penalties={penalties}
