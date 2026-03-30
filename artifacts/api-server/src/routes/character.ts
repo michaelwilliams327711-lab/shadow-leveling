@@ -349,4 +349,4 @@ router.get("/activity", async (req, res) => {
 });
 
 export default router;
-export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache };
+export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr };
