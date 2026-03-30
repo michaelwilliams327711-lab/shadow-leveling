@@ -10,6 +10,7 @@ import {
   TrendingDown,
   ShieldAlert,
   Layers,
+  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
+  { title: "Planner", href: "/planner", icon: CalendarDays, shadow: false },
   { title: "Status", href: "/", icon: LayoutDashboard, shadow: false },
   { title: "Quests", href: "/quests", icon: ScrollText, shadow: false },
   { title: "Vocation Paths", href: "/vocations", icon: Layers, shadow: false },

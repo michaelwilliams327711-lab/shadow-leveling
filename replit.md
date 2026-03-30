@@ -36,14 +36,15 @@ artifacts-monorepo/
 
 ## Features
 
-1. **Character Dashboard** - Level, XP progress, Gold, streak counter, stats (STR/INT/END/AGI/DIS), Radar chart, GitHub-style activity heatmap, daily check-in button, RNG event banner
-2. **Daily Orders** - Lightweight quick-add tasks on Dashboard. Type name, pick stat, press Enter. Awards E-rank XP (25) + 1 stat point. X/5 counter; at 5/5 a Hidden Box triggers with Gold or stat boost reward revealed via Solo Leveling-style animation. Orders vanish at midnight with zero penalty.
-3. **Quest System** - CRUD quests with Rank (F-SSS), category, duration. Complete/Fail with XP+Gold rewards/penalties scaled to difficulty. Quest log history.
-4. **Streak System** - Daily check-in builds streak, multipliers (1x-3x), milestone bonuses at 7/14/30/60/100 days
-5. **RNG Events** - Deterministic daily random events (30% chance): Surge Day, Treasure Surge, Awakening Pulse, Chaos Rift
-6. **Rewards Shop** - Spend Gold on custom guilt-free rewards
-7. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
-8. **The Awakening** - Vision/Anti-Vision journaling page
+1. **Planner** - Control room page with 4 views (Daily/Weekly/Monthly/Yearly). Daily shows today's quests, daily orders, bad habit check-ins, XP summary. Weekly shows 7-column grid with drag-to-reschedule. Monthly shows calendar with completion dots and day detail popover. Yearly shows activity heatmap + key events.
+2. **Character Dashboard** - Level, XP progress, Gold, streak counter, stats (STR/INT/END/AGI/DIS), Radar chart, GitHub-style activity heatmap, daily check-in button, RNG event banner
+3. **Daily Orders** - Lightweight quick-add tasks on Dashboard. Type name, pick stat, press Enter. Awards E-rank XP (25) + 1 stat point. X/5 counter; at 5/5 a Hidden Box triggers with Gold or stat boost reward revealed via Solo Leveling-style animation. Orders vanish at midnight with zero penalty.
+4. **Quest System** - CRUD quests with Rank (F-SSS), category, duration. Complete/Fail with XP+Gold rewards/penalties scaled to difficulty. Quest log history.
+5. **Streak System** - Daily check-in builds streak, multipliers (1x-3x), milestone bonuses at 7/14/30/60/100 days
+6. **RNG Events** - Deterministic daily random events (30% chance): Surge Day, Treasure Surge, Awakening Pulse, Chaos Rift
+7. **Rewards Shop** - Spend Gold on custom guilt-free rewards
+8. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
+9. **The Awakening** - Vision/Anti-Vision journaling page
 
 ## API Routes
 
@@ -67,6 +68,11 @@ All at `/api`:
 - `POST /daily-orders` - Create daily order (body: { name, statCategory })
 - `POST /daily-orders/:id/complete` - Complete an order (awards XP + stat; checks 5/5 Hidden Box)
 - `DELETE /daily-orders/:id` - Delete uncompleted order
+- `GET /planner/daily` - Today's quests, daily orders, bad habit check-ins, XP summary
+- `GET /planner/weekly` - Week's quest grid with completion counts
+- `GET /planner/monthly` - Month calendar with completion dots and milestone deadlines
+- `GET /planner/yearly` - Year heatmap + key events (boss defeats, high XP days)
+- `PATCH /planner/quest/:id/reschedule` - Reschedule a quest to a new deadline date
 
 ## Database Tables
 
