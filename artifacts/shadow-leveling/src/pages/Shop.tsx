@@ -100,7 +100,7 @@ export default function Shop() {
               SYSTEM SHOP
             </h1>
           </InfoTooltip>
-          <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">Exchange Gold for real-life rewards</p>
+          <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">Spend your Gold. Claim what you've earned.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -111,7 +111,7 @@ export default function Shop() {
           >
             <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
               <Coins className="text-gold w-6 h-6" />
-              <span className="text-gold font-bold text-2xl">{character?.gold?.toLocaleString() || 0}</span>
+              <span className="text-gold font-stat font-bold text-2xl">{character?.gold?.toLocaleString() || 0}</span>
             </div>
           </InfoTooltip>
 
@@ -123,13 +123,13 @@ export default function Shop() {
             </DialogTrigger>
             <DialogContent className="glass-panel border-white/10">
               <DialogHeader>
-                <DialogTitle className="font-display tracking-widest text-xl">Add Item</DialogTitle>
+                <DialogTitle className="font-display tracking-widest text-xl">Register Reward</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Item Name</FormLabel>
+                      <FormLabel>Reward Name</FormLabel>
                       <FormControl><Input {...field} className="bg-background/50" /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -149,7 +149,7 @@ export default function Shop() {
                     </FormItem>
                   )} />
                   <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={createReward.isPending}>
-                    {createReward.isPending ? "Adding..." : "Add to Shop"}
+                    {createReward.isPending ? "Inscribing..." : "Inscribe to Shop"}
                   </Button>
                 </form>
               </Form>
@@ -182,7 +182,7 @@ export default function Shop() {
                   >
                     <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-lg border border-gold/20">
                       <Coins className="w-4 h-4 text-gold" />
-                      <span className="font-bold text-gold">{reward.goldCost}</span>
+                      <span className="font-stat font-bold text-gold">{reward.goldCost}</span>
                     </div>
                   </InfoTooltip>
                 </div>
@@ -202,7 +202,7 @@ export default function Shop() {
                     }`}
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    {canAfford ? "PURCHASE" : "INSUFFICIENT GOLD"}
+                    {canAfford ? "CLAIM REWARD" : "INSUFFICIENT GOLD"}
                   </Button>
                 </InfoTooltip>
               </CardContent>

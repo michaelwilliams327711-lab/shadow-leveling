@@ -136,7 +136,7 @@ export default function ShadowDashboard() {
             className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-1"
             style={{ color: "#ef4444", textShadow: "0 0 30px rgba(239,68,68,0.4)" }}
           >
-            SHADOW DASHBOARD
+            THE VOID
           </h1>
         </InfoTooltip>
         <p className="text-muted-foreground text-lg tracking-widest uppercase">
@@ -159,7 +159,7 @@ export default function ShadowDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
-                  <p className="text-3xl font-display font-bold text-red-400">
+                  <p className="text-3xl font-stat font-bold text-red-400">
                     {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
                   </p>
                   <p className="text-xs text-muted-foreground">last 30 days</p>
@@ -182,7 +182,7 @@ export default function ShadowDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
-                  <p className="text-3xl font-display font-bold" style={{ color: "#dc2626" }}>
+                  <p className="text-3xl font-stat font-bold" style={{ color: "#dc2626" }}>
                     {missedCount}
                   </p>
                   <p className="text-xs text-muted-foreground">missed days recorded</p>

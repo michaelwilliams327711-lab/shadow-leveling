@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -51,6 +51,7 @@
 
   --font-sans: 'Rajdhani', sans-serif;
   --font-display: 'Cinzel', serif;
+  --font-mono: 'Orbitron', monospace;
 
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;
@@ -131,6 +132,11 @@
 .text-gold {
   color: hsl(45 100% 60%);
   text-shadow: 0 0 10px hsl(45 100% 60% / 0.4);
+}
+
+.font-stat {
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
 }
 
 .glass-panel {

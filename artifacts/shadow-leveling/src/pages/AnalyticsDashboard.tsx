@@ -129,7 +129,7 @@ export default function AnalyticsDashboard() {
           usage="Review this dashboard regularly to understand your growth trajectory and identify areas that need more consistency."
         >
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight mb-1">
-            ANALYTICS
+            HUNTER'S CHRONICLE
           </h1>
         </InfoTooltip>
         <p className="text-muted-foreground text-lg tracking-widest uppercase">
@@ -152,7 +152,7 @@ export default function AnalyticsDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Current Streak</p>
-                  <p className="text-3xl font-display font-bold text-orange-400">{data.character.streak}</p>
+                  <p className="text-3xl font-stat font-bold text-orange-400">{data.character.streak}</p>
                   <p className="text-xs text-muted-foreground">days in a row</p>
                 </div>
               </CardContent>
@@ -173,7 +173,7 @@ export default function AnalyticsDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Treasury / Gold</p>
-                  <p className="text-3xl font-display font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
+                  <p className="text-3xl font-stat font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">gold coins</p>
                 </div>
               </CardContent>
@@ -195,7 +195,7 @@ export default function AnalyticsDashboard() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Next Level XP</p>
-                    <p className="text-xl font-display font-bold text-primary">
+                    <p className="text-xl font-stat font-bold text-primary">
                       {data.character.xp.toLocaleString()} <span className="text-sm text-muted-foreground font-normal">/ {data.character.xpToNextLevel.toLocaleString()}</span>
                     </p>
                   </div>

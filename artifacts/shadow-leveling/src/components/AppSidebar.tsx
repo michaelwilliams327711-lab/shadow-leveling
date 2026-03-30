@@ -27,8 +27,8 @@ const navItems = [
   { title: "Shop", href: "/shop", icon: Store, shadow: false },
   { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
   { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
-  { title: "Analytics", href: "/analytics", icon: BarChart2, shadow: false },
-  { title: "Shadow Dashboard", href: "/shadow", icon: TrendingDown, shadow: true },
+  { title: "Hunter's Chronicle", href: "/analytics", icon: BarChart2, shadow: false },
+  { title: "The Void", href: "/shadow", icon: TrendingDown, shadow: true },
 ];
 
 export function AppSidebar() {

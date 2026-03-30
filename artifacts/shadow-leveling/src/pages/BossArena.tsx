@@ -173,8 +173,8 @@ export default function BossArena() {
                     >
                       <div className="space-y-1">
                         <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Victory</p>
-                        <p className="text-primary font-bold">+{boss.xpReward} XP</p>
-                        <p className="text-gold font-bold">+{boss.goldReward} G</p>
+                        <p className="text-primary font-stat font-bold">+{boss.xpReward} XP</p>
+                        <p className="text-gold font-stat font-bold">+{boss.goldReward} G</p>
                       </div>
                     </InfoTooltip>
                     <InfoTooltip
@@ -184,7 +184,7 @@ export default function BossArena() {
                     >
                       <div className="text-right space-y-1">
                         <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Defeat</p>
-                        <p className="text-destructive font-bold">-{boss.xpPenalty} XP</p>
+                        <p className="text-destructive font-stat font-bold">-{boss.xpPenalty} XP</p>
                         <p className="text-muted-foreground">- Stats drop</p>
                       </div>
                     </InfoTooltip>

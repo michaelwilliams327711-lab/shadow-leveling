@@ -47,7 +47,7 @@ function getOutcomeBadge(entry: QuestLogEntry) {
     return { label: "MISSED", className: "bg-slate-500/20 text-slate-400 border border-slate-500/40" };
   }
   if (entry.outcome === "completed") {
-    return { label: "COMPLETED", className: "bg-green-500/20 text-green-400 border border-green-500/40" };
+    return { label: "QUEST CLEARED", className: "bg-green-500/20 text-green-400 border border-green-500/40" };
   }
   return { label: "FAILED", className: "bg-red-500/20 text-red-400 border border-red-500/40" };
 }
@@ -76,12 +76,12 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
         
         if (res.alreadyCheckedIn) {
-          toast({ title: "Already Checked In", description: "You have already claimed your daily rewards." });
+          toast({ title: "ARISE ALREADY CLAIMED", description: "You have already claimed your daily rewards." });
           return;
         }
 
         toast({
-          title: "Check-in Successful!",
+          title: "ARISE COMPLETE",
           description: `Streak: ${res.streak} | Multiplier: ${res.multiplier}x`,
           className: "bg-primary/20 border-primary text-primary-foreground",
         });
@@ -89,7 +89,7 @@ export default function Dashboard() {
         if (res.milestoneBonus) {
           setTimeout(() => {
             toast({
-              title: "🔥 Milestone Reached! 🔥",
+              title: "THRESHOLD REACHED",
               description: `Bonus Rewards: +${res.milestoneBonusXp} XP | +${res.milestoneBonusGold} Gold`,
               className: "bg-destructive/20 border-destructive text-destructive-foreground",
             });
@@ -151,7 +151,7 @@ export default function Dashboard() {
           >
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
               <Coins className="text-gold w-5 h-5" />
-              <span className="text-gold font-bold text-xl">{character.gold.toLocaleString()} G</span>
+              <span className="text-gold font-stat font-bold text-xl">{character.gold.toLocaleString()} G</span>
             </div>
           </InfoTooltip>
           <InfoTooltip
@@ -161,7 +161,7 @@ export default function Dashboard() {
           >
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30">
               <Flame className="text-orange-500 w-5 h-5" />
-              <span className="text-orange-500 font-bold text-xl">{character.streak} Day</span>
+              <span className="text-orange-500 font-stat font-bold text-xl">{character.streak} Day</span>
               {character.multiplier > 1 && (
                 <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
                   {character.multiplier}x
@@ -221,7 +221,7 @@ export default function Dashboard() {
                 >
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl text-muted-foreground font-display tracking-widest">LEVEL</span>
-                    <span className="text-6xl font-display font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{character.level}</span>
+                    <span className="text-6xl font-stat font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{character.level}</span>
                   </div>
                 </InfoTooltip>
                 <InfoTooltip
@@ -230,8 +230,8 @@ export default function Dashboard() {
                   usage="Fill the bar to level up. Streak bonuses and high-rank quests accelerate progress."
                 >
                   <div className="text-right">
-                    <span className="text-primary font-bold text-xl">{character.xp.toLocaleString()}</span>
-                    <span className="text-muted-foreground text-sm"> / {character.xpToNextLevel.toLocaleString()} XP</span>
+                    <span className="text-primary font-stat font-bold text-xl">{character.xp.toLocaleString()}</span>
+                    <span className="text-muted-foreground text-sm font-stat"> / {character.xpToNextLevel.toLocaleString()} XP</span>
                   </div>
                 </InfoTooltip>
               </div>
@@ -256,7 +256,7 @@ export default function Dashboard() {
                 disabled={checkinMutation.isPending}
                 className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300"
               >
-                {checkinMutation.isPending ? "Connecting..." : "Daily Arise (Check-In)"}
+                {checkinMutation.isPending ? "Connecting..." : "DAILY ARISE"}
               </Button>
             </CardContent>
           </Card>
@@ -269,7 +269,7 @@ export default function Dashboard() {
                   fn="Each cell represents one day. Darker purple means more quests completed that day. Below the heatmap, your 10 most recent quest events are listed with outcome, XP/Gold changes, and timestamps."
                   usage="Use it to spot gaps in your consistency and review recent wins or failures at a glance."
                 >
-                  <span className="cursor-default">Activity Record</span>
+                  <span className="cursor-default">Hunter's Log</span>
                 </InfoTooltip>
               </CardTitle>
             </CardHeader>
@@ -277,7 +277,7 @@ export default function Dashboard() {
               <Heatmap data={heatmap || []} />
               {questLog.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Recent Activity</p>
+                  <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">System Log</p>
                   <div className="max-h-64 overflow-y-auto space-y-1 pr-1 hide-scrollbar">
                     {questLog.map((entry) => {
                       const badge = getOutcomeBadge(entry);
@@ -411,7 +411,7 @@ export default function Dashboard() {
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Consecutive Failures</span>
-                    <span className={`text-2xl font-display font-bold ${failStreakColors[failStreakTier]}`}>{failStreak}</span>
+                    <span className={`text-2xl font-stat font-bold ${failStreakColors[failStreakTier]}`}>{failStreak}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground flex items-center gap-1"><TrendingDown className="w-3 h-3" /> XP/Gold Penalty</span>
