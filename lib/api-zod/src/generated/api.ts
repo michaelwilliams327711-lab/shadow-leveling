@@ -158,6 +158,7 @@ export const ListQuestsResponseItem = zod.object({
       day: zod.number().nullish(),
     })
     .nullish(),
+  vocationId: zod.string().nullish(),
 });
 export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
 
@@ -187,6 +188,7 @@ export const CreateQuestBody = zod.object({
       day: zod.number().nullish(),
     })
     .nullish(),
+  vocationId: zod.string().nullish(),
 });
 
 /**
@@ -228,6 +230,7 @@ export const GetQuestResponse = zod.object({
       day: zod.number().nullish(),
     })
     .nullish(),
+  vocationId: zod.string().nullish(),
 });
 
 /**
@@ -261,6 +264,7 @@ export const UpdateQuestBody = zod.object({
       day: zod.number().nullish(),
     })
     .nullish(),
+  vocationId: zod.string().nullish(),
 });
 
 export const UpdateQuestResponse = zod.object({
@@ -295,6 +299,7 @@ export const UpdateQuestResponse = zod.object({
       day: zod.number().nullish(),
     })
     .nullish(),
+  vocationId: zod.string().nullish(),
 });
 
 /**
@@ -497,6 +502,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
           day: zod.number().nullish(),
         })
         .nullish(),
+      vocationId: zod.string().nullish(),
     }),
   ),
   character: zod.object({

@@ -29,6 +29,8 @@ import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
 import { DailyOrders } from "@/components/DailyOrders";
+import { VocationWidget } from "@/components/VocationWidget";
+import { STAT_META } from "@workspace/shared";
 
 function formatRelativeTime(isoString: string): string {
   const now = Date.now();
@@ -177,11 +179,11 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { name: "Strength", val: character.strength, icon: Dumbbell, color: "text-red-400", barColor: "bg-red-400" },
-    { name: "Agility", val: character.agility, icon: Zap, color: "text-yellow-400", barColor: "bg-yellow-400" },
-    { name: "Endurance", val: character.endurance, icon: Shield, color: "text-green-400", barColor: "bg-green-400" },
-    { name: "Intellect", val: character.intellect, icon: Brain, color: "text-blue-400", barColor: "bg-blue-400" },
-    { name: "Discipline", val: character.discipline, icon: Target, color: "text-purple-400", barColor: "bg-purple-400" },
+    { name: STAT_META.strength.label,   val: character.strength,   icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
+    { name: STAT_META.agility.label,    val: character.agility,    icon: Zap,      color: "text-yellow-400", barColor: "bg-yellow-400" },
+    { name: STAT_META.endurance.label,  val: character.endurance,  icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
+    { name: STAT_META.intellect.label,  val: character.intellect,  icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
+    { name: STAT_META.discipline.label, val: character.discipline, icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
   ];
 
   const corruption = character.corruption ?? 0;
@@ -438,6 +440,8 @@ export default function Dashboard() {
 
         {/* Right Column - Stats */}
         <div className="space-y-8">
+          <VocationWidget />
+
           <Card className="glass-panel">
             <CardHeader className="pb-2">
               <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">

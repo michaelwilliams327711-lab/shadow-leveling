@@ -1,20 +1,14 @@
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from "recharts";
 import type { Character } from "@workspace/api-client-react";
+import { STAT_META } from "@workspace/shared";
 
 interface StatRadarProps {
   character: Character;
 }
 
-const STAT_COLORS: Record<string, string> = {
-  STR: "#f87171",
-  AGI: "#facc15",
-  END: "#4ade80",
-  INT: "#60a5fa",
-  DIS: "#c084fc",
-};
-
 function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payload: { value: string }; textAnchor: string }) {
-  const color = STAT_COLORS[payload.value] ?? "hsl(var(--foreground))";
+  const entry = Object.values(STAT_META).find((m) => m.abbr === payload.value);
+  const color = entry?.color ?? "hsl(var(--foreground))";
   return (
     <text
       x={x}
@@ -34,11 +28,11 @@ export function StatRadar({ character }: StatRadarProps) {
   const fullMark = 110_000;
 
   const data = [
-    { subject: "STR", A: character.strength, fullMark },
-    { subject: "AGI", A: character.agility, fullMark },
-    { subject: "END", A: character.endurance, fullMark },
-    { subject: "DIS", A: character.discipline, fullMark },
-    { subject: "INT", A: character.intellect, fullMark },
+    { subject: STAT_META.strength.abbr,   A: character.strength,   fullMark },
+    { subject: STAT_META.agility.abbr,    A: character.agility,    fullMark },
+    { subject: STAT_META.endurance.abbr,  A: character.endurance,  fullMark },
+    { subject: STAT_META.discipline.abbr, A: character.discipline, fullMark },
+    { subject: STAT_META.intellect.abbr,  A: character.intellect,  fullMark },
   ];
 
   return (

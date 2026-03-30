@@ -24,6 +24,7 @@ import Awakening from "@/pages/Awakening";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
+import VocationPaths from "@/pages/VocationPaths";
 import NotFound from "@/pages/not-found";
 
 const heroBgImg = "/images/hero-bg.png";
@@ -130,6 +131,7 @@ function Router() {
       <Route path="/analytics" component={AnalyticsDashboard} />
       <Route path="/shadow" component={ShadowDashboard} />
       <Route path="/bad-habits" component={BadHabits} />
+      <Route path="/vocations" component={VocationPaths} />
       <Route component={NotFound} />
     </Switch>
   );

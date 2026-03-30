@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { vocationsTable } from "./vocations";
 
 export const questsTable = pgTable("quests", {
   id: serial("id").primaryKey(),
@@ -22,6 +23,7 @@ export const questsTable = pgTable("quests", {
   amountUnit: text("amount_unit"),
   isPaused: boolean("is_paused").notNull().default(false),
   recurrence: jsonb("recurrence"),
+  vocationId: text("vocation_id").references(() => vocationsTable.id, { onDelete: "set null" }),
 });
 
 export const questLogTable = pgTable("quest_log", {

@@ -21,4 +21,5 @@ export interface CreateQuestRequest {
   targetAmount?: number | null;
   amountUnit?: string | null;
   recurrence?: RecurrenceConfig | null;
+  vocationId?: string | null;
 }

@@ -758,6 +758,9 @@ components:
         recurrence:
           $ref: "#/components/schemas/RecurrenceConfig"
           nullable: true
+        vocationId:
+          type: string
+          nullable: true
       required: [id, name, category, difficulty, durationMinutes, xpReward, goldReward, xpPenalty, goldPenalty, status, isDaily, isPaused, createdAt]
 
     CreateQuestRequest:
@@ -792,6 +795,9 @@ components:
         recurrence:
           $ref: "#/components/schemas/RecurrenceConfig"
           nullable: true
+        vocationId:
+          type: string
+          nullable: true
       required: [name, category, difficulty, durationMinutes]
 
     UpdateQuestRequest:
@@ -822,6 +828,9 @@ components:
           nullable: true
         recurrence:
           $ref: "#/components/schemas/RecurrenceConfig"
+          nullable: true
+        vocationId:
+          type: string
           nullable: true
 
     QuestDailyLog:

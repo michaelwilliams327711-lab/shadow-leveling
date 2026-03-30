@@ -11,6 +11,7 @@ import {
   UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
+import { awardVocXp } from "./vocations.js";
 
 const router: IRouter = Router();
 
@@ -485,6 +486,7 @@ router.get("/quests", async (req, res) => {
 router.post("/quests", async (req, res) => {
   try {
     const body = CreateQuestBody.parse(req.body);
+    const vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
     const rewards = calculateRewards(body.difficulty, body.durationMinutes);
     const [quest] = await db
       .insert(questsTable)
@@ -500,6 +502,7 @@ router.post("/quests", async (req, res) => {
         amountUnit: body.amountUnit ?? null,
         recurrence: (body.recurrence as RecurrenceConfig) ?? null,
         isPaused: false,
+        vocationId: vocationId ?? null,
         ...rewards,
         status: "active",
       })
@@ -547,6 +550,9 @@ router.patch("/quests/:id", async (req, res) => {
     if (body.amountUnit !== undefined) updates.amountUnit = body.amountUnit ?? null;
     if (body.recurrence !== undefined) {
       updates.recurrence = body.recurrence ?? null;
+    }
+    if ("vocationId" in req.body) {
+      updates.vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
     }
 
     const [updated] = await db.update(questsTable).set(updates).where(eq(questsTable.id, id)).returning();
@@ -706,6 +712,15 @@ router.post("/quests/:id/complete", async (req, res) => {
 
     await upsertActivity(today);
 
+    let vocResult: { gateTriggered: boolean; gateBlocked: boolean; xpAwarded: number; newLevel: number; newXp: number } | null = null;
+    if (quest.vocationId) {
+      try {
+        vocResult = await awardVocXp(quest.vocationId, quest.difficulty);
+      } catch (vocErr) {
+        req.log.error({ err: vocErr, vocationId: quest.vocationId }, "Failed to award VOC XP; quest completion still succeeds");
+      }
+    }
+
     const statGains = {
       strength: statField === "strength" ? statGain : 0,
       intellect: statField === "intellect" ? statGain : 0,
@@ -729,7 +744,13 @@ router.post("/quests/:id/complete", async (req, res) => {
         lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
       },
     });
-    res.json(data);
+    const responseData: Record<string, unknown> = { ...data };
+    if (vocResult) {
+      responseData.vocGateTriggered = vocResult.gateTriggered;
+      responseData.vocGateBlocked = vocResult.gateBlocked;
+      responseData.vocXpAwarded = vocResult.xpAwarded;
+    }
+    res.json(responseData);
   } catch (err) {
     req.log.error({ err }, "Error completing quest");
     res.status(500).json({ error: "Internal server error" });

@@ -123,6 +123,7 @@ export interface Quest {
   targetAmount?: number | null;
   amountUnit?: string | null;
   recurrence?: RecurrenceConfig | null;
+  vocationId?: string | null;
 }
 
 export type CreateQuestRequestDifficulty =
@@ -152,6 +153,7 @@ export interface CreateQuestRequest {
   targetAmount?: number | null;
   amountUnit?: string | null;
   recurrence?: RecurrenceConfig | null;
+  vocationId?: string | null;
 }
 
 export type UpdateQuestRequestDifficulty =
@@ -180,6 +182,7 @@ export interface UpdateQuestRequest {
   targetAmount?: number | null;
   amountUnit?: string | null;
   recurrence?: RecurrenceConfig | null;
+  vocationId?: string | null;
 }
 
 export interface QuestDailyLog {

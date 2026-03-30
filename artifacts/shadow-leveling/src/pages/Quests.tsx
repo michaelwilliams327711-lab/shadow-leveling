@@ -17,7 +17,7 @@ import {
   getListQuestsWindowedQueryKey,
 } from "@workspace/api-client-react";
 import type { RecurrenceConfig } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,12 +55,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
-import { CATEGORY_STAT_MAP } from "@workspace/shared";
+import { CATEGORY_STAT_MAP, STAT_META } from "@workspace/shared";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { playQuestComplete } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { listVocations } from "@/lib/vocations-client";
+import type { VocationPath } from "@/lib/vocations-client";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -75,13 +77,19 @@ const QuestCategory = {
 const CATEGORY_PRESETS = Object.values(QuestCategory);
 
 
-const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = {
-  strength:   { label: "Strength",   icon: Dumbbell, color: "text-red-400" },
-  agility:    { label: "Agility",    icon: Zap,      color: "text-yellow-400" },
-  endurance:  { label: "Endurance",  icon: Shield,   color: "text-green-400" },
-  intellect:  { label: "Intellect",  icon: Brain,    color: "text-blue-400" },
-  discipline: { label: "Discipline", icon: Target,   color: "text-purple-400" },
+const STAT_ICONS: Record<string, LucideIcon> = {
+  strength: Dumbbell, agility: Zap, endurance: Shield, intellect: Brain, discipline: Target,
 };
+const STAT_TEXT_COLORS: Record<string, string> = {
+  strength: "text-red-400", agility: "text-yellow-400", endurance: "text-green-400",
+  intellect: "text-blue-400", discipline: "text-purple-400",
+};
+const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = Object.fromEntries(
+  Object.keys(STAT_META).map((key) => [
+    key,
+    { label: STAT_META[key as keyof typeof STAT_META].label, icon: STAT_ICONS[key], color: STAT_TEXT_COLORS[key] },
+  ])
+);
 
 const DAYS_OF_WEEK = [
   { label: "Sun", value: 0 },
@@ -503,6 +511,13 @@ export default function Quests() {
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas: Array<{ name: string; value: number }> } | null>(null);
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
+  const [createVocationId, setCreateVocationId] = useState<string>("");
+  const [editVocationId, setEditVocationId] = useState<string>("");
+  const { data: vocations = [] } = useQuery({
+    queryKey: ["vocations"],
+    queryFn: listVocations,
+    staleTime: 60_000,
+  });
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -550,6 +565,8 @@ export default function Quests() {
         recurrence: rec ?? { type: "none" },
       });
       setShowEditRecurrence(!!(rec && rec.type !== "none"));
+      const vId = (editingQuest as Quest & { vocationId?: string | null }).vocationId ?? "";
+      setEditVocationId(vId ?? "");
     }
   }, [editingQuest, editForm]);
 
@@ -648,12 +665,14 @@ export default function Quests() {
         targetAmount: data.targetAmount ?? null,
         amountUnit: data.amountUnit || null,
         recurrence: buildRecurrence(data.recurrence),
+        vocationId: createVocationId || null,
       }
     }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);
         setShowRecurrence(false);
+        setCreateVocationId("");
         createForm.reset();
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
       }
@@ -675,6 +694,7 @@ export default function Quests() {
           targetAmount: data.targetAmount ?? null,
           amountUnit: data.amountUnit || null,
           recurrence: buildRecurrence(data.recurrence),
+          vocationId: editVocationId || null,
         }
       },
       {
@@ -863,6 +883,26 @@ export default function Quests() {
                   </FormItem>
                 )} />
 
+                {vocations.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium leading-none flex items-center gap-2">
+                      Vocation Path <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <Select onValueChange={(v) => setCreateVocationId(v === "__none__" ? "" : v)} value={createVocationId || "__none__"}>
+                      <SelectTrigger className="bg-background/50 h-9 text-sm">
+                        <SelectValue placeholder="None — no VOC XP" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None — no VOC XP</SelectItem>
+                        {vocations.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Completing this quest awards VOC XP to the linked path</p>
+                  </div>
+                )}
+
                 <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
                   <FormItem>
                     <InfoTooltip what="How long you plan to spend on this quest." fn="Logged in minutes. Used to track total time invested per category over time." usage="Set a realistic target. If a task consistently takes longer than the duration you set, increase it to keep your log accurate.">
@@ -1026,6 +1066,26 @@ export default function Quests() {
                   <FormMessage />
                 </FormItem>
               )} />
+
+              {vocations.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium leading-none flex items-center gap-2">
+                    Vocation Path <span className="text-muted-foreground text-xs">(optional)</span>
+                  </label>
+                  <Select onValueChange={(v) => setEditVocationId(v === "__none__" ? "" : v)} value={editVocationId || "__none__"}>
+                    <SelectTrigger className="bg-background/50 h-9 text-sm">
+                      <SelectValue placeholder="None — no VOC XP" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None — no VOC XP</SelectItem>
+                      {vocations.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Completing this quest awards VOC XP to the linked path</p>
+                </div>
+              )}
 
               <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
                 <FormItem>

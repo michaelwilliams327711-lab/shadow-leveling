@@ -20,4 +20,5 @@ export interface UpdateQuestRequest {
   targetAmount?: number | null;
   amountUnit?: string | null;
   recurrence?: RecurrenceConfig | null;
+  vocationId?: string | null;
 }

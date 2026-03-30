@@ -9,6 +9,7 @@ import rngRouter from "./rng.js";
 import dashboardRouter from "./dashboard.js";
 import dailyOrdersRouter from "./daily-orders.js";
 import badHabitsRouter from "./badHabits.js";
+import vocationsRouter from "./vocations.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(rngRouter);
 router.use(dashboardRouter);
 router.use(dailyOrdersRouter);
 router.use(badHabitsRouter);
+router.use(vocationsRouter);
 
 export default router;
