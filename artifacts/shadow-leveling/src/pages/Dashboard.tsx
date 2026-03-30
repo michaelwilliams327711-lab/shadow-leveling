@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { 
   useGetCharacter, 
   useGetActivityHeatmap, 
@@ -10,8 +11,8 @@ import {
   type QuestLogEntry,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, Sword, SkullIcon, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,10 @@ import { StatRadar } from "@/components/StatRadar";
 import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
+import { LevelUpCeremony } from "@/components/LevelUpCeremony";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { playAriseClick } from "@/lib/sounds";
 
 function formatRelativeTime(isoString: string): string {
   const now = Date.now();
@@ -54,6 +59,8 @@ function getOutcomeBadge(entry: QuestLogEntry) {
 
 const STAT_CAP = 110_000;
 
+const STREAK_MILESTONES = [7, 30, 100, 365];
+
 export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
   const { data: heatmap } = useGetActivityHeatmap();
@@ -66,10 +73,19 @@ export default function Dashboard() {
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const reduced = useReducedMotion();
+  const [ariseAnimating, setAriseAnimating] = useState(false);
+  const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
+  const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
+  const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
   const handleCheckin = () => {
+    if (!reduced) playAriseClick();
+    setAriseAnimating(true);
+    setTimeout(() => setAriseAnimating(false), 1400);
+
     checkinMutation.mutate(undefined, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
@@ -80,11 +96,22 @@ export default function Dashboard() {
           return;
         }
 
+        setAriseStreakTick(res.streak);
+        setTimeout(() => setAriseStreakTick(null), 2000);
+
         toast({
           title: "ARISE COMPLETE",
           description: `Streak: ${res.streak} | Multiplier: ${res.multiplier}x`,
           className: "bg-primary/20 border-primary text-primary-foreground",
         });
+
+        if (res.leveledUp && res.newLevel) {
+          setTimeout(() => setLevelUpData({ newLevel: res.newLevel! }), 1200);
+        }
+
+        if (STREAK_MILESTONES.includes(res.streak)) {
+          setTimeout(() => setStreakMilestone(res.streak), 800);
+        }
 
         if (res.milestoneBonus) {
           setTimeout(() => {
@@ -136,6 +163,21 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Daily Arise screen darken overlay */}
+      <AnimatePresence>
+        {ariseAnimating && !reduced && (
+          <motion.div
+            key="arise-screen-darken"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[100] pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at center, rgba(124,58,237,0.18) 0%, rgba(0,0,0,0.55) 100%)" }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header & Status */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
@@ -159,9 +201,28 @@ export default function Dashboard() {
             fn="Builds a multiplier (up to 2×) that boosts XP and Gold rewards for completed quests."
             usage="Hit the 'Daily Arise' button every day to keep your streak alive and grow your multiplier."
           >
-            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30">
+            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30 relative overflow-hidden">
+              <AnimatePresence>
+                {ariseStreakTick !== null && !reduced && (
+                  <motion.div
+                    key="streak-tick"
+                    className="absolute inset-0 bg-orange-500/20 rounded-xl pointer-events-none"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: [0, 1, 0.6, 0] }}
+                    transition={{ duration: 0.8 }}
+                  />
+                )}
+              </AnimatePresence>
               <Flame className="text-orange-500 w-5 h-5" />
-              <span className="text-orange-500 font-stat font-bold text-xl">{character.streak} Day</span>
+              <motion.span
+                key={ariseStreakTick ?? character.streak}
+                initial={ariseStreakTick !== null && !reduced ? { scale: 1.5, color: "#f97316" } : {}}
+                animate={{ scale: 1, color: "#f97316" }}
+                transition={{ type: "spring", stiffness: 300, damping: 12 }}
+                className="text-orange-500 font-stat font-bold text-xl"
+              >
+                {(ariseStreakTick ?? character.streak)} Day
+              </motion.span>
               {character.multiplier > 1 && (
                 <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
                   {character.multiplier}x
@@ -251,13 +312,42 @@ export default function Dashboard() {
                 </div>
               </InfoTooltip>
 
-              <Button 
-                onClick={handleCheckin}
-                disabled={checkinMutation.isPending}
-                className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300"
-              >
-                {checkinMutation.isPending ? "Connecting..." : "DAILY ARISE"}
-              </Button>
+              <div className="relative">
+                <AnimatePresence>
+                  {ariseAnimating && !reduced && (
+                    <motion.div
+                      key="arise-glow"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1.15 }}
+                      exit={{ opacity: 0, scale: 1.3 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0 rounded-lg pointer-events-none"
+                      style={{ background: "radial-gradient(ellipse at center, rgba(124,58,237,0.6) 0%, transparent 70%)", zIndex: 0 }}
+                    />
+                  )}
+                </AnimatePresence>
+                <motion.div
+                  animate={ariseAnimating && !reduced ? { scale: [1, 0.96, 1.02, 1] } : {}}
+                  transition={{ duration: 0.4 }}
+                  className="relative z-10"
+                >
+                  <Button 
+                    onClick={handleCheckin}
+                    disabled={checkinMutation.isPending}
+                    className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300"
+                  >
+                    {checkinMutation.isPending ? "Connecting..." : "DAILY ARISE"}
+                  </Button>
+                </motion.div>
+                {ariseAnimating && !reduced && (
+                  <motion.div
+                    className="absolute inset-0 rounded-lg pointer-events-none border-2 border-primary"
+                    initial={{ opacity: 1, scale: 1 }}
+                    animate={{ opacity: 0, scale: 1.3 }}
+                    transition={{ duration: 0.8 }}
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -434,6 +524,18 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <StreakMilestoneBanner
+        open={streakMilestone !== null}
+        streak={streakMilestone ?? 0}
+        onDismiss={() => setStreakMilestone(null)}
+      />
+
+      <LevelUpCeremony
+        open={levelUpData !== null}
+        newLevel={levelUpData?.newLevel ?? 0}
+        onDismiss={() => setLevelUpData(null)}
+      />
     </div>
   );
 }

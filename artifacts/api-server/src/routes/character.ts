@@ -218,6 +218,8 @@ router.post("/character/checkin", async (req, res) => {
       milestoneBonus,
       milestoneBonusXp,
       milestoneBonusGold,
+      leveledUp: newLevel > char.level,
+      newLevel,
     });
     res.json(data);
   } catch (err) {

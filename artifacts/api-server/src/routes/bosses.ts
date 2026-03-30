@@ -98,6 +98,8 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       statCategory: null,
     });
 
+    const leveledUp = newLevel > char.level;
+
     res.json({
       success: true,
       victory,
@@ -106,6 +108,8 @@ router.post("/bosses/:id/challenge", async (req, res) => {
         : `DEFEAT. ${boss.name} proved too powerful. -${boss.xpPenalty} XP. This loss is now part of your permanent record.`,
       xpChange: victory ? boss.xpReward : -boss.xpPenalty,
       goldChange: victory ? boss.goldReward : 0,
+      leveledUp,
+      newLevel,
       character: {
         ...updatedChar,
         xpToNextLevel: XP_PER_LEVEL(updatedChar.level),

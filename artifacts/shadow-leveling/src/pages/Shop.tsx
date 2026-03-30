@@ -16,6 +16,9 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { GoldSpendAnimation } from "@/components/GoldSpendAnimation";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { playGoldSpend } from "@/lib/sounds";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +50,9 @@ export default function Shop() {
   const purchaseReward = usePurchaseReward();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const reduced = useReducedMotion();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [purchasingId, setPurchasingId] = useState<number | null>(null);
 
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -62,6 +67,8 @@ export default function Shop() {
 
     purchaseReward.mutate({ id }, {
       onSuccess: (res) => {
+        setPurchasingId(id);
+        if (!reduced) playGoldSpend();
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
         toast({ 
@@ -69,7 +76,9 @@ export default function Shop() {
           description: `Spent ${res.goldSpent} G. Remaining: ${res.goldRemaining} G`,
           className: "bg-gold/20 border-gold text-gold"
         });
-      }
+        setTimeout(() => setPurchasingId(null), 1000);
+      },
+      onError: () => setPurchasingId(null),
     });
   };
 
@@ -162,7 +171,8 @@ export default function Shop() {
         {rewards.map(reward => {
           const canAfford = (character?.gold || 0) >= reward.goldCost;
           return (
-            <Card key={reward.id} className={`glass-panel overflow-hidden transition-all duration-300 ${canAfford ? 'hover:border-primary/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]' : 'opacity-70 grayscale-[0.3]'}`}>
+            <Card key={reward.id} className={`glass-panel overflow-hidden transition-all duration-300 relative ${canAfford ? 'hover:border-primary/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]' : 'opacity-70 grayscale-[0.3]'}`}>
+              <GoldSpendAnimation active={purchasingId === reward.id} />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>

@@ -15,4 +15,6 @@ export interface CheckinResult {
   milestoneBonus: boolean;
   milestoneBonusXp: number;
   milestoneBonusGold: number;
+  leveledUp?: boolean;
+  newLevel?: number;
 }

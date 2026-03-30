@@ -56,6 +56,11 @@ import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { CATEGORY_STAT_MAP } from "@workspace/shared";
+import { LevelUpCeremony } from "@/components/LevelUpCeremony";
+import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
+import { RankUpNotification } from "@/components/RankUpNotification";
+import { playQuestComplete } from "@/lib/sounds";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -490,10 +495,14 @@ export default function Quests() {
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const reduced = useReducedMotion();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [showEditRecurrence, setShowEditRecurrence] = useState(false);
+  const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas: Array<{ name: string; value: number }> } | null>(null);
+  const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
+  const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -552,10 +561,36 @@ export default function Quests() {
   const onComplete = (id: number) => {
     completeQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
+        setCompletingQuestId(id);
+        if (!reduced) playQuestComplete();
         invalidateQuests();
         toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
-        if (res.leveledUp) {
-          setTimeout(() => toast({ title: "LEVEL UP!", description: `You reached Level ${res.newLevel}!` }), 1000);
+        if (res.leveledUp && res.newLevel) {
+          const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
+          const statDeltas: Array<{ name: string; value: number }> = [];
+          if (res.statGains) {
+            for (const stat of statNames) {
+              const gain = (res.statGains as Record<string, number>)[stat] ?? 0;
+              if (gain > 0) {
+                statDeltas.push({ name: stat.charAt(0).toUpperCase() + stat.slice(1), value: gain });
+              }
+            }
+          }
+          setTimeout(() => setLevelUpData({ newLevel: res.newLevel!, statDeltas }), 600);
+        }
+        if (res.statGains && res.character) {
+          const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
+          for (const stat of statNames) {
+            const gain = (res.statGains as Record<string, number>)[stat] ?? 0;
+            const newVal = (res.character as Record<string, number>)[stat] ?? 0;
+            const prevVal = newVal - gain;
+            const prevTier = Math.floor(prevVal / 10000);
+            const newTier = Math.floor(newVal / 10000);
+            if (gain > 0 && newTier > prevTier && newTier > 0) {
+              setTimeout(() => setRankUpData({ statName: stat.charAt(0).toUpperCase() + stat.slice(1), statValue: newVal }), 1200);
+              break;
+            }
+          }
         }
       }
     });
@@ -1100,7 +1135,11 @@ export default function Quests() {
                 {quests.filter(q => q.status === status).map(quest => {
                   const recLabel = getRecurrenceLabel(quest.recurrence as RecurrenceConfig | null);
                   return (
-                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group", quest.isPaused && "opacity-60")}>
+                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60")}>
+                      <QuestCompleteEffect
+                        active={completingQuestId === quest.id}
+                        onDone={() => setCompletingQuestId(null)}
+                      />
                       <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-center gap-3 flex-wrap">
@@ -1286,6 +1325,20 @@ export default function Quests() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <LevelUpCeremony
+        open={levelUpData !== null}
+        newLevel={levelUpData?.newLevel ?? 0}
+        statDeltas={levelUpData?.statDeltas}
+        onDismiss={() => setLevelUpData(null)}
+      />
+
+      <RankUpNotification
+        open={rankUpData !== null}
+        statName={rankUpData?.statName ?? ""}
+        statValue={rankUpData?.statValue ?? 0}
+        onDismiss={() => setRankUpData(null)}
+      />
     </div>
   );
 }

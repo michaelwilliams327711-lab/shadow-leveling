@@ -13,5 +13,7 @@ export interface BossChallengeResult {
   message: string;
   xpChange: number;
   goldChange: number;
+  leveledUp?: boolean;
+  newLevel?: number;
   character: Character;
 }

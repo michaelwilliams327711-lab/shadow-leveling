@@ -44,6 +44,8 @@ export interface CheckinResult {
   milestoneBonus: boolean;
   milestoneBonusXp: number;
   milestoneBonusGold: number;
+  leveledUp?: boolean;
+  newLevel?: number;
 }
 
 export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
@@ -320,6 +322,8 @@ export interface BossChallengeResult {
   message: string;
   xpChange: number;
   goldChange: number;
+  leveledUp?: boolean;
+  newLevel?: number;
   character: Character;
 }
 

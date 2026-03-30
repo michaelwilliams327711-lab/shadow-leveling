@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { 
   useListBosses, 
   useChallengeBoss,
@@ -21,6 +22,8 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { BossVictoryScreen } from "@/components/BossVictoryScreen";
+import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 const bossArenaImg = "/images/boss-arena.png";
 
 const bossImageMap: Record<number, string> = {
@@ -39,19 +42,46 @@ export default function BossArena() {
   const challengeBoss = useChallengeBoss();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [victoryData, setVictoryData] = useState<{
+    bossName: string;
+    xpGained: number;
+    goldGained: number;
+    statDeltas: Array<{ name: string; value: number }>;
+  } | null>(null);
+  const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas?: Array<{ name: string; value: number }> } | null>(null);
 
   const handleChallenge = (id: number) => {
+    const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
+    const preCharacter = character;
+
     challengeBoss.mutate({ id }, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         
         if (res.victory) {
-          toast({ 
-            title: "BOSS DEFEATED!", 
-            description: res.message,
-            className: "bg-primary/20 border-primary text-primary shadow-[0_0_20px_rgba(124,58,237,0.5)]"
+          const boss = bosses.find(b => b.id === id);
+          const statDeltas: Array<{ name: string; value: number }> = [];
+          if (preCharacter && res.character) {
+            for (const stat of statNames) {
+              const delta = ((res.character as Record<string, number>)[stat] ?? 0) - ((preCharacter as Record<string, number>)[stat] ?? 0);
+              if (delta > 0) {
+                statDeltas.push({ name: stat.charAt(0).toUpperCase() + stat.slice(1), value: delta });
+              }
+            }
+          }
+          setVictoryData({
+            bossName: boss?.name ?? "The Boss",
+            xpGained: res.xpChange > 0 ? res.xpChange : (boss?.xpReward ?? 0),
+            goldGained: res.goldChange > 0 ? res.goldChange : (boss?.goldReward ?? 0),
+            statDeltas,
           });
+
+          if (res.leveledUp && res.newLevel) {
+            setTimeout(() => {
+              setLevelUpData({ newLevel: res.newLevel!, statDeltas });
+            }, 4000);
+          }
         } else {
           toast({ 
             title: "DEFEAT", 
@@ -234,6 +264,22 @@ export default function BossArena() {
           })}
         </div>
       </div>
+
+      <BossVictoryScreen
+        open={victoryData !== null}
+        bossName={victoryData?.bossName ?? ""}
+        xpGained={victoryData?.xpGained ?? 0}
+        goldGained={victoryData?.goldGained ?? 0}
+        statDeltas={victoryData?.statDeltas}
+        onDismiss={() => setVictoryData(null)}
+      />
+
+      <LevelUpCeremony
+        open={levelUpData !== null}
+        newLevel={levelUpData?.newLevel ?? 0}
+        statDeltas={levelUpData?.statDeltas}
+        onDismiss={() => setLevelUpData(null)}
+      />
     </div>
   );
 }

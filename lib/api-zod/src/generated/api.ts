@@ -80,6 +80,8 @@ export const DailyCheckinResponse = zod.object({
   milestoneBonus: zod.boolean(),
   milestoneBonusXp: zod.number(),
   milestoneBonusGold: zod.number(),
+  leveledUp: zod.boolean().optional(),
+  newLevel: zod.number().optional(),
 });
 
 /**
@@ -592,6 +594,8 @@ export const ChallengeBossResponse = zod.object({
   message: zod.string(),
   xpChange: zod.number(),
   goldChange: zod.number(),
+  leveledUp: zod.boolean().optional(),
+  newLevel: zod.number().optional(),
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
