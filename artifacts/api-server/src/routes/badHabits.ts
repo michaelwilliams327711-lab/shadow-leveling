@@ -5,6 +5,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { CreateBadHabitBody, UpdateBadHabitBody } from "@workspace/api-zod";
 import { corruptionConfig, type HabitSeverity } from "../corruptionConfig.js";
 import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
+import { getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -24,10 +25,10 @@ function dateAddDays(dateStr: string, days: number): string {
   return d.toISOString().split("T")[0];
 }
 
-function computeCleanStreak(logs: LogRow[]): number {
+function computeCleanStreak(logs: LogRow[], localDate?: string): number {
   if (!logs.length) return 0;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getSystemDate(localDate);
   let streak = 0;
   let checkDate = today;
 
@@ -76,6 +77,7 @@ router.get("/corruption-config", (_req, res) => {
 
 router.get("/bad-habits", async (req, res) => {
   try {
+    const localDate = getSystemDateFromReq(req);
     const habits = await db.select().from(badHabitsTable).orderBy(desc(badHabitsTable.createdAt));
 
     if (!habits.length) {
@@ -98,7 +100,7 @@ router.get("/bad-habits", async (req, res) => {
 
     const result = habits.map((habit) => {
       const logs = logsByHabitId.get(habit.id) ?? [];
-      const cleanStreak = computeCleanStreak(logs);
+      const cleanStreak = computeCleanStreak(logs, localDate);
       const longestStreak = computeLongestStreak(logs);
       return { ...habit, cleanStreak, longestStreak };
     });
@@ -124,6 +126,7 @@ router.post("/bad-habits", async (req, res) => {
 router.patch("/bad-habits/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const localDate = getSystemDateFromReq(req);
     const body = UpdateBadHabitBody.parse(req.body);
     const [updated] = await db.update(badHabitsTable).set(body).where(eq(badHabitsTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
@@ -134,7 +137,7 @@ router.patch("/bad-habits/:id", async (req, res) => {
       .where(eq(badHabitLogTable.habitId, id))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-    res.json({ ...updated, cleanStreak: computeCleanStreak(logs), longestStreak: computeLongestStreak(logs) });
+    res.json({ ...updated, cleanStreak: computeCleanStreak(logs, localDate), longestStreak: computeLongestStreak(logs) });
   } catch (err) {
     req.log.error({ err }, "Error updating bad habit");
     res.status(500).json({ error: "Internal server error" });
@@ -163,7 +166,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
     const corruptionDelta = corruptionConfig.corruptionDelta[severity];
     const xpPenalty = corruptionConfig.xpPenalty[severity];
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSystemDateFromReq(req);
 
     const char = await getOrCreateCharacter();
     const newCorruption = Math.min(100, char.corruption + corruptionDelta);
@@ -202,7 +205,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
 
 router.post("/bad-habits/record-clean-day", async (req, res) => {
   try {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSystemDateFromReq(req);
     const activeHabits = await db
       .select()
       .from(badHabitsTable)
@@ -240,7 +243,7 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
         .where(eq(badHabitLogTable.habitId, habit.id))
         .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-      const streak = computeCleanStreak(logs);
+      const streak = computeCleanStreak(logs, todayStr);
       if (streak < purificationThreshold) {
         allPurified = false;
         break;

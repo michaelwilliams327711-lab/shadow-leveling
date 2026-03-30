@@ -13,3 +13,4 @@ export const STAT_META: Record<StatKey, { label: string; abbr: string; color: st
 
 export * from "./levelUp.js";
 export * from "./economy.js";
+export * from "./time.js";

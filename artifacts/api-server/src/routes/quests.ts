@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
 import { eq, and, isNotNull, lt, lte, or } from "drizzle-orm";
-import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL } from "@workspace/shared";
+import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -10,7 +10,7 @@ import {
   FailQuestResponse,
   UpsertQuestDailyLogBody,
 } from "@workspace/api-zod";
-import { getOrCreateCharacter, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
+import { getOrCreateCharacter, upsertActivity, invalidateCharacterCache } from "./character.js";
 import { awardVocXp } from "./vocations.js";
 
 const router: IRouter = Router();
@@ -117,9 +117,9 @@ function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Da
   }
 }
 
-function isRecurringQuestDueToday(recurrence: RecurrenceConfig, completedAt: Date | null, createdAt: Date): boolean {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+function isRecurringQuestDueToday(recurrence: RecurrenceConfig, completedAt: Date | null, createdAt: Date, localDate?: string): boolean {
+  const todayStr = getSystemDate(localDate);
+  const today = new Date(todayStr + "T00:00:00.000Z");
 
   if (recurrence.type === "none") return false;
 
@@ -146,8 +146,9 @@ export interface ProcessOverdueResult {
   updatedChar: typeof characterTable.$inferSelect;
 }
 
-export async function processOverdueQuestsLogic(): Promise<ProcessOverdueResult> {
-  const now = new Date();
+export async function processOverdueQuestsLogic(localDate?: string): Promise<ProcessOverdueResult> {
+  const todayStr = getSystemDate(localDate);
+  const now = new Date(todayStr + "T00:00:00.000Z");
 
   const allActiveQuests = await db
     .select()
@@ -163,7 +164,7 @@ export async function processOverdueQuestsLogic(): Promise<ProcessOverdueResult>
     if (q.isPaused) return false;
     const recurrence = q.recurrence as RecurrenceConfig | null;
     if (!recurrence || recurrence.type === "none") return false;
-    return isRecurringQuestDueToday(recurrence, q.completedAt, q.createdAt);
+    return isRecurringQuestDueToday(recurrence, q.completedAt, q.createdAt, localDate);
   });
 
   for (const quest of recurringToReset) {
@@ -306,7 +307,8 @@ export async function processOverdueQuestsLogic(): Promise<ProcessOverdueResult>
 
 router.post("/quests/process-overdue", async (req, res) => {
   try {
-    const result = await processOverdueQuestsLogic();
+    const localDate = getSystemDateFromReq(req);
+    const result = await processOverdueQuestsLogic(localDate);
 
     res.json({
       penalties: result.penalties,
@@ -332,19 +334,20 @@ router.post("/quests/recalculate-rewards", async (req, res) => {
  * This ensures we find the actual upcoming occurrence, not just one step
  * ahead of (possibly stale) completedAt/createdAt.
  */
-function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date): Date | null {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date, localDate?: string): Date | null {
+  const todayStr = getSystemDate(localDate);
+  const today = new Date(todayStr + "T00:00:00.000Z");
 
   let candidate = getNextOccurrenceDate(recurrence, baseDate);
   if (!candidate) return null;
 
-  const MAX_ITERATIONS = 100;
+  const MAX_ITERATIONS = 10_000;
   let iterations = 0;
   while (candidate < today) {
     if (iterations >= MAX_ITERATIONS) {
-      console.warn(`[getNextDueFromNow] Hit MAX_ITERATIONS cap (${MAX_ITERATIONS}). Breaking loop.`);
-      break;
+      console.warn(`[getNextDueFromNow] Hit MAX_ITERATIONS cap (${MAX_ITERATIONS}). Computing next occurrence from today.`);
+      const recovered = getNextOccurrenceDate(recurrence, today);
+      return recovered;
     }
     candidate = getNextOccurrenceDate(recurrence, candidate);
     if (!candidate) return null;
@@ -356,14 +359,14 @@ function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date): Date |
 
 router.get("/quests", async (req, res) => {
   try {
+    const localDate = getSystemDateFromReq(req);
     const windowDaysParam = req.query.windowDays;
     const windowDays = windowDaysParam ? parseInt(String(windowDaysParam), 10) : null;
 
     if (windowDays != null && !isNaN(windowDays) && windowDays > 0) {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
+      const now = new Date(localDate + "T00:00:00.000Z");
       const windowEnd = new Date(now);
-      windowEnd.setDate(windowEnd.getDate() + windowDays);
+      windowEnd.setUTCDate(windowEnd.getUTCDate() + windowDays);
 
       const [nonActive, activeWithDeadline, activeNullDeadline] = await Promise.all([
         db
@@ -414,7 +417,7 @@ router.get("/quests", async (req, res) => {
         const recurrence = q.recurrence as RecurrenceConfig | null;
 
         if (recurrence && recurrence.type !== "none") {
-          const nextDue = getNextDueFromNow(recurrence, q.completedAt ?? q.createdAt);
+          const nextDue = getNextDueFromNow(recurrence, q.completedAt ?? q.createdAt, localDate);
           if (!nextDue) return false;
           return nextDue <= windowEnd;
         }
@@ -576,7 +579,7 @@ router.post("/quests/:id/complete", async (req, res) => {
     if (!quest) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
-    const today = getLocalDateStr(req);
+    const today = getSystemDateFromReq(req);
 
     const { xpReward, goldReward } = calculateRewards(quest.difficulty, quest.durationMinutes);
 
@@ -696,7 +699,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     if (!quest) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
-    const today = getLocalDateStr(req);
+    const today = getSystemDateFromReq(req);
 
     const { xpPenalty, goldPenalty } = calculateRewards(quest.difficulty, quest.durationMinutes);
 

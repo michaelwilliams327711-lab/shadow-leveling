@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getSystemDateFromReq } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -40,7 +41,7 @@ function deterministicRng(date: string): number {
 
 router.get("/rng/daily-event", async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getSystemDateFromReq(req);
     const hash = deterministicRng(today);
     const eventChance = hash % 100;
     const hasEvent = eventChance < 30;

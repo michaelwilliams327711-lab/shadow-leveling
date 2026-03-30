@@ -8,7 +8,7 @@ import {
   UpdateCharacterResponse,
   DailyCheckinResponse,
 } from "@workspace/api-zod";
-import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS } from "@workspace/shared";
+import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -82,17 +82,6 @@ router.patch("/character", async (req, res) => {
   }
 });
 
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-function getLocalDateStr(req: import("express").Request): string {
-  const header = req.headers["x-local-date"];
-  const headerVal = Array.isArray(header) ? header[0] : header;
-  if (headerVal && DATE_REGEX.test(headerVal)) return headerVal;
-  const queryVal = typeof req.query.localDate === "string" ? req.query.localDate : undefined;
-  if (queryVal && DATE_REGEX.test(queryVal)) return queryVal;
-  return new Date().toISOString().split("T")[0];
-}
-
 function getLastCheckinDateStr(lastCheckin: Date): string {
   return lastCheckin.toISOString().split("T")[0];
 }
@@ -100,7 +89,7 @@ function getLastCheckinDateStr(lastCheckin: Date): string {
 router.post("/character/checkin", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
-    const todayStr = getLocalDateStr(req);
+    const todayStr = getSystemDateFromReq(req);
 
     let alreadyCheckedIn = false;
     if (char.lastCheckin) {
@@ -203,9 +192,8 @@ router.post("/character/checkin", async (req, res) => {
 router.post("/character/login", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStr = getSystemDateFromReq(req);
+    const todayStart = new Date(todayStr + "T00:00:00.000Z");
 
     const penalties: Array<{
       type: string;
@@ -219,8 +207,8 @@ router.post("/character/login", async (req, res) => {
 
     if (char.lastLoginDate) {
       const lastLogin = new Date(char.lastLoginDate);
-      const lastLoginStart = new Date(lastLogin);
-      lastLoginStart.setHours(0, 0, 0, 0);
+      const lastLoginDateStr = lastLogin.toISOString().split("T")[0];
+      const lastLoginStart = new Date(lastLoginDateStr + "T00:00:00.000Z");
 
       const daysDiff = Math.floor(
         (todayStart.getTime() - lastLoginStart.getTime()) / (1000 * 60 * 60 * 24)
@@ -258,7 +246,7 @@ router.post("/character/login", async (req, res) => {
             gold: Math.max(0, char.gold - goldPenalty),
             streak: 0,
             multiplier: 1.0,
-            lastLoginDate: now,
+            lastLoginDate: todayStart,
           })
           .where(eq(characterTable.id, char.id))
           .returning();
@@ -275,13 +263,13 @@ router.post("/character/login", async (req, res) => {
         });
       } else {
         await db.update(characterTable)
-          .set({ lastLoginDate: now })
+          .set({ lastLoginDate: todayStart })
           .where(eq(characterTable.id, char.id));
         invalidateCharacterCache();
       }
     } else {
       await db.update(characterTable)
-        .set({ lastLoginDate: now })
+        .set({ lastLoginDate: todayStart })
         .where(eq(characterTable.id, char.id));
       invalidateCharacterCache();
     }
@@ -305,11 +293,12 @@ router.get("/activity", async (req, res) => {
     const records = await db.select().from(activityTable);
     const dateMap = new Map(records.map((r) => [r.date, { count: r.count, level: r.level }]));
 
+    const todayStr = getSystemDateFromReq(req);
     const result = [];
-    const today = new Date();
+    const todayDate = new Date(todayStr + "T00:00:00.000Z");
     for (let i = 363; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+      const d = new Date(todayDate);
+      d.setUTCDate(d.getUTCDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const entry = dateMap.get(dateStr);
       result.push({ date: dateStr, count: entry?.count ?? 0, level: entry?.level ?? 0 });
@@ -323,4 +312,5 @@ router.get("/activity", async (req, res) => {
 });
 
 export default router;
-export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr };
+export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity };
+export { getSystemDateFromReq as getLocalDateStr };
