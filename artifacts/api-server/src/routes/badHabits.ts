@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { badHabitsTable, badHabitLogTable, characterTable } from "@workspace/db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, gte, lt } from "drizzle-orm";
 import { CreateBadHabitBody, UpdateBadHabitBody } from "@workspace/api-zod";
 import { corruptionConfig, type HabitSeverity } from "../corruptionConfig.js";
 import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
@@ -11,12 +11,22 @@ const router: IRouter = Router();
 
 type LogRow = { date: string; type: string; occurredAt: Date };
 
-function getDayStatus(logs: LogRow[], date: string): "clean" | "relapsed" | "missed" {
-  const dayLogs = logs.filter((l) => l.date === date);
-  if (!dayLogs.length) return "missed";
+function getDayStatusFromMap(byDate: Map<string, LogRow[]>, date: string): "clean" | "relapsed" | "missed" {
+  const dayLogs = byDate.get(date);
+  if (!dayLogs || !dayLogs.length) return "missed";
   const hasRelapse = dayLogs.some((l) => l.type === "relapse");
   if (hasRelapse) return "relapsed";
   return "clean";
+}
+
+function buildDateMap(logs: LogRow[]): Map<string, LogRow[]> {
+  const byDate = new Map<string, LogRow[]>();
+  for (const log of logs) {
+    const existing = byDate.get(log.date) ?? [];
+    existing.push(log);
+    byDate.set(log.date, existing);
+  }
+  return byDate;
 }
 
 function dateAddDays(dateStr: string, days: number): string {
@@ -28,12 +38,30 @@ function dateAddDays(dateStr: string, days: number): string {
 function computeCleanStreak(logs: LogRow[], localDate?: string): number {
   if (!logs.length) return 0;
 
+  const byDate = buildDateMap(logs);
   const today = getSystemDate(localDate);
   let streak = 0;
   let checkDate = today;
 
   while (true) {
-    const status = getDayStatus(logs, checkDate);
+    const status = getDayStatusFromMap(byDate, checkDate);
+    if (status === "clean") {
+      streak++;
+      checkDate = dateAddDays(checkDate, -1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function computeCleanStreakFromMap(byDate: Map<string, LogRow[]>): number {
+  const today = new Date().toISOString().split("T")[0];
+  let streak = 0;
+  let checkDate = today;
+
+  while (true) {
+    const status = getDayStatusFromMap(byDate, checkDate);
     if (status === "clean") {
       streak++;
       checkDate = dateAddDays(checkDate, -1);
@@ -47,7 +75,8 @@ function computeCleanStreak(logs: LogRow[], localDate?: string): number {
 function computeLongestStreak(logs: LogRow[]): number {
   if (!logs.length) return 0;
 
-  const dates = [...new Set(logs.map((l) => l.date))].sort();
+  const byDate = buildDateMap(logs);
+  const dates = [...byDate.keys()].sort();
   if (!dates.length) return 0;
 
   let longest = 0;
@@ -55,7 +84,7 @@ function computeLongestStreak(logs: LogRow[]): number {
   let prevDate: string | null = null;
 
   for (const date of dates) {
-    const status = getDayStatus(logs, date);
+    const status = getDayStatusFromMap(byDate, date);
     if (status !== "clean") {
       current = 0;
       prevDate = date;
@@ -211,39 +240,52 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
       .from(badHabitsTable)
       .where(eq(badHabitsTable.isActive, 1));
 
-    for (const habit of activeHabits) {
-      const todayLogs = await db
-        .select({ type: badHabitLogTable.type })
-        .from(badHabitLogTable)
-        .where(and(
-          eq(badHabitLogTable.habitId, habit.id),
-          eq(badHabitLogTable.date, todayStr),
-        ));
+    if (!activeHabits.length) {
+      return res.json({ success: true, purified: false });
+    }
 
+    const habitIds = activeHabits.map((h) => h.id);
+
+    const allLogs = await db
+      .select({ habitId: badHabitLogTable.habitId, date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
+      .from(badHabitLogTable)
+      .where(inArray(badHabitLogTable.habitId, habitIds))
+      .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
+
+    const logsByHabitId = new Map<string, LogRow[]>();
+    for (const log of allLogs) {
+      const existing = logsByHabitId.get(log.habitId) ?? [];
+      existing.push({ date: log.date, type: log.type, occurredAt: log.occurredAt });
+      logsByHabitId.set(log.habitId, existing);
+    }
+
+    const toInsert: { habitId: string; date: string; type: string; corruptionDelta: number }[] = [];
+    for (const habit of activeHabits) {
+      const logs = logsByHabitId.get(habit.id) ?? [];
+      const todayLogs = logs.filter((l) => l.date === todayStr);
       const hasRelapse = todayLogs.some((l) => l.type === "relapse");
       const hasClean = todayLogs.some((l) => l.type === "clean");
-
       if (!hasRelapse && !hasClean) {
-        await db.insert(badHabitLogTable).values({
-          habitId: habit.id,
-          date: todayStr,
-          type: "clean",
-          corruptionDelta: 0,
-        });
+        toInsert.push({ habitId: habit.id, date: todayStr, type: "clean", corruptionDelta: 0 });
+      }
+    }
+
+    if (toInsert.length > 0) {
+      await db.insert(badHabitLogTable).values(toInsert);
+      for (const row of toInsert) {
+        const existing = logsByHabitId.get(row.habitId) ?? [];
+        existing.unshift({ date: row.date, type: row.type, occurredAt: new Date() });
+        logsByHabitId.set(row.habitId, existing);
       }
     }
 
     const purificationThreshold = corruptionConfig.purificationStreakDays;
-    let allPurified = activeHabits.length > 0;
+    let allPurified = true;
 
     for (const habit of activeHabits) {
-      const logs = await db
-        .select({ date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
-        .from(badHabitLogTable)
-        .where(eq(badHabitLogTable.habitId, habit.id))
-        .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
-
-      const streak = computeCleanStreak(logs, todayStr);
+      const logs = logsByHabitId.get(habit.id) ?? [];
+      const byDate = buildDateMap(logs);
+      const streak = computeCleanStreakFromMap(byDate);
       if (streak < purificationThreshold) {
         allPurified = false;
         break;
@@ -251,7 +293,7 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
     }
 
     let purified = false;
-    if (allPurified && activeHabits.length > 0) {
+    if (allPurified) {
       const char = await getOrCreateCharacter();
       if (char.corruption > 0) {
         const resetDelta = -char.corruption;
@@ -261,14 +303,14 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
         invalidateCharacterCache();
         purified = true;
 
-        for (const habit of activeHabits) {
-          await db.insert(badHabitLogTable).values({
+        await db.insert(badHabitLogTable).values(
+          activeHabits.map((habit) => ({
             habitId: habit.id,
             date: todayStr,
             type: "purification",
             corruptionDelta: resetDelta,
-          });
-        }
+          }))
+        );
       }
     }
 
@@ -281,24 +323,63 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
 
 router.get("/bad-habits/corruption-history", async (req, res) => {
   try {
-    const logs = await db
-      .select({
-        date: badHabitLogTable.date,
-        type: badHabitLogTable.type,
-        corruptionDelta: badHabitLogTable.corruptionDelta,
-        occurredAt: badHabitLogTable.occurredAt,
-        habitId: badHabitLogTable.habitId,
-      })
-      .from(badHabitLogTable)
-      .orderBy(badHabitLogTable.occurredAt);
+    const limitParam = req.query.limit;
+    const offsetParam = req.query.offset;
+    const limit = limitParam ? Math.max(1, parseInt(String(limitParam), 10)) : 365;
+    const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
+
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 365);
+    windowStart.setHours(0, 0, 0, 0);
+
+    const [beforeWindowLogs, withinWindowLogs, allHabits] = await Promise.all([
+      db
+        .select({
+          type: badHabitLogTable.type,
+          corruptionDelta: badHabitLogTable.corruptionDelta,
+        })
+        .from(badHabitLogTable)
+        .where(lt(badHabitLogTable.occurredAt, windowStart))
+        .orderBy(badHabitLogTable.occurredAt)
+        .limit(1000),
+      db
+        .select({
+          date: badHabitLogTable.date,
+          type: badHabitLogTable.type,
+          corruptionDelta: badHabitLogTable.corruptionDelta,
+          occurredAt: badHabitLogTable.occurredAt,
+          habitId: badHabitLogTable.habitId,
+        })
+        .from(badHabitLogTable)
+        .where(gte(badHabitLogTable.occurredAt, windowStart))
+        .orderBy(badHabitLogTable.occurredAt)
+        .limit(limit + offset),
+      db.select({ id: badHabitsTable.id, name: badHabitsTable.name }).from(badHabitsTable),
+    ]);
 
     const habitsMap: Record<string, string> = {};
-    const allHabits = await db.select({ id: badHabitsTable.id, name: badHabitsTable.name }).from(badHabitsTable);
     for (const h of allHabits) {
       habitsMap[h.id] = h.name;
     }
 
     let runningCorruption = 0;
+    for (const priorLog of beforeWindowLogs) {
+      if (priorLog.type === "purification") {
+        runningCorruption = 0;
+      } else {
+        runningCorruption = Math.max(0, Math.min(100, runningCorruption + priorLog.corruptionDelta));
+      }
+    }
+    for (let i = 0; i < Math.min(offset, withinWindowLogs.length); i++) {
+      const priorLog = withinWindowLogs[i];
+      if (priorLog.type === "purification") {
+        runningCorruption = 0;
+      } else {
+        runningCorruption = Math.max(0, Math.min(100, runningCorruption + priorLog.corruptionDelta));
+      }
+    }
+    const logs = withinWindowLogs.slice(offset);
+
     const chartPoints: { date: string; corruption: number; occurredAt: string }[] = [];
 
     for (const log of logs) {

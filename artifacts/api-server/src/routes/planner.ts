@@ -271,6 +271,16 @@ router.get("/planner/monthly", async (req, res) => {
       milestones: { name: string; type: string }[];
     };
 
+    const questLogByDate = new Map<string, Map<string, number>>();
+    for (const entry of questLogEntries) {
+      let byAction = questLogByDate.get(entry.date);
+      if (!byAction) {
+        byAction = new Map<string, number>();
+        questLogByDate.set(entry.date, byAction);
+      }
+      byAction.set(entry.actionType, Number(entry.count));
+    }
+
     const daysInMonth = monthEnd.getDate();
     const days: DayData[] = [];
 
@@ -278,9 +288,9 @@ router.get("/planner/monthly", async (req, res) => {
       const dayDate = new Date(year, month, d);
       const dayStr = dateToStr(dayDate);
 
-      const dayLogs = questLogEntries.filter((e) => e.date === dayStr);
-      const completedCount = dayLogs.find((e) => e.actionType === "COMPLETED")?.count ?? 0;
-      const failedCount = dayLogs.find((e) => e.actionType === "FAILED")?.count ?? 0;
+      const byAction = questLogByDate.get(dayStr);
+      const completedCount = byAction?.get("COMPLETED") ?? 0;
+      const failedCount = byAction?.get("FAILED") ?? 0;
 
       const upcomingQuests = activeQuests
         .filter((q) => q.status === "active" && isQuestDueOnDate(q, dayDate))

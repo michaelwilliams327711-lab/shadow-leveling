@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, lt, lte, or } from "drizzle-orm";
+import { eq, and, isNotNull, lt, lte, or, gte } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import {
   CreateQuestBody,
@@ -430,7 +430,22 @@ router.get("/quests", async (req, res) => {
       return res.json(filtered.map(serializeQuest));
     }
 
-    const allQuests = await db.select().from(questsTable).orderBy(questsTable.createdAt);
+    const limitParam = req.query.limit;
+    const offsetParam = req.query.offset;
+    const limit = limitParam ? Math.max(1, parseInt(String(limitParam), 10)) : 365;
+    const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
+
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 365);
+    windowStart.setHours(0, 0, 0, 0);
+
+    const allQuests = await db
+      .select()
+      .from(questsTable)
+      .where(gte(questsTable.createdAt, windowStart))
+      .orderBy(questsTable.createdAt)
+      .limit(limit)
+      .offset(offset);
     res.json(allQuests.map(serializeQuest));
   } catch (err) {
     req.log.error({ err }, "Error listing quests");
@@ -788,7 +803,23 @@ router.post("/quests/:id/fail", async (req, res) => {
 
 router.get("/quest-log", async (req, res) => {
   try {
-    const log = await db.select().from(questLogTable).orderBy(questLogTable.occurredAt);
+    const limitParam = req.query.limit;
+    const offsetParam = req.query.offset;
+    const limit = limitParam ? Math.max(1, parseInt(String(limitParam), 10)) : 365;
+    const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
+
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 365);
+    windowStart.setHours(0, 0, 0, 0);
+
+    const log = await db
+      .select()
+      .from(questLogTable)
+      .where(gte(questLogTable.occurredAt, windowStart))
+      .orderBy(questLogTable.occurredAt)
+      .limit(limit)
+      .offset(offset);
+
     const mapped = log.map((e) => ({
       ...e,
       occurredAt: e.occurredAt.toISOString(),
