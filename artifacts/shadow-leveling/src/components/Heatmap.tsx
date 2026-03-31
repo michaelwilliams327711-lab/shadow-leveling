@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Flame } from "lucide-react";
 import type { ActivityDay } from "@workspace/api-client-react";
 
 interface HeatmapProps {
@@ -106,8 +107,8 @@ export function Heatmap({ data = [] }: HeatmapProps) {
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-base">🔥</span>
-        <span className="text-sm font-semibold tracking-wide text-white/80">
+        <Flame className="h-4 w-4 text-primary" />
+        <span className="text-sm">
           Activity Heatmap — {currentYear}
         </span>
       </div>
