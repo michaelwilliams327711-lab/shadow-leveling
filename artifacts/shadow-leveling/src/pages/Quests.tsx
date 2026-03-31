@@ -1326,7 +1326,7 @@ export default function Quests() {
       const vId = (editingQuest as Quest & { vocationId?: string | null }).vocationId ?? "";
       setEditVocationId(vId ?? "");
     }
-  }, [editingQuest?.id, editForm]);
+  }, [editingQuest?.id]);
 
   const invalidateQuests = () => {
     queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });

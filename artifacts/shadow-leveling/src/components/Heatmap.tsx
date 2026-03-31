@@ -1,9 +1,15 @@
-import { useEffect, useRef } from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useEffect, useRef, useState } from "react";
 import type { ActivityDay } from "@workspace/api-client-react";
 
 interface HeatmapProps {
   data?: ActivityDay[];
+}
+
+interface HoveredDay {
+  dateStr: string;
+  count: number;
+  x: number;
+  y: number;
 }
 
 function utcDateStr(d: Date): string {
@@ -21,6 +27,8 @@ function formatDisplayDate(dateStr: string): string {
 
 export function Heatmap({ data = [] }: HeatmapProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoveredDay, setHoveredDay] = useState<HoveredDay | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,27 +68,53 @@ export function Heatmap({ data = [] }: HeatmapProps) {
     weeks.push(days.slice(i, i + 7));
   }
 
+  const handleMouseEnter = (day: { dateStr: string; count: number }, e: React.MouseEvent<HTMLDivElement>) => {
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    const cellRect = e.currentTarget.getBoundingClientRect();
+    setHoveredDay({
+      dateStr: day.dateStr,
+      count: day.count,
+      x: cellRect.left - containerRect.left + cellRect.width / 2,
+      y: cellRect.top - containerRect.top,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredDay(null);
+  };
+
   return (
-    <div ref={scrollRef} className="w-full overflow-x-auto pb-4 hide-scrollbar">
-      <div className="flex gap-1 min-w-max">
-        {weeks.map((week) => (
-          <div key={week[0]?.dateStr} className="flex flex-col gap-1">
-            {week.map((day) => (
-              <Tooltip key={day.dateStr}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`w-3 h-3 rounded-sm border ${getLevelColor(day.level)} transition-colors hover:border-white`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent className="bg-popover border-border text-xs font-sans">
-                  <p className="font-semibold">{day.count} actions</p>
-                  <p className="text-muted-foreground">{formatDisplayDate(day.dateStr)}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        ))}
+    <div ref={containerRef} className="relative w-full">
+      <div ref={scrollRef} className="w-full overflow-x-auto pb-4 hide-scrollbar">
+        <div className="flex gap-1 min-w-max">
+          {weeks.map((week) => (
+            <div key={week[0]?.dateStr} className="flex flex-col gap-1">
+              {week.map((day) => (
+                <div
+                  key={day.dateStr}
+                  className={`w-3 h-3 rounded-sm border ${getLevelColor(day.level)} transition-colors hover:border-white cursor-default`}
+                  onMouseEnter={(e) => handleMouseEnter(day, e)}
+                  onMouseLeave={handleMouseLeave}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
+      {hoveredDay && (
+        <div
+          className="pointer-events-none absolute z-50 rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-sans shadow-md"
+          style={{
+            left: hoveredDay.x,
+            top: hoveredDay.y - 8,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <p className="font-semibold">{hoveredDay.count} actions</p>
+          <p className="text-muted-foreground">{formatDisplayDate(hoveredDay.dateStr)}</p>
+        </div>
+      )}
     </div>
   );
 }
