@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,7 +25,6 @@ import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
 import VocationPaths from "@/pages/VocationPaths";
-import Planner from "@/pages/Planner";
 import NotFound from "@/pages/not-found";
 
 const heroBgImg = "/images/hero-bg.png";
@@ -133,7 +132,7 @@ function Router() {
       <Route path="/shadow" component={ShadowDashboard} />
       <Route path="/bad-habits" component={BadHabits} />
       <Route path="/vocations" component={VocationPaths} />
-      <Route path="/planner" component={Planner} />
+      <Route path="/planner"><Redirect to="/quests" /></Route>
       <Route component={NotFound} />
     </Switch>
   );

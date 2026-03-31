@@ -28,7 +28,6 @@ import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
-import { DailyOrders } from "@/components/DailyOrders";
 import { VocationWidget } from "@/components/VocationWidget";
 import { STAT_META } from "@workspace/shared";
 
@@ -380,8 +379,6 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-
-          <DailyOrders />
 
           <Card className="glass-panel">
             <CardHeader>
