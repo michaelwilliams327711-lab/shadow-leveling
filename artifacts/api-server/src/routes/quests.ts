@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, lt, lte, or, gte, inArray } from "drizzle-orm";
+import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import {
   CreateQuestBody,
@@ -432,9 +432,12 @@ router.get("/quests", async (req, res) => {
           .select()
           .from(questsTable)
           .where(
-            or(
-              eq(questsTable.status, "completed"),
-              eq(questsTable.status, "failed"),
+            and(
+              isNull(questsTable.deletedAt),
+              or(
+                eq(questsTable.status, "completed"),
+                eq(questsTable.status, "failed"),
+              ),
             ),
           )
           .orderBy(questsTable.createdAt),
@@ -443,6 +446,7 @@ router.get("/quests", async (req, res) => {
           .from(questsTable)
           .where(
             and(
+              isNull(questsTable.deletedAt),
               eq(questsTable.status, "active"),
               isNotNull(questsTable.deadline),
               lte(questsTable.deadline, windowEnd),
@@ -454,6 +458,7 @@ router.get("/quests", async (req, res) => {
           .from(questsTable)
           .where(
             and(
+              isNull(questsTable.deletedAt),
               eq(questsTable.status, "active"),
               isNotNull(questsTable.recurrence),
             ),
@@ -501,7 +506,7 @@ router.get("/quests", async (req, res) => {
     const allQuests = await db
       .select()
       .from(questsTable)
-      .where(gte(questsTable.createdAt, windowStart))
+      .where(and(isNull(questsTable.deletedAt), gte(questsTable.createdAt, windowStart)))
       .orderBy(questsTable.createdAt)
       .limit(limit)
       .offset(offset);
@@ -586,7 +591,7 @@ router.patch("/quests/:id", async (req, res) => {
 router.delete("/quests/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await db.delete(questsTable).where(eq(questsTable.id, id));
+    await db.update(questsTable).set({ deletedAt: new Date() }).where(eq(questsTable.id, id));
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting quest");

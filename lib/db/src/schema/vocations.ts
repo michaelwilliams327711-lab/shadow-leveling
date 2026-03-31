@@ -16,6 +16,7 @@ export const vocationsTable = pgTable("vocations", {
   milestoneQuestDescription: text("milestone_quest_description"),
   titleLadder: jsonb("title_ladder").notNull().default(sql`'["Novice"]'::jsonb`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const vocationLogTable = pgTable("vocation_log", {

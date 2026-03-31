@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { rewardsTable, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { CreateRewardBody } from "@workspace/api-zod";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 
@@ -9,7 +9,7 @@ const router: IRouter = Router();
 
 router.get("/shop/rewards", async (req, res) => {
   try {
-    const rewards = await db.select().from(rewardsTable).orderBy(rewardsTable.goldCost);
+    const rewards = await db.select().from(rewardsTable).where(isNull(rewardsTable.deletedAt)).orderBy(rewardsTable.goldCost);
     const mapped = rewards.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
     res.json(mapped);
   } catch (err) {
@@ -37,7 +37,7 @@ router.post("/shop/rewards", async (req, res) => {
 router.delete("/shop/rewards/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await db.delete(rewardsTable).where(eq(rewardsTable.id, id));
+    await db.update(rewardsTable).set({ deletedAt: new Date() }).where(eq(rewardsTable.id, id));
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting reward");

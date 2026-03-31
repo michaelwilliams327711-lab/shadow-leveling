@@ -9,6 +9,7 @@ export const badHabitsTable = pgTable("bad_habits", {
   severity: text("severity").notNull().default("Medium"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   isActive: integer("is_active").notNull().default(1),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const badHabitLogTable = pgTable("bad_habit_log", {

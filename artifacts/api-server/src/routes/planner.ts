@@ -7,7 +7,7 @@ import {
   badHabitLogTable,
   dailyOrdersTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte, sql, isNull, isNotNull, or } from "drizzle-orm";
 import { getLocalDateStr } from "./character.js";
 import { RANK_BASE_REWARDS } from "@workspace/shared";
 import { type RecurrenceConfig } from "@workspace/api-zod";
@@ -79,7 +79,21 @@ router.get("/planner/daily", async (req, res) => {
     const today = getLocalDateStr(req);
     const todayDate = new Date(today + "T00:00:00");
 
-    const allQuests = await db.select().from(questsTable);
+    const dayWindowStart = new Date(todayDate);
+    dayWindowStart.setDate(dayWindowStart.getDate() - 1);
+    const dayWindowEnd = new Date(todayDate);
+    dayWindowEnd.setDate(dayWindowEnd.getDate() + 1);
+
+    const allQuests = await db.select().from(questsTable).where(
+      and(
+        isNull(questsTable.deletedAt),
+        or(
+          and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
+          and(isNotNull(questsTable.deadline), gte(questsTable.deadline, dayWindowStart), lte(questsTable.deadline, dayWindowEnd)),
+          and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, dayWindowStart), lte(questsTable.completedAt, dayWindowEnd)),
+        ),
+      ),
+    );
 
     const [charRow] = await db
       .select({ id: sql<number>`id` })
@@ -100,7 +114,7 @@ router.get("/planner/daily", async (req, res) => {
 
     let todayBadHabits: { id: string; name: string; category: string; severity: string; createdAt: string; isActive: number; todayStatus: string | null }[] = [];
     try {
-      const allBadHabits = await db.select().from(badHabitsTable).where(eq(badHabitsTable.isActive, 1));
+      const allBadHabits = await db.select().from(badHabitsTable).where(and(eq(badHabitsTable.isActive, 1), isNull(badHabitsTable.deletedAt)));
       const badHabitLogs = await db
         .select()
         .from(badHabitLogTable)
@@ -158,7 +172,19 @@ router.get("/planner/weekly", async (req, res) => {
     const weekStart = addDays(todayDate, -dayOfWeek);
     const weekEnd = addDays(weekStart, 6);
 
-    const allQuests = await db.select().from(questsTable);
+    const weekWindowStart = addDays(weekStart, -1);
+    const weekWindowEnd = addDays(weekEnd, 1);
+
+    const allQuests = await db.select().from(questsTable).where(
+      and(
+        isNull(questsTable.deletedAt),
+        or(
+          and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
+          and(isNotNull(questsTable.deadline), gte(questsTable.deadline, weekWindowStart), lte(questsTable.deadline, weekWindowEnd)),
+          and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, weekWindowStart), lte(questsTable.completedAt, weekWindowEnd)),
+        ),
+      ),
+    );
     const activeQuests = allQuests.filter((q) => !q.isPaused);
 
     const days: {
@@ -216,7 +242,19 @@ router.get("/planner/monthly", async (req, res) => {
     const monthStart = new Date(year, month, 1);
     const monthEnd = new Date(year, month + 1, 0);
 
-    const allQuests = await db.select().from(questsTable);
+    const monthWindowStart = addDays(monthStart, -1);
+    const monthWindowEnd = addDays(monthEnd, 1);
+
+    const allQuests = await db.select().from(questsTable).where(
+      and(
+        isNull(questsTable.deletedAt),
+        or(
+          and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
+          and(isNotNull(questsTable.deadline), gte(questsTable.deadline, monthWindowStart), lte(questsTable.deadline, monthWindowEnd)),
+          and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, monthWindowStart), lte(questsTable.completedAt, monthWindowEnd)),
+        ),
+      ),
+    );
     const activeQuests = allQuests.filter((q) => !q.isPaused);
 
     const questLogEntries = await db

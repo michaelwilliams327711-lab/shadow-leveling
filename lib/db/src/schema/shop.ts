@@ -10,6 +10,7 @@ export const rewardsTable = pgTable("rewards", {
   category: text("category").notNull().default("Leisure"),
   timesRedeemed: integer("times_redeemed").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertRewardSchema = createInsertSchema(rewardsTable).omit({ id: true, createdAt: true, timesRedeemed: true });

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { badHabitsTable, badHabitLogTable, characterTable } from "@workspace/db";
-import { eq, desc, and, inArray, gte, lt } from "drizzle-orm";
+import { eq, desc, and, inArray, gte, lt, isNull } from "drizzle-orm";
 import { CreateBadHabitBody, UpdateBadHabitBody } from "@workspace/api-zod";
 import { corruptionConfig, type HabitSeverity } from "../corruptionConfig.js";
 import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
@@ -107,7 +107,7 @@ router.get("/corruption-config", (_req, res) => {
 router.get("/bad-habits", async (req, res) => {
   try {
     const localDate = getSystemDateFromReq(req);
-    const habits = await db.select().from(badHabitsTable).orderBy(desc(badHabitsTable.createdAt));
+    const habits = await db.select().from(badHabitsTable).where(isNull(badHabitsTable.deletedAt)).orderBy(desc(badHabitsTable.createdAt));
 
     if (!habits.length) {
       return res.json([]);
@@ -179,7 +179,7 @@ router.patch("/bad-habits/:id", async (req, res) => {
 router.delete("/bad-habits/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await db.delete(badHabitsTable).where(eq(badHabitsTable.id, id));
+    await db.update(badHabitsTable).set({ deletedAt: new Date() }).where(eq(badHabitsTable.id, id));
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting bad habit");
@@ -241,7 +241,7 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
     const activeHabits = await db
       .select()
       .from(badHabitsTable)
-      .where(eq(badHabitsTable.isActive, 1));
+      .where(and(eq(badHabitsTable.isActive, 1), isNull(badHabitsTable.deletedAt)));
 
     if (!activeHabits.length) {
       return res.json({ success: true, purified: false });
@@ -249,10 +249,14 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
 
     const habitIds = activeHabits.map((h) => h.id);
 
+    const logsCutoffDate = new Date();
+    logsCutoffDate.setUTCDate(logsCutoffDate.getUTCDate() - 365);
+    logsCutoffDate.setUTCHours(0, 0, 0, 0);
+
     const allLogs = await db
       .select({ habitId: badHabitLogTable.habitId, date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
       .from(badHabitLogTable)
-      .where(inArray(badHabitLogTable.habitId, habitIds))
+      .where(and(inArray(badHabitLogTable.habitId, habitIds), gte(badHabitLogTable.occurredAt, logsCutoffDate)))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
     const logsByHabitId = new Map<string, LogRow[]>();
@@ -328,11 +332,11 @@ router.get("/bad-habits/corruption-history", async (req, res) => {
   try {
     const limitParam = req.query.limit;
     const offsetParam = req.query.offset;
-    const limit = limitParam ? Math.max(1, parseInt(String(limitParam), 10)) : 365;
+    const limit = limitParam ? Math.max(1, parseInt(String(limitParam), 10)) : 90;
     const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
 
     const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 365);
+    windowStart.setDate(windowStart.getDate() - 90);
     windowStart.setHours(0, 0, 0, 0);
 
     const [beforeWindowLogs, withinWindowLogs, allHabits] = await Promise.all([

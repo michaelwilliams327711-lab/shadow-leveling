@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { characterTable, activityTable, penaltyLogTable, questLogTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, gte } from "drizzle-orm";
 import {
   GetCharacterResponse,
   UpdateCharacterBody,
@@ -285,12 +285,16 @@ router.post("/character/login", async (req, res) => {
 
 router.get("/activity", async (req, res) => {
   try {
-    const records = await db.select().from(activityTable);
+    const todayStr = getSystemDateFromReq(req);
+    const todayDate = new Date(todayStr + "T00:00:00.000Z");
+    const windowStart = new Date(todayDate);
+    windowStart.setUTCDate(windowStart.getUTCDate() - 364);
+    const windowStartStr = windowStart.toISOString().split("T")[0];
+
+    const records = await db.select().from(activityTable).where(gte(activityTable.date, windowStartStr));
     const dateMap = new Map(records.map((r) => [r.date, { count: r.count, level: r.level }]));
 
-    const todayStr = getSystemDateFromReq(req);
     const result = [];
-    const todayDate = new Date(todayStr + "T00:00:00.000Z");
     for (let i = 363; i >= 0; i--) {
       const d = new Date(todayDate);
       d.setUTCDate(d.getUTCDate() - i);

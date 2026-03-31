@@ -20,6 +20,7 @@ export const questsTable = pgTable("quests", {
   isPaused: boolean("is_paused").notNull().default(false),
   recurrence: jsonb("recurrence"),
   vocationId: text("vocation_id").references(() => vocationsTable.id, { onDelete: "set null" }),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const questLogTable = pgTable("quest_log", {

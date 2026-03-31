@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { vocationsTable, vocationLogTable, questsTable } from "@workspace/db";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, isNull, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -70,7 +70,7 @@ function parseUpdateVocationBody(body: Record<string, unknown>) {
 
 router.get("/vocations", async (req, res) => {
   try {
-    const vocations = await db.select().from(vocationsTable).orderBy(vocationsTable.createdAt);
+    const vocations = await db.select().from(vocationsTable).where(isNull(vocationsTable.deletedAt)).orderBy(vocationsTable.createdAt);
 
     const linkedCounts = await db
       .select({
@@ -78,14 +78,27 @@ router.get("/vocations", async (req, res) => {
         count: sql<number>`count(*)::int`,
       })
       .from(questsTable)
-      .where(sql`${questsTable.vocationId} IS NOT NULL`)
+      .where(and(sql`${questsTable.vocationId} IS NOT NULL`, isNull(questsTable.deletedAt)))
       .groupBy(questsTable.vocationId);
 
+    const xpTotals = await db
+      .select({
+        vocationId: vocationLogTable.vocationId,
+        totalXp: sql<number>`coalesce(sum(${vocationLogTable.delta}), 0)::int`,
+        completions: sql<number>`count(*)::int`,
+      })
+      .from(vocationLogTable)
+      .where(sql`${vocationLogTable.eventType} = 'XP_GAINED' OR ${vocationLogTable.eventType} = 'GATE_TRIGGERED'`)
+      .groupBy(vocationLogTable.vocationId);
+
     const countMap = new Map(linkedCounts.map((r) => [r.vocationId, r.count]));
+    const xpMap = new Map(xpTotals.map((r) => [r.vocationId, { totalXp: r.totalXp, completions: r.completions }]));
 
     const result = vocations.map((v) => ({
       ...serializeVocation(v),
       linkedQuestCount: countMap.get(v.id) ?? 0,
+      totalXpEarned: xpMap.get(v.id)?.totalXp ?? 0,
+      totalCompletions: xpMap.get(v.id)?.completions ?? 0,
     }));
 
     res.json(result);
@@ -181,7 +194,7 @@ router.delete("/vocations/:id", async (req, res) => {
   try {
     const { id } = req.params;
     await db.update(questsTable).set({ vocationId: null }).where(eq(questsTable.vocationId, id));
-    await db.delete(vocationsTable).where(eq(vocationsTable.id, id));
+    await db.update(vocationsTable).set({ deletedAt: new Date() }).where(eq(vocationsTable.id, id));
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting vocation");
