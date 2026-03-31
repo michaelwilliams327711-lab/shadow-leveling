@@ -150,15 +150,18 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   const todayStr = getSystemDate(localDate);
   const now = new Date(todayStr + "T00:00:00.000Z");
 
+  const cutoffDate = new Date(now);
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 90);
+
   const allActiveQuests = await db
     .select()
     .from(questsTable)
-    .where(eq(questsTable.status, "active"));
+    .where(and(eq(questsTable.status, "active"), gte(questsTable.updatedAt, cutoffDate)));
 
   const allCompletedQuests = await db
     .select()
     .from(questsTable)
-    .where(eq(questsTable.status, "completed"));
+    .where(and(eq(questsTable.status, "completed"), gte(questsTable.updatedAt, cutoffDate)));
 
   const recurringToReset = allCompletedQuests.filter(q => {
     if (q.isPaused) return false;
@@ -338,7 +341,33 @@ function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date, localDa
   const todayStr = getSystemDate(localDate);
   const today = new Date(todayStr + "T00:00:00.000Z");
 
-  let candidate = getNextOccurrenceDate(recurrence, baseDate);
+  let candidate: Date | null;
+
+  if (recurrence.type === "daily") {
+    const intervalDays = recurrence.intervalDays ?? 1;
+    if (intervalDays >= 1) {
+      const baseMs = Date.UTC(
+        baseDate.getUTCFullYear(),
+        baseDate.getUTCMonth(),
+        baseDate.getUTCDate()
+      );
+      const firstNextMs = baseMs + intervalDays * 86_400_000;
+      const todayMs = today.getTime();
+
+      if (firstNextMs >= todayMs) {
+        return new Date(firstNextMs);
+      }
+
+      const diffDays = Math.floor((todayMs - firstNextMs) / 86_400_000);
+      const stepsNeeded = Math.ceil(diffDays / intervalDays);
+      candidate = new Date(firstNextMs + stepsNeeded * intervalDays * 86_400_000);
+    } else {
+      candidate = getNextOccurrenceDate(recurrence, baseDate);
+    }
+  } else {
+    candidate = getNextOccurrenceDate(recurrence, baseDate);
+  }
+
   if (!candidate) return null;
 
   const MAX_ITERATIONS = 10_000;

@@ -17,60 +17,47 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const DEFAULT_TIMEZONE = "America/New_York";
-
-function getLocalDateStr(timezone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+function getUtcDateStr(): string {
+  return new Date().toISOString().split("T")[0];
 }
 
-function getLocalHour(timezone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    hour: "numeric",
-    hour12: false,
-  }).formatToParts(new Date());
-  const hourPart = parts.find(p => p.type === "hour");
-  return hourPart ? parseInt(hourPart.value, 10) : -1;
+function getUtcHour(): number {
+  return new Date().getUTCHours();
 }
 
 let lastProcessedDate: string | null = null;
 
 cron.schedule("0 * * * *", async () => {
-  const localHour = getLocalHour(DEFAULT_TIMEZONE);
-  const localDate = getLocalDateStr(DEFAULT_TIMEZONE);
+  const utcHour = getUtcHour();
+  const utcDate = getUtcDateStr();
 
-  if (localHour !== 0 && localHour !== 1) {
+  if (utcHour !== 0 && utcHour !== 1) {
     return;
   }
 
-  if (lastProcessedDate === localDate) {
+  if (lastProcessedDate === utcDate) {
     logger.info(
-      { timezone: DEFAULT_TIMEZONE, localDate, localHour },
+      { utcDate, utcHour },
       "Daily quest auto-refresh: already processed for today, skipping"
     );
     return;
   }
 
-  lastProcessedDate = localDate;
+  lastProcessedDate = utcDate;
   logger.info(
-    { timezone: DEFAULT_TIMEZONE, localDate, localHour },
-    "Daily quest auto-refresh: midnight window detected, running overdue processing"
+    { utcDate, utcHour },
+    "Daily quest auto-refresh: UTC midnight window detected, running overdue processing"
   );
 
   try {
-    const result = await processOverdueQuestsLogic();
+    const result = await processOverdueQuestsLogic(utcDate);
     logger.info(
-      { recurringReset: result.recurringReset, penaltiesApplied: result.penaltiesApplied, localDate, timezone: DEFAULT_TIMEZONE },
+      { recurringReset: result.recurringReset, penaltiesApplied: result.penaltiesApplied, utcDate },
       "Daily quest auto-refresh complete"
     );
   } catch (err) {
     lastProcessedDate = null;
-    logger.error({ err, localDate, timezone: DEFAULT_TIMEZONE }, "Daily quest auto-refresh: error during overdue processing");
+    logger.error({ err, utcDate }, "Daily quest auto-refresh: error during overdue processing");
   }
 });
 
