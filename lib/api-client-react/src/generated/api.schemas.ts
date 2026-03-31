@@ -23,12 +23,12 @@ export interface Character {
   discipline: number;
   streak: number;
   longestStreak: number;
-  multiplier: number;
+  readonly multiplier: number;
   lastCheckin?: string | null;
   totalQuestsCompleted: number;
   totalQuestsFailed: number;
   failStreak: number;
-  penaltyMultiplier: number;
+  readonly penaltyMultiplier: number;
   corruption: number;
 }
 
@@ -108,12 +108,7 @@ export interface Quest {
   category: string;
   difficulty: QuestDifficulty;
   durationMinutes: number;
-  xpReward: number;
-  goldReward: number;
-  xpPenalty: number;
-  goldPenalty: number;
   status: QuestStatus;
-  isDaily: boolean;
   isPaused: boolean;
   description?: string | null;
   createdAt: string;
@@ -146,7 +141,6 @@ export interface CreateQuestRequest {
   category: string;
   difficulty: CreateQuestRequestDifficulty;
   durationMinutes: number;
-  isDaily?: boolean;
   description?: string | null;
   deadline?: string | null;
   statBoost?: StatBoost | null;

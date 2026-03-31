@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
-import { processLevelUp, totalXpEarned, XP_PER_LEVEL } from "@workspace/shared";
+import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -11,12 +11,18 @@ router.get("/bosses", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
     const bosses = await db.select().from(bossesTable).orderBy(bossesTable.xpThreshold);
-    const mapped = bosses.map((b) => ({
-      ...b,
-      isUnlocked: totalXpEarned(char.xp, char.level) >= b.xpThreshold,
-      defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
-      failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
-    }));
+    const mapped = bosses.map((b) => {
+      const rankRewards = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
+      return {
+        ...b,
+        xpReward: rankRewards.xp,
+        goldReward: rankRewards.gold,
+        xpPenalty: Math.floor(rankRewards.xp * 0.6),
+        isUnlocked: totalXpEarned(char.xp, char.level) >= b.xpThreshold,
+        defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
+        failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
+      };
+    });
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error listing bosses");
@@ -48,6 +54,11 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       });
     }
 
+    const rankRewards = RANK_BASE_REWARDS[boss.rank] ?? { xp: 350, gold: 175 };
+    const xpReward = rankRewards.xp;
+    const goldReward = rankRewards.gold;
+    const xpPenalty = Math.floor(xpReward * 0.6);
+
     const winChance = Math.min(0.85, 0.4 + (char.streak * 0.02) + (char.level * 0.01));
     const victory = Math.random() < winChance;
 
@@ -56,13 +67,13 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     let newLevel = char.level;
 
     if (victory) {
-      newXp += boss.xpReward;
-      newGold += boss.goldReward;
+      newXp += xpReward;
+      newGold += goldReward;
       const result = processLevelUp(newXp, newLevel);
       newXp = result.xp;
       newLevel = result.level;
     } else {
-      newXp = Math.max(0, char.xp - boss.xpPenalty);
+      newXp = Math.max(0, char.xp - xpPenalty);
     }
 
     const [updatedChar] = await db.update(characterTable)
@@ -84,8 +95,8 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       category: "Boss",
       difficulty: boss.rank,
       outcome: victory ? "completed" : "failed",
-      xpChange: victory ? boss.xpReward : -boss.xpPenalty,
-      goldChange: victory ? boss.goldReward : 0,
+      xpChange: victory ? xpReward : -xpPenalty,
+      goldChange: victory ? goldReward : 0,
       multiplierApplied: 1.0,
       actionType: victory ? "BOSS_DEFEATED" : "FAILED",
       statCategory: null,
@@ -97,10 +108,10 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       success: true,
       victory,
       message: victory
-        ? `VICTORY! ${boss.name} has been defeated! +${boss.xpReward} XP, +${boss.goldReward} Gold!`
-        : `DEFEAT. ${boss.name} proved too powerful. -${boss.xpPenalty} XP. This loss is now part of your permanent record.`,
-      xpChange: victory ? boss.xpReward : -boss.xpPenalty,
-      goldChange: victory ? boss.goldReward : 0,
+        ? `VICTORY! ${boss.name} has been defeated! +${xpReward} XP, +${goldReward} Gold!`
+        : `DEFEAT. ${boss.name} proved too powerful. -${xpPenalty} XP. This loss is now part of your permanent record.`,
+      xpChange: victory ? xpReward : -xpPenalty,
+      goldChange: victory ? goldReward : 0,
       leveledUp,
       newLevel,
       character: {

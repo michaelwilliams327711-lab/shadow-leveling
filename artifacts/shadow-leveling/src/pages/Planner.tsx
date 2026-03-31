@@ -43,6 +43,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
 
 type PlannerView = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -115,7 +116,7 @@ function QuestCard({ quest, compact = false }: { quest: Quest; compact?: boolean
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Zap className="h-3 w-3 text-yellow-400" />
-              {quest.xpReward} XP
+              {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />

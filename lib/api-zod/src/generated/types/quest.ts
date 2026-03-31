@@ -16,12 +16,7 @@ export interface Quest {
   category: string;
   difficulty: QuestDifficulty;
   durationMinutes: number;
-  xpReward: number;
-  goldReward: number;
-  xpPenalty: number;
-  goldPenalty: number;
   status: QuestStatus;
-  isDaily: boolean;
   isPaused: boolean;
   description?: string | null;
   createdAt: string;

@@ -20,11 +20,11 @@ export interface Character {
   discipline: number;
   streak: number;
   longestStreak: number;
-  multiplier: number;
+  readonly multiplier: number;
   lastCheckin?: string | null;
   totalQuestsCompleted: number;
   totalQuestsFailed: number;
   failStreak: number;
-  penaltyMultiplier: number;
+  readonly penaltyMultiplier: number;
   corruption: number;
 }

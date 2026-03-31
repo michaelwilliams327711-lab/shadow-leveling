@@ -633,6 +633,7 @@ components:
           type: integer
         multiplier:
           type: number
+          readOnly: true
         lastCheckin:
           type: string
           nullable: true
@@ -644,6 +645,7 @@ components:
           type: integer
         penaltyMultiplier:
           type: number
+          readOnly: true
         corruption:
           type: integer
       required:
@@ -674,6 +676,10 @@ components:
         milestoneBonusXp:
           type: integer
         milestoneBonusGold:
+          type: integer
+        leveledUp:
+          type: boolean
+        newLevel:
           type: integer
       required: [success, message, streak, multiplier, alreadyCheckedIn, milestoneBonus, milestoneBonusXp, milestoneBonusGold]
 
@@ -720,19 +726,9 @@ components:
           enum: [F, E, D, C, B, A, S, SS, SSS]
         durationMinutes:
           type: integer
-        xpReward:
-          type: integer
-        goldReward:
-          type: integer
-        xpPenalty:
-          type: integer
-        goldPenalty:
-          type: integer
         status:
           type: string
           enum: [active, completed, failed]
-        isDaily:
-          type: boolean
         isPaused:
           type: boolean
         description:
@@ -761,7 +757,7 @@ components:
         vocationId:
           type: string
           nullable: true
-      required: [id, name, category, difficulty, durationMinutes, xpReward, goldReward, xpPenalty, goldPenalty, status, isDaily, isPaused, createdAt]
+      required: [id, name, category, difficulty, durationMinutes, status, isPaused, createdAt]
 
     CreateQuestRequest:
       type: object
@@ -775,8 +771,6 @@ components:
           enum: [F, E, D, C, B, A, S, SS, SSS]
         durationMinutes:
           type: integer
-        isDaily:
-          type: boolean
         description:
           type: string
           nullable: true
@@ -1044,6 +1038,10 @@ components:
         xpChange:
           type: integer
         goldChange:
+          type: integer
+        leveledUp:
+          type: boolean
+        newLevel:
           type: integer
         character:
           $ref: "#/components/schemas/Character"

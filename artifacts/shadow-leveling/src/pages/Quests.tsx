@@ -55,7 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
-import { CATEGORY_STAT_MAP, STAT_META } from "@workspace/shared";
+import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
@@ -1266,14 +1266,14 @@ export default function Quests() {
                               fn="XP accumulates toward your next level. Higher rank quests award more XP."
                               usage="Complete quests to earn XP. Failing a quest deducts XP instead."
                             >
-                              <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {quest.xpReward} XP</span>
+                              <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP</span>
                             </InfoTooltip>
                             <InfoTooltip
                               what="Gold Reward — currency awarded on completion."
                               fn="Gold is spent in the System Shop to purchase real-life rewards."
                               usage="Complete quests to earn Gold. Failing deducts Gold. Spend it in the Shop."
                             >
-                              <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {quest.goldReward} G</span>
+                              <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.gold ?? 25) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.gold)} G</span>
                             </InfoTooltip>
                             {quest.targetAmount != null && (
                               <InfoTooltip
