@@ -74,6 +74,20 @@ All at `/api`:
 - `GET /planner/yearly` - Year heatmap + key events (boss defeats, high XP days)
 - `PATCH /planner/quest/:id/reschedule` - Reschedule a quest to a new deadline date
 
+## Environment Variables
+
+### API Server (`artifacts/api-server`)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `API_SECRET_KEY` | Prod only | Static secret enforced on all `/api` routes via `X-Api-Key` header. Omit in local dev to skip auth. |
+| `CORS_ORIGIN` | Prod only | Exact origin allowed by CORS (e.g. `https://your-app.replit.app`). Defaults to `*` when unset. |
+
+### Frontend (`artifacts/shadow-leveling`)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_KEY` | Prod only | Must match `API_SECRET_KEY`. Injected as `X-Api-Key` header on every API call. Omit in local dev. |
+
 ## Database Tables
 
 - `character` - Single row, all player stats

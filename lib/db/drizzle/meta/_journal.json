@@ -50,6 +50,13 @@
       "when": 1743480000000,
       "tag": "0006_drop_quest_reward_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1743566400000,
+      "tag": "0007_awakening_character_id",
+      "breakpoints": true
     }
   ]
 }

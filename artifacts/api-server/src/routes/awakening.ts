@@ -1,15 +1,23 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { awakeningTable } from "@workspace/db";
+import { awakeningTable, characterTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { SaveAwakeningBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+async function getCharacterId(): Promise<number | null> {
+  const rows = await db.select({ id: characterTable.id }).from(characterTable).limit(1);
+  return rows.length > 0 ? rows[0].id : null;
+}
+
 async function getOrCreateAwakening() {
-  const rows = await db.select().from(awakeningTable).limit(1);
+  const characterId = await getCharacterId();
+  const rows = characterId
+    ? await db.select().from(awakeningTable).where(eq(awakeningTable.characterId, characterId)).limit(1)
+    : await db.select().from(awakeningTable).limit(1);
   if (rows.length > 0) return rows[0];
-  const [newEntry] = await db.insert(awakeningTable).values({ vision: null, antiVision: null, coreValues: null }).returning();
+  const [newEntry] = await db.insert(awakeningTable).values({ characterId, vision: null, antiVision: null, coreValues: null }).returning();
   return newEntry;
 }
 
