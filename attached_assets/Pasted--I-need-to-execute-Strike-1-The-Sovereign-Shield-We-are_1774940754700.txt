@@ -1,0 +1,71 @@
+"I need to execute Strike 1: The Sovereign Shield. We are fixing critical security and data-loss vulnerabilities.
+
+1. Install the Gatekeeper (C-01 & C-02):
+
+In artifacts/api-server/src/app.ts, replace the wildcard app.use(cors()) with a restricted origin pointing only to your frontend URL.
+
+Implement a JWT or Session verification middleware. Every route (except login/signup) must now verify the Authorization: Bearer header that the frontend is already sending.
+
+Scope all queries! Ensure getOrCreateCharacter() and all route logic are scoped to the authenticated user's ID.
+
+2. Soft-Delete Logic (C-03):
+
+Update the Drizzle schema. Add a deleted_at: timestamp column to quests and bad_habits.
+
+Remove onDelete: 'cascade'. Replace all db.delete() calls with db.update().set({ deletedAt: new Date() }).
+
+Update all SELECT queries to filter out rows where deletedAt is not null. This preserves history for the heatmap.
+
+3. Add Rate Limiting (H-01):
+
+Add the express-rate-limit middleware. Set a sensible global limit (e.g., 100 requests per minute) and a stricter limit for the process-overdue and check-in endpoints.
+
+Constraint: Do not touch the UI. This is a backend and database security fortification."
+
+Strike 2: The Integrity Engine (H-04, H-05, M-04, L-04)
+Now we fix the "N+1" performance bombs and the "Status Desync" where your Quest page and Planner page start telling different stories.
+
+Copy and paste this into the Replit Agent:
+
+"I need to execute Strike 2: The Integrity Engine. We are fixing database referential integrity and performance.
+
+1. Enforce Foreign Keys (H-04 & L-03):
+
+Update the Drizzle schema for daily_orders, daily_hidden_box_rewards, and quest_log. Formally declare .references(() => characterTable.id) for the characterId columns.
+
+In the vocations table, set onDelete: 'set null' for the vocationId in the quests table.
+
+2. Atomic Overdue Processing (H-05):
+
+In quests.ts, wrap the entire processOverdueQuestsLogic in a Database Transaction (db.transaction). If the status update fails, the log entry must not be written, and vice versa.
+
+3. Performance & Indexing (M-04 & L-04):
+
+Add B-Tree indexes to quest_log.occurredAt, bad_habit_log.date, and quests.status.
+
+Refactor the streak calculations in badHabits.ts to use a single SQL aggregation query instead of pulling all rows into memory and processing them in TypeScript.
+
+Constraint: Logic only. Ensure the 30-year scaling is protected by these indexes."
+
+Strike 3: The Cinematic Immersion (H-03, M-02, M-06, M-07)
+This fixes the "glitches in the Matrix"—the theme drift and the race conditions that make the game feel "unpolished."
+
+Copy and paste this into the Replit Agent:
+
+"I need to execute Strike 3: Cinematic Immersion. We are fixing UI drift and state race conditions.
+
+1. Fix Victory Screen Race Condition (H-03):
+
+In BossArena.tsx, do not rely on preCharacter snapshots. Use the response data directly from the mutation (e.g., mutateAsync().then(res => ...)) to calculate stat deltas. This ensures the numbers shown are exactly what the server just granted.
+
+2. Unified Theme Sync (M-02 & L-05):
+
+Search for hardcoded hex colors (like #ef4444 or #f97316). Replace them with the corresponding HSL variables from index.css (e.g., var(--primary) or var(--accent)). Ensure the ShadowDashboard follows the global theme.
+
+3. Add Loading Skeletons (M-06 & M-05):
+
+Implement the PlannerViewSkeleton pattern for the Shop, Boss Arena, and Shadow Dashboard. Add proper error boundaries to ShadowDashboard to prevent the infinite loading spinner on failure.
+
+4. Stabilize Quest Forms (M-07):
+
+In Quests.tsx, refactor the useEffect that resets the edit form. Use a stable ID (e.g., editingQuest.id) as the dependency rather than the whole object to prevent background refetches from wiping user input."
