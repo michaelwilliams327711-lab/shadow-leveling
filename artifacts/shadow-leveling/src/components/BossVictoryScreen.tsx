@@ -22,7 +22,7 @@ interface BossVictoryScreenProps {
 
 const STAT_COLORS: Record<string, string> = {
   strength: "text-red-400",
-  agility: "text-yellow-400",
+  agility: "text-cyan-400",
   endurance: "text-green-400",
   intellect: "text-blue-400",
   discipline: "text-purple-400",
@@ -96,8 +96,8 @@ export function BossVictoryScreen({ open, bossName, xpGained, goldGained, statDe
                 </div>
                 <div className="w-px bg-white/10" />
                 <div className="flex flex-col items-center gap-1">
-                  <Coins className="w-5 h-5 text-yellow-400" />
-                  <span className="font-stat font-bold text-yellow-400 text-xl">+{goldGained.toLocaleString()}</span>
+                  <Coins className="w-5 h-5 text-gold" />
+                  <span className="font-stat font-bold text-gold text-xl">+{goldGained.toLocaleString()}</span>
                   <span className="text-xs text-muted-foreground">Gold</span>
                 </div>
               </div>
@@ -126,9 +126,9 @@ export function BossVictoryScreen({ open, bossName, xpGained, goldGained, statDe
               transition={reduced ? {} : { delay: 0.9 }}
               className="flex items-center gap-2"
             >
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-xs text-yellow-400/80 font-display tracking-widest">DUNGEON CLEARED</span>
-              <Trophy className="w-4 h-4 text-yellow-400" />
+              <Trophy className="w-4 h-4 text-violet-400" />
+              <span className="text-xs text-violet-400/80 font-display tracking-widest">DUNGEON CLEARED</span>
+              <Trophy className="w-4 h-4 text-violet-400" />
             </motion.div>
 
             <Button

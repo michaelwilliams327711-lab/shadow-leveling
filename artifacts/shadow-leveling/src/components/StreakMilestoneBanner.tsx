@@ -13,7 +13,7 @@ interface StreakMilestoneBannerProps {
 }
 
 function getMilestoneInfo(streak: number) {
-  if (streak >= 365) return { label: "LEGENDARY", color: "text-yellow-400", glow: "rgba(250,204,21,0.5)", icon: Star, desc: "One full year of discipline. You are untouchable." };
+  if (streak >= 365) return { label: "LEGENDARY", color: "text-teal-400", glow: "rgba(45,212,191,0.5)", icon: Star, desc: "One full year of discipline. You are untouchable." };
   if (streak >= 100) return { label: "ELITE", color: "text-purple-400", glow: "rgba(168,85,247,0.5)", icon: Zap, desc: "100 days strong. Few ever reach this threshold." };
   if (streak >= 30) return { label: "VETERAN", color: "text-blue-400", glow: "rgba(96,165,250,0.5)", icon: Flame, desc: "One month of unbroken discipline. Impressive." };
   return { label: "HUNTER", color: "text-orange-400", glow: "rgba(251,146,60,0.5)", icon: Flame, desc: "Seven days without breaking. The streak begins." };

@@ -86,7 +86,7 @@ export function PenaltyModal({ penalties, onDismiss }: PenaltyModalProps) {
                 </span>
               )}
               {totalGold > 0 && (
-                <span className="flex items-center gap-1 text-yellow-500 font-bold text-base">
+                <span className="flex items-center gap-1 text-gold font-bold text-base">
                   <Coins className="w-4 h-4" />
                   −{totalGold} G
                 </span>

@@ -164,7 +164,7 @@ export default function Awakening() {
                   usage="List rules like 'Never skip workouts two days in a row' or 'No social media before noon.' These act as guardrails against self-sabotage."
                 >
                   <FormLabel className="text-xl font-display tracking-widest text-white flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-yellow-400" /> CORE LAWS
+                    <Sparkles className="w-5 h-5 text-cyan-400" /> CORE LAWS
                   </FormLabel>
                 </InfoTooltip>
                 <InfoTooltip

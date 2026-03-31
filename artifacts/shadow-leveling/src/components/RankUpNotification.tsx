@@ -14,7 +14,7 @@ interface RankUpNotificationProps {
 
 const STAT_COLORS: Record<string, { text: string; glow: string }> = {
   strength: { text: "text-red-400", glow: "rgba(248,113,113,0.5)" },
-  agility: { text: "text-yellow-400", glow: "rgba(250,204,21,0.5)" },
+  agility: { text: "text-cyan-400", glow: "rgba(34,211,238,0.5)" },
   endurance: { text: "text-green-400", glow: "rgba(74,222,128,0.5)" },
   intellect: { text: "text-blue-400", glow: "rgba(96,165,250,0.5)" },
   discipline: { text: "text-purple-400", glow: "rgba(192,132,252,0.5)" },

@@ -113,7 +113,7 @@ const STAT_ICONS: Record<string, LucideIcon> = {
   strength: Dumbbell, agility: Zap, endurance: Shield, intellect: Brain, discipline: Target,
 };
 const STAT_TEXT_COLORS: Record<string, string> = {
-  strength: "text-red-400", agility: "text-yellow-400", endurance: "text-green-400",
+  strength: "text-red-400", agility: "text-cyan-400", endurance: "text-green-400",
   intellect: "text-blue-400", discipline: "text-purple-400",
 };
 const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = Object.fromEntries(
@@ -546,7 +546,7 @@ function PlannerQuestCard({ quest, compact = false }: { quest: Quest; compact?: 
         </div>
         {!compact && (
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-yellow-400" />{Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP</span>
+            <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-violet-400" />{Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP</span>
             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{quest.durationMinutes}m</span>
           </div>
         )}
@@ -584,7 +584,7 @@ function PlannerDailyView() {
             <p className="text-sm text-muted-foreground mt-0.5">{formatDate(data.date)}</p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-stat font-bold text-yellow-400">+{data.totalXpAvailable} XP</div>
+            <div className="text-3xl font-stat font-bold text-violet-400">+{data.totalXpAvailable} XP</div>
             <div className="text-xs text-muted-foreground">available if cleared</div>
           </div>
         </div>
@@ -830,7 +830,7 @@ function PlannerYearlyView() {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-background/50 border-white/10 text-center p-4"><div className="text-2xl font-stat font-bold text-white">{totalCompleted}</div><div className="text-xs text-muted-foreground">Quests Completed</div></Card>
-        <Card className="bg-background/50 border-white/10 text-center p-4"><div className="text-2xl font-stat font-bold text-yellow-400">{totalXp.toLocaleString()}</div><div className="text-xs text-muted-foreground">XP Earned</div></Card>
+        <Card className="bg-background/50 border-white/10 text-center p-4"><div className="text-2xl font-stat font-bold text-violet-400">{totalXp.toLocaleString()}</div><div className="text-xs text-muted-foreground">XP Earned</div></Card>
         <Card className="bg-background/50 border-white/10 text-center p-4"><div className="text-2xl font-stat font-bold text-primary">{activeDays}</div><div className="text-xs text-muted-foreground">Active Days</div></Card>
       </div>
       <Card className="bg-background/50 border-white/10">
@@ -874,7 +874,7 @@ function PlannerYearlyView() {
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Star className="h-4 w-4 text-amber-400" />Key Events — {data.year}</CardTitle></CardHeader>
           <CardContent className="space-y-2 max-h-64 overflow-y-auto">
             {data.keyEvents.map((event: YearlyKeyEvent, i: number) => (
-              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2 border text-sm ${event.type === "boss_defeated" ? "bg-amber-500/10 border-amber-500/30 text-amber-300" : event.type === "high_xp_day" ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-300" : "bg-primary/10 border-primary/30 text-primary"}`}>
+              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2 border text-sm ${event.type === "boss_defeated" ? "bg-amber-500/10 border-amber-500/30 text-amber-300" : event.type === "high_xp_day" ? "bg-violet-500/10 border-violet-500/30 text-violet-300" : "bg-primary/10 border-primary/30 text-primary"}`}>
                 {event.type === "boss_defeated" ? <Skull className="h-4 w-4 flex-shrink-0" /> : event.type === "high_xp_day" ? <Zap className="h-4 w-4 flex-shrink-0" /> : <Flame className="h-4 w-4 flex-shrink-0" />}
                 <div className="flex-1"><span className="font-medium">{event.label}</span></div>
                 <span className="text-xs opacity-70 flex-shrink-0">{event.date}</span>
@@ -996,11 +996,11 @@ function ChronicleSection() {
           <Card className="glass-panel border border-yellow-500/20">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                <Coins className="w-7 h-7 text-yellow-400" />
+                <Coins className="w-7 h-7 text-gold" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Treasury / Gold</p>
-                <p className="text-3xl font-stat font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
+                <p className="text-3xl font-stat font-bold text-gold">{data.character.gold.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">gold coins</p>
               </div>
             </CardContent>
@@ -1396,7 +1396,7 @@ export default function Quests() {
     F: "bg-gray-500/20 text-gray-400 border-gray-500/30",
     E: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     D: "bg-green-500/20 text-green-400 border-green-500/30",
-    C: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    C: "bg-amber-600/20 text-amber-500 border-amber-600/30",
     B: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     A: "bg-red-500/20 text-red-400 border-red-500/30",
     S: "bg-purple-500/20 text-purple-400 border-purple-500/30",
@@ -1963,7 +1963,7 @@ export default function Quests() {
                               </InfoTooltip>
                             )}
                             {quest.isPaused && (
-                              <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400 border-none flex items-center gap-1">
+                              <Badge variant="secondary" className="bg-sky-500/10 text-sky-400 border-none flex items-center gap-1">
                                 <Pause className="w-2.5 h-2.5" />
                                 Paused
                               </Badge>
@@ -2003,7 +2003,7 @@ export default function Quests() {
                               fn="Gold is spent in the System Shop to purchase real-life rewards."
                               usage="Complete quests to earn Gold. Failing deducts Gold. Spend it in the Shop."
                             >
-                              <span className="flex items-center gap-1.5 text-yellow-400"><Trophy className="w-4 h-4" /> {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.gold ?? 25) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.gold)} G</span>
+                              <span className="flex items-center gap-1.5 text-gold"><Coins className="w-4 h-4" /> {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.gold ?? 25) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.gold)} G</span>
                             </InfoTooltip>
                             {quest.targetAmount != null && (
                               <InfoTooltip
@@ -2047,8 +2047,8 @@ export default function Quests() {
                                   variant="outline"
                                   size="icon"
                                   className={cn(
-                                    "border-yellow-500/30 hover:border-yellow-500/60 hover:bg-yellow-500/10",
-                                    quest.isPaused ? "text-yellow-400" : "text-yellow-400/60 hover:text-yellow-400"
+                                    "border-sky-500/30 hover:border-sky-500/60 hover:bg-sky-500/10",
+                                    quest.isPaused ? "text-sky-400" : "text-sky-400/60 hover:text-sky-400"
                                   )}
                                   onClick={() => onTogglePause(quest)}
                                   title={quest.isPaused ? "Resume quest" : "Pause quest"}

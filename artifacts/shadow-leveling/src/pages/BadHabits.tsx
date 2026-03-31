@@ -41,7 +41,7 @@ import {
 import { InfoTooltip } from "@/components/InfoTooltip";
 
 const SEVERITY_CONFIG = {
-  Low: { color: "text-yellow-400", border: "border-yellow-500/40", bg: "bg-yellow-500/10", label: "Low", icon: "⚠️" },
+  Low: { color: "text-amber-500", border: "border-amber-600/40", bg: "bg-amber-600/10", label: "Low", icon: "⚠️" },
   Medium: { color: "text-orange-400", border: "border-orange-500/40", bg: "bg-orange-500/10", label: "Medium", icon: "🔥" },
   High: { color: "text-red-400", border: "border-red-500/50", bg: "bg-red-500/15", label: "High", icon: "☠️" },
 } as const;
@@ -413,10 +413,10 @@ export default function BadHabits() {
                           </div>
                           <div className="rounded-md bg-white/3 border border-white/5 px-3 py-2">
                             <div className="flex items-center gap-1.5 mb-0.5">
-                              <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                              <Trophy className="w-3.5 h-3.5 text-violet-400" />
                               <span className="text-xs text-muted-foreground uppercase tracking-widest">Best</span>
                             </div>
-                            <span className="text-xl font-stat font-bold text-yellow-400">{habit.longestStreak}d</span>
+                            <span className="text-xl font-stat font-bold text-violet-400">{habit.longestStreak}d</span>
                           </div>
                         </div>
 

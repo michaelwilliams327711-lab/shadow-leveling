@@ -163,7 +163,7 @@ export default function Dashboard() {
 
   const failStreakColors: Record<string, string> = {
     none: "text-muted-foreground",
-    low: "text-yellow-400",
+    low: "text-amber-500",
     mid: "text-orange-400",
     high: "text-red-500",
     max: "text-red-600",
@@ -171,7 +171,7 @@ export default function Dashboard() {
 
   const failStreakBorderColors: Record<string, string> = {
     none: "border-white/10",
-    low: "border-yellow-500/30",
+    low: "border-amber-500/30",
     mid: "border-orange-500/40",
     high: "border-red-500/50",
     max: "border-red-600/60",
@@ -179,7 +179,7 @@ export default function Dashboard() {
 
   const stats = [
     { name: STAT_META.strength.label,   val: character.strength,   icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
-    { name: STAT_META.agility.label,    val: character.agility,    icon: Zap,      color: "text-yellow-400", barColor: "bg-yellow-400" },
+    { name: STAT_META.agility.label,    val: character.agility,    icon: Zap,      color: "text-cyan-400", barColor: "bg-cyan-400" },
     { name: STAT_META.endurance.label,  val: character.endurance,  icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
     { name: STAT_META.intellect.label,  val: character.intellect,  icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
     { name: STAT_META.discipline.label, val: character.discipline, icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
@@ -597,7 +597,7 @@ export default function Dashboard() {
                     failStreakTier === "max" ? "bg-red-950/60 text-red-300" :
                     failStreakTier === "high" ? "bg-red-900/40 text-red-400" :
                     failStreakTier === "mid" ? "bg-orange-900/40 text-orange-300" :
-                    "bg-yellow-900/30 text-yellow-300"
+                    "bg-amber-900/30 text-amber-300"
                   }`}>
                     Complete a quest to reset the streak.
                   </div>

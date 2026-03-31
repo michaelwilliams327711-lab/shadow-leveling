@@ -24,7 +24,7 @@ import { Check, Plus, Trash2, Target, Package, Zap, Dumbbell, Brain, Shield } fr
 const STAT_OPTIONS = [
   { value: "discipline", label: "Discipline", icon: Target, color: "text-purple-400" },
   { value: "strength", label: "Strength", icon: Dumbbell, color: "text-red-400" },
-  { value: "agility", label: "Agility", icon: Zap, color: "text-yellow-400" },
+  { value: "agility", label: "Agility", icon: Zap, color: "text-cyan-400" },
   { value: "endurance", label: "Endurance", icon: Shield, color: "text-green-400" },
   { value: "intellect", label: "Intellect", icon: Brain, color: "text-blue-400" },
 ] as const;
@@ -359,7 +359,7 @@ export function DailyOrders() {
               style={{
                 color: selectedStat === "discipline" ? "#c084fc"
                   : selectedStat === "strength" ? "#f87171"
-                  : selectedStat === "agility" ? "#facc15"
+                  : selectedStat === "agility" ? "#22d3ee"
                   : selectedStat === "endurance" ? "#4ade80"
                   : "#60a5fa"
               }}
