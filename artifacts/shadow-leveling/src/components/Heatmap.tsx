@@ -33,14 +33,14 @@ export function Heatmap({ data = [] }: HeatmapProps) {
   const [hoveredDay, setHoveredDay] = useState<HoveredDay | null>(null);
 
   const now = new Date();
-  const currentYear = now.getUTCFullYear();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const jan1UTC = Date.UTC(currentYear, 0, 1);
+
+  const windowStartUTC = todayUTC - 363 * 86400000;
 
   const activityMap = new Map(data.map(a => [a.date, a]));
 
   const days: { dateStr: string; count: number; level: number }[] = [];
-  for (let ms = jan1UTC; ms <= todayUTC; ms += 86400000) {
+  for (let ms = windowStartUTC; ms <= todayUTC; ms += 86400000) {
     const d = new Date(ms);
     const dateStr = utcDateStr(d);
     const activity = activityMap.get(dateStr);
@@ -51,9 +51,9 @@ export function Heatmap({ data = [] }: HeatmapProps) {
     });
   }
 
-  const jan1DayOfWeek = new Date(jan1UTC).getUTCDay();
+  const windowStartDayOfWeek = new Date(windowStartUTC).getUTCDay();
   const paddedDays: (typeof days[0] | null)[] = [
-    ...Array(jan1DayOfWeek).fill(null),
+    ...Array(windowStartDayOfWeek).fill(null),
     ...days,
   ];
 
@@ -63,17 +63,25 @@ export function Heatmap({ data = [] }: HeatmapProps) {
   }
 
   const monthLabels: { label: string; colIndex: number }[] = [];
-  const seenMonths = new Set<number>();
-  for (let month = 0; month < 12; month++) {
-    const firstDayMs = Date.UTC(currentYear, month, 1);
-    if (firstDayMs > todayUTC) break;
-    const dayOfYear = Math.round((firstDayMs - jan1UTC) / 86400000);
-    const colIndex = Math.floor((dayOfYear + jan1DayOfWeek) / 7);
-    if (!seenMonths.has(month)) {
-      seenMonths.add(month);
+  const seenMonths = new Set<string>();
+
+  for (let ms = windowStartUTC; ms <= todayUTC; ms += 86400000) {
+    const d = new Date(ms);
+    const month = d.getUTCMonth();
+    const year = d.getUTCFullYear();
+    const key = `${year}-${month}`;
+
+    if (d.getUTCDate() === 1 && !seenMonths.has(key)) {
+      seenMonths.add(key);
+      const dayOffset = Math.round((ms - windowStartUTC) / 86400000);
+      const colIndex = Math.floor((dayOffset + windowStartDayOfWeek) / 7);
       monthLabels.push({ label: MONTH_NAMES[month], colIndex });
     }
   }
+
+  const startYear = new Date(windowStartUTC).getUTCFullYear();
+  const endYear = now.getUTCFullYear();
+  const titleYear = startYear === endYear ? String(endYear) : `${startYear} \u2013 ${endYear}`;
 
   const getLevelColor = (level: number) => {
     switch (level) {
@@ -109,16 +117,16 @@ export function Heatmap({ data = [] }: HeatmapProps) {
       <div className="flex items-center gap-2">
         <Flame className="h-4 w-4 text-primary" />
         <span className="text-sm">
-          Activity Heatmap — {currentYear}
+          Activity Heatmap — {titleYear}
         </span>
       </div>
 
       <div ref={containerRef} className="relative w-full overflow-x-auto hide-scrollbar">
         <div className="min-w-max">
           <div className="relative h-4 mb-1" style={{ width: weeks.length * CELL_STEP - 4 }}>
-            {monthLabels.map(({ label, colIndex }) => (
+            {monthLabels.map(({ label, colIndex }, i) => (
               <span
-                key={label}
+                key={`${label}-${i}`}
                 className="absolute text-[10px] text-muted-foreground leading-none"
                 style={{ left: colIndex * CELL_STEP }}
               >

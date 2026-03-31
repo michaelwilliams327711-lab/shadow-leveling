@@ -288,7 +288,7 @@ router.get("/activity", async (req, res) => {
     const todayStr = getSystemDateFromReq(req);
     const todayDate = new Date(todayStr + "T00:00:00.000Z");
     const windowStart = new Date(todayDate);
-    windowStart.setUTCDate(windowStart.getUTCDate() - 364);
+    windowStart.setUTCDate(windowStart.getUTCDate() - 363);
     const windowStartStr = windowStart.toISOString().split("T")[0];
 
     const records = await db.select().from(activityTable).where(gte(activityTable.date, windowStartStr));
