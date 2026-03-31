@@ -225,6 +225,8 @@ export function DailyOrders() {
   const completedCount = orders.filter((o) => o.completed).length;
 
   const activeHiddenBox = showHiddenBox ?? serverPendingBox;
+  const activeHiddenBoxRef = useRef(activeHiddenBox);
+  activeHiddenBoxRef.current = activeHiddenBox;
 
   const handleCreate = useCallback(() => {
     const name = inputValue.trim();
@@ -283,20 +285,23 @@ export function DailyOrders() {
   );
 
   const handleAcknowledge = useCallback(() => {
-    if (!activeHiddenBox) return;
+    if (!activeHiddenBoxRef.current) return;
     setIsClaiming(true);
 
     claimMutation.mutate(undefined, {
       onSuccess: (result) => {
+        const box = activeHiddenBoxRef.current;
         setIsClaiming(false);
         setShowHiddenBox(null);
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
         toast({
           title: "Reward Claimed",
-          description: activeHiddenBox.type === "gold"
-            ? `+${activeHiddenBox.goldBonus} Gold deposited`
-            : `${activeHiddenBox.stat} +${activeHiddenBox.statBoost} applied`,
+          description: box
+            ? box.type === "gold"
+              ? `+${box.goldBonus} Gold deposited`
+              : `${box.stat} +${box.statBoost} applied`
+            : "Reward applied",
           className: "bg-purple-900/30 border-purple-500/40 text-white",
         });
       },
@@ -306,7 +311,7 @@ export function DailyOrders() {
         toast({ title: "Error", description: "Failed to claim reward.", variant: "destructive" });
       },
     });
-  }, [activeHiddenBox, claimMutation, queryClient, toast]);
+  }, [claimMutation, queryClient, toast]);
 
   const handleDelete = useCallback(
     (id: string) => {

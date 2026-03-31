@@ -94,7 +94,7 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
-import { ActivityCalendar } from "react-activity-calendar";
+import { useMemo } from "react";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -163,20 +163,18 @@ interface CategoryComboboxProps {
 
 function CategoryCombobox({ value, onChange }: CategoryComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
+  const [localInput, setLocalInput] = useState<string | null>(null);
 
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
+  const inputValue = useMemo(() => localInput ?? value, [localInput, value]);
 
   const handleSelect = (selected: string) => {
     onChange(selected);
-    setInputValue(selected);
+    setLocalInput(null);
     setOpen(false);
   };
 
   const handleInputChange = (search: string) => {
-    setInputValue(search);
+    setLocalInput(search);
     onChange(search);
   };
 
@@ -801,6 +799,8 @@ const HEATMAP_COLORS = ["bg-white/5 border-white/5", "bg-primary/20 border-prima
 
 function PlannerYearlyView() {
   const { data, isLoading } = useGetPlannerYearly();
+  const [hoverDay, setHoverDay] = useState<{ day: YearlyHeatmapDay; x: number; y: number } | null>(null);
+
   if (isLoading) return <PlannerViewSkeleton />;
   if (!data) return null;
   const weeks: YearlyHeatmapDay[][] = [];
@@ -847,20 +847,30 @@ function PlannerYearlyView() {
                     if (!day.date || day.level < 0) return <div key={di} className="w-3 h-3 rounded-sm" />;
                     const isToday = day.date === data.today;
                     return (
-                      <Tooltip key={di}>
-                        <TooltipTrigger asChild>
-                          <div className={`w-3 h-3 rounded-sm border cursor-default transition-transform hover:scale-125 ${isToday ? "ring-1 ring-white/60" : ""} ${HEATMAP_COLORS[day.level] ?? HEATMAP_COLORS[0]}`} />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                          <div className="font-semibold">{day.date}</div>
-                          <div>{day.completedCount} completed · {day.xpGained} XP</div>
-                        </TooltipContent>
-                      </Tooltip>
+                      <div
+                        key={di}
+                        className={`w-3 h-3 rounded-sm border cursor-default transition-transform hover:scale-125 ${isToday ? "ring-1 ring-white/60" : ""} ${HEATMAP_COLORS[day.level] ?? HEATMAP_COLORS[0]}`}
+                        onMouseEnter={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          const parent = (e.currentTarget as HTMLElement).closest(".overflow-x-auto")?.getBoundingClientRect();
+                          setHoverDay({ day, x: rect.left - (parent?.left ?? 0) + rect.width / 2, y: rect.top - (parent?.top ?? 0) });
+                        }}
+                        onMouseLeave={() => setHoverDay(null)}
+                      />
                     );
                   })}
                 </div>
               ))}
             </div>
+            {hoverDay && (
+              <div
+                className="pointer-events-none absolute z-50 rounded-md border border-white/10 bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md"
+                style={{ left: hoverDay.x, top: hoverDay.y - 52, transform: "translateX(-50%)" }}
+              >
+                <div className="font-semibold">{hoverDay.day.date}</div>
+                <div>{hoverDay.day.completedCount} completed · {hoverDay.day.xpGained} XP</div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
             <span>Less</span>
@@ -905,6 +915,95 @@ const CHART_THEME = {
   text: "#a1a1aa",
   grid: "rgba(255,255,255,0.05)",
 };
+
+const CHRONICLE_HEATMAP_COLORS = ["bg-white/5 border-white/5", "bg-emerald-900/50 border-emerald-800/50", "bg-emerald-700/60 border-emerald-600/60", "bg-emerald-500/70 border-emerald-400/70", "bg-emerald-400 border-emerald-300/80"];
+
+function ChronicleHeatmap({ activityCalendar }: { activityCalendar: { date: string; count: number; level: number }[] }) {
+  const [hoverDay, setHoverDay] = useState<{ item: { date: string; count: number; level: number }; x: number; y: number } | null>(null);
+
+  const { weeks, monthPositions, totalCount } = useMemo(() => {
+    if (!activityCalendar.length) return { weeks: [], monthPositions: [], totalCount: 0 };
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const sorted = [...activityCalendar].sort((a, b) => a.date.localeCompare(b.date));
+    const firstDate = new Date(sorted[0].date + "T00:00:00");
+    const firstDow = firstDate.getDay();
+    const weeksArr: { date: string; count: number; level: number }[][] = [];
+    let cur: { date: string; count: number; level: number }[] = [];
+    for (let i = 0; i < firstDow; i++) cur.push({ date: "", count: 0, level: -1 });
+    for (const item of sorted) {
+      cur.push(item);
+      if (cur.length === 7) { weeksArr.push(cur); cur = []; }
+    }
+    if (cur.length > 0) { while (cur.length < 7) cur.push({ date: "", count: 0, level: -1 }); weeksArr.push(cur); }
+    const mpos: { month: string; col: number }[] = [];
+    let lastM = -1;
+    for (let w = 0; w < weeksArr.length; w++) {
+      for (const d of weeksArr[w]) {
+        if (d.date) {
+          const m = new Date(d.date + "T00:00:00").getMonth();
+          if (m !== lastM) { mpos.push({ month: MONTH_NAMES[m], col: w }); lastM = m; }
+        }
+      }
+    }
+    const total = activityCalendar.reduce((s, d) => s + d.count, 0);
+    return { weeks: weeksArr, monthPositions: mpos, totalCount: total };
+  }, [activityCalendar]);
+
+  if (!weeks.length) return null;
+
+  return (
+    <Card className="glass-panel">
+      <CardHeader>
+        <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <div className="relative min-w-[700px]">
+          <div className="flex gap-0.5 mb-1 text-xs text-muted-foreground/60">
+            {monthPositions.map((mp, i) => <div key={i} className="absolute" style={{ left: `${mp.col * 14}px` }}>{mp.month}</div>)}
+          </div>
+          <div className="flex gap-0.5 mt-5">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-0.5">
+                {week.map((item, di) => {
+                  if (!item.date || item.level < 0) return <div key={di} className="w-3 h-3 rounded-sm" />;
+                  return (
+                    <div
+                      key={di}
+                      className={`w-3 h-3 rounded-sm border cursor-default transition-transform hover:scale-125 ${CHRONICLE_HEATMAP_COLORS[item.level] ?? CHRONICLE_HEATMAP_COLORS[0]}`}
+                      onMouseEnter={(e) => {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const parent = (e.currentTarget as HTMLElement).closest(".overflow-x-auto")?.getBoundingClientRect();
+                        setHoverDay({ item, x: rect.left - (parent?.left ?? 0) + rect.width / 2, y: rect.top - (parent?.top ?? 0) });
+                      }}
+                      onMouseLeave={() => setHoverDay(null)}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          {hoverDay && (
+            <div
+              className="pointer-events-none absolute z-50 rounded-md border border-white/10 bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md"
+              style={{ left: hoverDay.x, top: hoverDay.y - 52, transform: "translateX(-50%)" }}
+            >
+              <div className="font-semibold">{hoverDay.item.date}</div>
+              <div>{hoverDay.item.count} quest{hoverDay.item.count !== 1 ? "s" : ""} completed</div>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+          <span>{totalCount} quests completed in the past year</span>
+          <div className="flex items-center gap-1">
+            <span>Less</span>
+            {CHRONICLE_HEATMAP_COLORS.map((c, i) => <div key={i} className={`w-3 h-3 rounded-sm border ${c}`} />)}
+            <span>More</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function ChronicleTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -1120,28 +1219,7 @@ function ChronicleSection() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="glass-panel">
-          <CardHeader>
-            <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <ActivityCalendar
-              data={data.activityCalendar}
-              theme={{ dark: ["#1a1a2e", "#1e3a2e", "#166534", "#16a34a", "#10b981"] }}
-              colorScheme="dark"
-              labels={{
-                months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-                weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-                totalCount: "{{count}} quests completed in {{year}}",
-                legend: { less: "Less", more: "More" },
-              }}
-              style={{ color: "#a1a1aa", fontSize: 12 }}
-              blockSize={13}
-              blockMargin={4}
-              fontSize={12}
-            />
-          </CardContent>
-        </Card>
+        <ChronicleHeatmap activityCalendar={data.activityCalendar} />
       </motion.div>
     </div>
   );

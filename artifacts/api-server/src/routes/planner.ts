@@ -284,6 +284,79 @@ router.get("/planner/monthly", async (req, res) => {
     const daysInMonth = monthEnd.getDate();
     const days: DayData[] = [];
 
+    const upcomingByDate = new Map<string, (typeof questsTable.$inferSelect)[]>();
+    const milestonesByDate = new Map<string, { name: string; type: string }[]>();
+
+    function addToUpcoming(dayStr: string, quest: typeof questsTable.$inferSelect) {
+      const existing = upcomingByDate.get(dayStr);
+      if (existing) { existing.push(quest); } else { upcomingByDate.set(dayStr, [quest]); }
+    }
+
+    for (const q of activeQuests) {
+      if (q.status !== "active") continue;
+      const recurrence = q.recurrence as RecurrenceConfig | null;
+
+      if (recurrence && recurrence.type !== "none") {
+        switch (recurrence.type) {
+          case "daily": {
+            const interval = recurrence.intervalDays ?? 1;
+            const base = new Date(q.completedAt ?? q.createdAt);
+            base.setHours(0, 0, 0, 0);
+            for (let d = 1; d <= daysInMonth; d++) {
+              const target = new Date(year, month, d);
+              const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
+              if (diffDays > 0 && diffDays % interval === 0) {
+                addToUpcoming(dateToStr(target), q);
+              }
+            }
+            break;
+          }
+          case "weekly": {
+            const dows = recurrence.daysOfWeek ?? [];
+            if (dows.length > 0) {
+              for (let d = 1; d <= daysInMonth; d++) {
+                const target = new Date(year, month, d);
+                if (dows.includes(target.getDay())) {
+                  addToUpcoming(dateToStr(target), q);
+                }
+              }
+            }
+            break;
+          }
+          case "monthly": {
+            const dom = recurrence.dayOfMonth ?? 1;
+            if (dom <= daysInMonth) {
+              addToUpcoming(dateToStr(new Date(year, month, dom)), q);
+            }
+            break;
+          }
+          case "yearly": {
+            const m = recurrence.month ?? 1;
+            const dy = recurrence.day ?? 1;
+            if (m === month + 1 && dy <= daysInMonth) {
+              addToUpcoming(dateToStr(new Date(year, month, dy)), q);
+            }
+            break;
+          }
+        }
+      } else if (q.deadline) {
+        const deadlineStr = dateToStr(new Date(q.deadline));
+        const deadlineDate = new Date(q.deadline);
+        if (deadlineDate.getFullYear() === year && deadlineDate.getMonth() === month) {
+          addToUpcoming(deadlineStr, q);
+        }
+      }
+    }
+
+    for (const q of allQuests) {
+      if (q.deadline && q.status === "active") {
+        const dStr = dateToStr(new Date(q.deadline));
+        const existing = milestonesByDate.get(dStr) ?? [];
+        existing.push({ name: q.name, type: "deadline" });
+        milestonesByDate.set(dStr, existing);
+      }
+    }
+
     for (let d = 1; d <= daysInMonth; d++) {
       const dayDate = new Date(year, month, d);
       const dayStr = dateToStr(dayDate);
@@ -292,16 +365,8 @@ router.get("/planner/monthly", async (req, res) => {
       const completedCount = byAction?.get("COMPLETED") ?? 0;
       const failedCount = byAction?.get("FAILED") ?? 0;
 
-      const upcomingQuests = activeQuests
-        .filter((q) => q.status === "active" && isQuestDueOnDate(q, dayDate))
-        .map(serializeQuest);
-
-      const milestones: { name: string; type: string }[] = [];
-      for (const q of allQuests) {
-        if (q.deadline && dateToStr(new Date(q.deadline)) === dayStr && q.status === "active") {
-          milestones.push({ name: q.name, type: "deadline" });
-        }
-      }
+      const upcomingQuests = (upcomingByDate.get(dayStr) ?? []).map(serializeQuest);
+      const milestones = milestonesByDate.get(dayStr) ?? [];
 
       days.push({
         date: dayStr,
