@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ActivityDay } from "@workspace/api-client-react";
 
 interface HeatmapProps {
@@ -25,32 +25,54 @@ function formatDisplayDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function Heatmap({ data = [] }: HeatmapProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredDay, setHoveredDay] = useState<HoveredDay | null>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
-    }
-  }, [data]);
-
   const now = new Date();
+  const currentYear = now.getUTCFullYear();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const jan1UTC = Date.UTC(currentYear, 0, 1);
 
   const activityMap = new Map(data.map(a => [a.date, a]));
 
-  const days = Array.from({ length: 364 }).map((_, i) => {
-    const d = new Date(todayUTC - (363 - i) * 86400000);
+  const days: { dateStr: string; count: number; level: number }[] = [];
+  for (let ms = jan1UTC; ms <= todayUTC; ms += 86400000) {
+    const d = new Date(ms);
     const dateStr = utcDateStr(d);
     const activity = activityMap.get(dateStr);
-    return {
+    days.push({
       dateStr,
       count: activity?.count || 0,
       level: activity?.level || 0,
-    };
-  });
+    });
+  }
+
+  const jan1DayOfWeek = new Date(jan1UTC).getUTCDay();
+  const paddedDays: (typeof days[0] | null)[] = [
+    ...Array(jan1DayOfWeek).fill(null),
+    ...days,
+  ];
+
+  const weeks: (typeof days[0] | null)[][] = [];
+  for (let i = 0; i < paddedDays.length; i += 7) {
+    weeks.push(paddedDays.slice(i, i + 7));
+  }
+
+  const monthLabels: { label: string; colIndex: number }[] = [];
+  const seenMonths = new Set<number>();
+  for (let month = 0; month < 12; month++) {
+    const firstDayMs = Date.UTC(currentYear, month, 1);
+    if (firstDayMs > todayUTC) break;
+    const dayOfYear = Math.round((firstDayMs - jan1UTC) / 86400000);
+    const colIndex = Math.floor((dayOfYear + jan1DayOfWeek) / 7);
+    if (!seenMonths.has(month)) {
+      seenMonths.add(month);
+      monthLabels.push({ label: MONTH_NAMES[month], colIndex });
+    }
+  }
 
   const getLevelColor = (level: number) => {
     switch (level) {
@@ -62,11 +84,6 @@ export function Heatmap({ data = [] }: HeatmapProps) {
       default: return "bg-white/5 border-white/5";
     }
   };
-
-  const weeks: typeof days[] = [];
-  for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7));
-  }
 
   const handleMouseEnter = (day: { dateStr: string; count: number }, e: React.MouseEvent<HTMLDivElement>) => {
     const containerRect = containerRef.current?.getBoundingClientRect();
@@ -84,37 +101,78 @@ export function Heatmap({ data = [] }: HeatmapProps) {
     setHoveredDay(null);
   };
 
+  const CELL_STEP = 16;
+
   return (
-    <div ref={containerRef} className="relative w-full">
-      <div ref={scrollRef} className="w-full overflow-x-auto pb-4 hide-scrollbar">
-        <div className="flex gap-1 min-w-max">
-          {weeks.map((week) => (
-            <div key={week[0]?.dateStr} className="flex flex-col gap-1">
-              {week.map((day) => (
-                <div
-                  key={day.dateStr}
-                  className={`w-3 h-3 rounded-sm border ${getLevelColor(day.level)} transition-colors hover:border-white cursor-default`}
-                  onMouseEnter={(e) => handleMouseEnter(day, e)}
-                  onMouseLeave={handleMouseLeave}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+    <div className="w-full space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-base">🔥</span>
+        <span className="text-sm font-semibold tracking-wide text-white/80">
+          Activity Heatmap — {currentYear}
+        </span>
       </div>
-      {hoveredDay && (
-        <div
-          className="pointer-events-none absolute z-50 rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-sans shadow-md"
-          style={{
-            left: hoveredDay.x,
-            top: hoveredDay.y - 8,
-            transform: "translate(-50%, -100%)",
-          }}
-        >
-          <p className="font-semibold">{hoveredDay.count} actions</p>
-          <p className="text-muted-foreground">{formatDisplayDate(hoveredDay.dateStr)}</p>
+
+      <div ref={containerRef} className="relative w-full overflow-x-auto hide-scrollbar">
+        <div className="min-w-max">
+          <div className="relative h-4 mb-1" style={{ width: weeks.length * CELL_STEP - 4 }}>
+            {monthLabels.map(({ label, colIndex }) => (
+              <span
+                key={label}
+                className="absolute text-[10px] text-muted-foreground leading-none"
+                style={{ left: colIndex * CELL_STEP }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex gap-1">
+            {weeks.map((week, wIdx) => (
+              <div key={wIdx} className="flex flex-col gap-1">
+                {Array.from({ length: 7 }).map((_, dIdx) => {
+                  const day = week[dIdx];
+                  if (!day) {
+                    return <div key={dIdx} className="w-3 h-3 rounded-sm opacity-0" />;
+                  }
+                  return (
+                    <div
+                      key={day.dateStr}
+                      className={`w-3 h-3 rounded-sm border ${getLevelColor(day.level)} transition-colors hover:border-white cursor-default`}
+                      onMouseEnter={(e) => handleMouseEnter(day, e)}
+                      onMouseLeave={handleMouseLeave}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="text-[10px] text-muted-foreground">Less</span>
+            {[1, 2, 3, 4].map(level => (
+              <div
+                key={level}
+                className={`w-3 h-3 rounded-sm border ${getLevelColor(level)}`}
+              />
+            ))}
+            <span className="text-[10px] text-muted-foreground">More</span>
+          </div>
         </div>
-      )}
+
+        {hoveredDay && (
+          <div
+            className="pointer-events-none absolute z-50 rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-sans shadow-md"
+            style={{
+              left: hoveredDay.x,
+              top: hoveredDay.y - 8,
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            <p className="font-semibold">{hoveredDay.count} actions</p>
+            <p className="text-muted-foreground">{formatDisplayDate(hoveredDay.dateStr)}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
