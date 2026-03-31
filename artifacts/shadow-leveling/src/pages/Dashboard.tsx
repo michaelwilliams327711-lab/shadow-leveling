@@ -245,8 +245,8 @@ export default function Dashboard() {
               <Flame className="text-orange-500 w-5 h-5" />
               <motion.span
                 key={ariseStreakTick ?? character.streak}
-                initial={ariseStreakTick !== null && !reduced ? { scale: 1.5, color: "#f97316" } : {}}
-                animate={{ scale: 1, color: "#f97316" }}
+                initial={ariseStreakTick !== null && !reduced ? { scale: 1.5, color: "hsl(var(--accent))" } : {}}
+                animate={{ scale: 1, color: "hsl(var(--accent))" }}
                 transition={{ type: "spring", stiffness: 300, damping: 12 }}
                 className="text-orange-500 font-stat font-bold text-xl"
               >

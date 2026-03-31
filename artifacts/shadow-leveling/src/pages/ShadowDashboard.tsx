@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingDown, Skull, AlertTriangle, ShieldAlert, Zap } from "lucide-react";
+import { TrendingDown, Skull, AlertTriangle, ShieldAlert, Zap, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   AreaChart,
@@ -55,15 +57,25 @@ function parseDateFull(dateStr: string): string {
 }
 
 const SHADOW_THEME = {
-  grid: "rgba(239,68,68,0.08)",
-  text: "#a1a1aa",
-  red: "#ef4444",
-  darkRed: "#991b1b",
-  orange: "#ea580c",
-  tooltip: { background: "#1c0a0a", border: "#ef4444", text: "#fca5a5" },
+  grid: "hsl(var(--destructive) / 0.08)",
+  text: "hsl(var(--muted-foreground))",
+  red: "hsl(var(--destructive))",
+  darkRed: "hsl(var(--destructive) / 0.6)",
+  orange: "hsl(var(--destructive) / 0.8)",
+  tooltip: {
+    background: "hsl(var(--card))",
+    border: "hsl(var(--destructive))",
+    text: "hsl(var(--destructive-foreground) / 0.85)",
+  },
 };
 
-const DOUGHNUT_COLORS = ["#ef4444", "#dc2626", "#ea580c", "#c2410c", "#b91c1c"];
+const DOUGHNUT_COLORS = [
+  "hsl(var(--destructive))",
+  "hsl(var(--destructive) / 0.85)",
+  "hsl(var(--destructive) / 0.7)",
+  "hsl(var(--destructive) / 0.55)",
+  "hsl(var(--destructive) / 0.4)",
+];
 
 function ShadowTooltip({
   active,
@@ -97,7 +109,7 @@ function ShadowTooltip({
 }
 
 export default function ShadowDashboard() {
-  const { data: apiData, isLoading } = useQuery<ApiDashboardStats>({
+  const { data: apiData, isLoading, isError, refetch } = useQuery<ApiDashboardStats>({
     queryKey: ["dashboard-stats"],
     queryFn: async ({ signal }) => {
       const res = await fetch("/api/dashboard-stats", { signal });
@@ -109,10 +121,43 @@ export default function ShadowDashboard() {
 
   const { data: corruptionData } = useGetCorruptionHistory({ query: { staleTime: 5 * 60 * 1000 } });
 
-  if (isLoading || !apiData) {
+  if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-red-500" />
+      <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
+        <Skeleton className="h-16 w-72 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass-panel rounded-xl p-6 space-y-3">
+              <Skeleton className="h-5 w-1/2 rounded" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="glass-panel rounded-xl p-6 space-y-3">
+              <Skeleton className="h-5 w-1/3 rounded" />
+              <Skeleton className="h-48 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !apiData) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center h-full gap-4">
+        <AlertTriangle className="w-12 h-12 text-destructive" />
+        <p className="text-destructive font-bold tracking-widest uppercase">Failed to load Void data</p>
+        <Button
+          onClick={() => refetch()}
+          variant="outline"
+          className="border-destructive/50 text-destructive hover:bg-destructive/10 gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retry
+        </Button>
       </div>
     );
   }
@@ -145,7 +190,7 @@ export default function ShadowDashboard() {
         >
           <h1
             className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-1"
-            style={{ color: "#ef4444", textShadow: "0 0 30px rgba(239,68,68,0.4)" }}
+            style={{ color: "hsl(var(--destructive))", textShadow: "0 0 30px hsl(var(--destructive) / 0.4)" }}
           >
             THE VOID
           </h1>
@@ -163,7 +208,7 @@ export default function ShadowDashboard() {
             fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
-            <Card className="glass-panel border border-red-500/30" style={{ boxShadow: "0 0 20px rgba(239,68,68,0.07)" }}>
+            <Card className="glass-panel border border-red-500/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
@@ -186,14 +231,14 @@ export default function ShadowDashboard() {
             fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
           >
-            <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px rgba(153,27,27,0.07)" }}>
+            <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
                   <Skull className="w-7 h-7 text-red-700" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
-                  <p className="text-3xl font-stat font-bold" style={{ color: "#dc2626" }}>
+                  <p className="text-3xl font-stat font-bold" style={{ color: "hsl(var(--destructive))" }}>
                     {missedCount}
                   </p>
                   <p className="text-xs text-muted-foreground">missed days recorded</p>
@@ -209,7 +254,7 @@ export default function ShadowDashboard() {
             fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
           >
-            <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px rgba(234,88,12,0.07)" }}>
+            <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
                   <AlertTriangle className="w-7 h-7 text-orange-500" />
@@ -251,8 +296,8 @@ export default function ShadowDashboard() {
                 >
                   <defs>
                     <linearGradient id="bleedGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#991b1b" stopOpacity={0} />
+                      <stop offset="5%" stopColor={SHADOW_THEME.red} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={SHADOW_THEME.darkRed} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={SHADOW_THEME.grid} />
@@ -277,11 +322,11 @@ export default function ShadowDashboard() {
                     type="monotone"
                     dataKey="xp"
                     name="XP Lost"
-                    stroke="#ef4444"
+                    stroke={SHADOW_THEME.red}
                     strokeWidth={2.5}
                     fill="url(#bleedGradient)"
                     dot={false}
-                    activeDot={{ r: 5, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: SHADOW_THEME.red, stroke: "hsl(var(--card))", strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -332,14 +377,14 @@ export default function ShadowDashboard() {
                     <Tooltip
                       formatter={(value: number, name: string) => [value.toLocaleString(), name]}
                       contentStyle={{
-                        background: "#1c0a0a",
-                        border: "1px solid #ef4444",
+                        background: SHADOW_THEME.tooltip.background,
+                        border: `1px solid ${SHADOW_THEME.tooltip.border}`,
                         borderRadius: 8,
-                        color: "#fca5a5",
+                        color: SHADOW_THEME.tooltip.text,
                         fontSize: 13,
                       }}
-                      labelStyle={{ color: "#fca5a5" }}
-                      itemStyle={{ color: "#ffffff" }}
+                      labelStyle={{ color: SHADOW_THEME.tooltip.text }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
                     />
                   </PieChart>
                   <div className="w-full grid grid-cols-2 gap-x-6 gap-y-2">
@@ -391,15 +436,15 @@ export default function ShadowDashboard() {
                       key={entryKey}
                       className="rounded-md px-3 py-2.5 border flex items-start gap-3"
                       style={{
-                        background: isMissed ? "rgba(153,27,27,0.12)" : "rgba(239,68,68,0.06)",
-                        borderColor: isMissed ? "rgba(153,27,27,0.4)" : "rgba(239,68,68,0.2)",
+                        background: isMissed ? "hsl(var(--destructive) / 0.12)" : "hsl(var(--destructive) / 0.06)",
+                        borderColor: isMissed ? "hsl(var(--destructive) / 0.4)" : "hsl(var(--destructive) / 0.2)",
                       }}
                     >
                       <span className="text-lg mt-0.5 select-none">{isMissed ? "💀" : "✝"}</span>
                       <div className="flex-1 min-w-0">
                         <p
                           className="text-xs uppercase tracking-widest font-bold mb-0.5"
-                          style={{ color: isMissed ? "#dc2626" : "#ef4444" }}
+                          style={{ color: "hsl(var(--destructive))" }}
                         >
                           [{entry.action_type}] {entry.stat_category}
                         </p>
@@ -407,7 +452,7 @@ export default function ShadowDashboard() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {parseDateFull(entry.date)}{" "}
                           &mdash;{" "}
-                          <span style={{ color: "#ef4444" }}>
+                          <span style={{ color: "hsl(var(--destructive))" }}>
                             {entry.xp_change} XP
                           </span>
                         </p>
@@ -443,8 +488,8 @@ export default function ShadowDashboard() {
                 <LineChart data={corruptionChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="corruptionGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#991b1b" stopOpacity={0} />
+                      <stop offset="5%" stopColor={SHADOW_THEME.red} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={SHADOW_THEME.darkRed} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={SHADOW_THEME.grid} />
@@ -455,10 +500,10 @@ export default function ShadowDashboard() {
                     type="monotone"
                     dataKey="corruption"
                     name="Corruption"
-                    stroke="#ef4444"
+                    stroke={SHADOW_THEME.red}
                     strokeWidth={2.5}
-                    dot={{ fill: "#ef4444", r: 4, stroke: "#fff", strokeWidth: 1.5 }}
-                    activeDot={{ r: 6, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
+                    dot={{ fill: SHADOW_THEME.red, r: 4, stroke: "hsl(var(--card))", strokeWidth: 1.5 }}
+                    activeDot={{ r: 6, fill: SHADOW_THEME.red, stroke: "hsl(var(--card))", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -487,7 +532,7 @@ export default function ShadowDashboard() {
                 <div
                   key={`${event.occurredAt}-${i}`}
                   className="rounded-md px-3 py-2.5 border flex items-start gap-3"
-                  style={{ background: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.2)" }}
+                  style={{ background: "hsl(var(--destructive) / 0.06)", borderColor: "hsl(var(--destructive) / 0.2)" }}
                 >
                   <span className="text-lg mt-0.5 select-none">☠️</span>
                   <div className="flex-1 min-w-0">
@@ -496,7 +541,7 @@ export default function ShadowDashboard() {
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {parseDateFull(event.date)} &mdash;{" "}
-                      <span style={{ color: "#ef4444" }}>+{event.delta} Corruption</span>
+                      <span style={{ color: "hsl(var(--destructive))" }}>+{event.delta} Corruption</span>
                     </p>
                   </div>
                 </div>

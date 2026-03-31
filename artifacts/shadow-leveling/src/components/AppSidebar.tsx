@@ -75,10 +75,10 @@ export function AppSidebar() {
                         style={
                           isActive && isShadow
                             ? {
-                                background: "rgba(239,68,68,0.12)",
-                                borderColor: "rgba(239,68,68,0.35)",
-                                boxShadow: "inset 0 0 10px rgba(239,68,68,0.08)",
-                                color: "#ef4444",
+                                background: "hsl(var(--destructive) / 0.12)",
+                                borderColor: "hsl(var(--destructive) / 0.35)",
+                                boxShadow: "inset 0 0 10px hsl(var(--destructive) / 0.08)",
+                                color: "hsl(var(--destructive))",
                               }
                             : undefined
                         }
@@ -96,7 +96,7 @@ export function AppSidebar() {
                         />
                         <span
                           className="font-semibold text-base tracking-wide"
-                          style={isShadow && !isActive ? { color: "#7f1d1d" } : undefined}
+                          style={isShadow && !isActive ? { color: "hsl(var(--destructive) / 0.5)" } : undefined}
                         >
                           {item.title}
                         </span>

@@ -11,6 +11,7 @@ import { Skull, Lock, Swords, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -52,10 +53,10 @@ export default function BossArena() {
 
   const handleChallenge = (id: number) => {
     const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
-    const preCharacter = character;
 
     challengeBoss.mutate({ id }, {
       onSuccess: (res) => {
+        const preCharacter = queryClient.getQueryData<typeof character>(getGetCharacterQueryKey());
         queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         
@@ -94,7 +95,21 @@ export default function BossArena() {
     });
   };
 
-  if (isLoading) return <div className="p-8">Loading Boss Data...</div>;
+  if (isLoading) return (
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
+      <Skeleton className="h-16 w-64 rounded-xl" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="glass-panel rounded-xl p-6 space-y-4">
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-6 w-3/4 rounded" />
+            <Skeleton className="h-4 w-1/2 rounded" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen relative">
