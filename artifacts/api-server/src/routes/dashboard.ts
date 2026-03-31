@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questLogTable } from "@workspace/db";
-import { sql, gte, inArray } from "drizzle-orm";
+import { sql, gte, inArray, and } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL } from "./character.js";
 
 const router: IRouter = Router();
@@ -9,15 +9,13 @@ const router: IRouter = Router();
 router.get("/dashboard-stats", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
-    const today = new Date();
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(todayStr + "T00:00:00.000Z");
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 29);
 
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setDate(oneYearAgo.getDate() - 363);
-    oneYearAgo.setHours(0, 0, 0, 0);
+    const oneYearAgo = new Date(todayStr + "T00:00:00.000Z");
+    oneYearAgo.setUTCDate(oneYearAgo.getUTCDate() - 363);
 
     const xpByDateRaw = await db
       .select({
@@ -32,8 +30,8 @@ router.get("/dashboard-stats", async (req, res) => {
     const xpByDateMap = new Map(xpByDateRaw.map((r) => [r.date, Number(r.xp)]));
     const xpByDate: { date: string; xp: number }[] = [];
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+      const d = new Date(todayStr + "T00:00:00.000Z");
+      d.setUTCDate(d.getUTCDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       xpByDate.push({ date: dateStr, xp: xpByDateMap.get(dateStr) ?? 0 });
     }
@@ -44,7 +42,7 @@ router.get("/dashboard-stats", async (req, res) => {
         xp: sql<number>`coalesce(sum(case when ${questLogTable.xpChange} > 0 then ${questLogTable.xpChange} else 0 end), 0)`,
       })
       .from(questLogTable)
-      .where(sql`${questLogTable.statCategory} is not null`)
+      .where(and(sql`${questLogTable.statCategory} is not null`, gte(questLogTable.occurredAt, oneYearAgo)))
       .groupBy(questLogTable.statCategory);
 
     const xpByStatCategory = xpByStatCategoryRaw.map((r) => ({
@@ -64,8 +62,8 @@ router.get("/dashboard-stats", async (req, res) => {
     const activityMap = new Map(activityCountRaw.map((r) => [r.date, Number(r.count)]));
     const activityCalendar: { date: string; count: number; level: number }[] = [];
     for (let i = 363; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+      const d = new Date(todayStr + "T00:00:00.000Z");
+      d.setUTCDate(d.getUTCDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const count = activityMap.get(dateStr) ?? 0;
       const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
@@ -78,6 +76,7 @@ router.get("/dashboard-stats", async (req, res) => {
         count: sql<number>`count(*)`,
       })
       .from(questLogTable)
+      .where(gte(questLogTable.occurredAt, oneYearAgo))
       .groupBy(questLogTable.actionType);
 
     const outcomeBreakdown: Record<string, number> = {
@@ -127,8 +126,8 @@ router.get("/dashboard-stats", async (req, res) => {
     const xpBledByDate: { date: string; xp: number }[] = [];
     let totalXpBled = 0;
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+      const d = new Date(todayStr + "T00:00:00.000Z");
+      d.setUTCDate(d.getUTCDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const bled = xpBledMap.get(dateStr) ?? 0;
       totalXpBled += bled;

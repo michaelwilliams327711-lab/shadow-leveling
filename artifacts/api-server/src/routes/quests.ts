@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, lt, lte, or, gte } from "drizzle-orm";
+import { eq, and, isNotNull, lt, lte, or, gte, inArray } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import {
   CreateQuestBody,
@@ -9,6 +9,7 @@ import {
   CompleteQuestResponse,
   FailQuestResponse,
   UpsertQuestDailyLogBody,
+  type RecurrenceConfig,
 } from "@workspace/api-zod";
 import { getOrCreateCharacter, upsertActivity, invalidateCharacterCache } from "./character.js";
 import { awardVocXp } from "./vocations.js";
@@ -50,7 +51,7 @@ function getDifficultyStatPenalty(difficulty: string): number {
   return 1;
 }
 
-function serializeQuest(q: typeof questsTable.$inferSelect) {
+export function serializeQuest(q: typeof questsTable.$inferSelect) {
   return {
     ...q,
     createdAt: q.createdAt.toISOString(),
@@ -59,14 +60,6 @@ function serializeQuest(q: typeof questsTable.$inferSelect) {
   };
 }
 
-type RecurrenceConfig = {
-  type: "none" | "daily" | "weekly" | "monthly" | "yearly";
-  intervalDays?: number | null;
-  daysOfWeek?: number[] | null;
-  dayOfMonth?: number | null;
-  month?: number | null;
-  day?: number | null;
-};
 
 function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Date | null {
   const next = new Date(fromDate);
@@ -213,6 +206,14 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       discipline: char.discipline,
     };
 
+    type QuestLogEntry = typeof questLogTable.$inferInsert;
+    type PenaltyLogEntry = typeof penaltyLogTable.$inferInsert;
+
+    const questLogBatch: QuestLogEntry[] = [];
+    const penaltyLogBatch: PenaltyLogEntry[] = [];
+    const penaltyDescs: Array<{ desc: string; xpDeducted: number; goldDeducted: number }> = [];
+    const overdueIds: number[] = [];
+
     for (const quest of overdueQuests) {
       runningFailStreak += 1;
       const xpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
@@ -238,12 +239,9 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       statAccum[statField] = Math.max(1, statAccum[statField] - catStatPenalty);
       statAccum.discipline = Math.max(1, statAccum.discipline - discPenalty);
 
-      await tx
-        .update(questsTable)
-        .set({ status: "failed" })
-        .where(eq(questsTable.id, quest.id));
+      overdueIds.push(quest.id);
 
-      await tx.insert(questLogTable).values({
+      questLogBatch.push({
         questName: quest.name,
         category: quest.category,
         difficulty: quest.difficulty,
@@ -256,23 +254,39 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       });
 
       const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
-
-      const [penaltyLog] = await tx.insert(penaltyLogTable).values({
+      penaltyLogBatch.push({
         type: "quest_overdue",
         description: penaltyDesc,
         xpDeducted,
         goldDeducted,
-      }).returning();
+      });
+      penaltyDescs.push({ desc: penaltyDesc, xpDeducted, goldDeducted });
 
+      failedQuestsSerialized.push(serializeQuest({ ...quest, status: "failed" }));
+    }
+
+    await tx
+      .update(questsTable)
+      .set({ status: "failed" })
+      .where(inArray(questsTable.id, overdueIds));
+
+    await tx.insert(questLogTable).values(questLogBatch);
+
+    const insertedPenalties = await tx
+      .insert(penaltyLogTable)
+      .values(penaltyLogBatch)
+      .returning();
+
+    for (let i = 0; i < overdueQuests.length; i++) {
+      const penaltyLog = insertedPenalties[i];
+      const { desc, xpDeducted, goldDeducted } = penaltyDescs[i];
       penalties.push({
         type: "quest_overdue",
-        description: penaltyDesc,
+        description: desc,
         xpDeducted,
         goldDeducted,
         occurredAt: penaltyLog.occurredAt.toISOString(),
       });
-
-      failedQuestsSerialized.push(serializeQuest({ ...quest, status: "failed" }));
     }
 
     const finalXpGoldMult = getXpGoldPenaltyMultiplier(runningFailStreak);
@@ -494,7 +508,7 @@ router.post("/quests", async (req, res) => {
         difficulty: body.difficulty,
         durationMinutes: body.durationMinutes,
         description: body.description ?? null,
-        deadline: body.deadline ? new Date(body.deadline as string) : null,
+        deadline: body.deadline ? new Date((body.deadline as string) + "T00:00:00.000Z") : null,
         statBoost: body.statBoost ?? null,
         targetAmount: body.targetAmount ?? null,
         amountUnit: body.amountUnit ?? null,

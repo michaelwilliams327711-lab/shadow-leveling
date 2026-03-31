@@ -176,6 +176,10 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     const { xp: newXp, level: newLevel } = processLevelUp(char.xp + E_RANK_XP, char.level);
     const leveledUp = newLevel > char.level;
 
+    const streakResetFields = char.failStreak > 0
+      ? { failStreak: 0, penaltyMultiplier: 1.0 }
+      : {};
+
     const [updatedChar] = await db
       .update(characterTable)
       .set({
@@ -187,6 +191,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
         agility: statUpdates.agility,
         discipline: statUpdates.discipline,
         totalQuestsCompleted: char.totalQuestsCompleted + 1,
+        ...streakResetFields,
       })
       .where(eq(characterTable.id, char.id))
       .returning();

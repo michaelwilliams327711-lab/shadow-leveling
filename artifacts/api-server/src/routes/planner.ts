@@ -9,17 +9,11 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { getLocalDateStr } from "./character.js";
+import { RANK_BASE_REWARDS } from "@workspace/shared";
+import { type RecurrenceConfig } from "@workspace/api-zod";
+import { serializeQuest } from "./quests.js";
 
 const router: IRouter = Router();
-
-type RecurrenceConfig = {
-  type: "none" | "daily" | "weekly" | "monthly" | "yearly";
-  intervalDays?: number | null;
-  daysOfWeek?: number[] | null;
-  dayOfMonth?: number | null;
-  month?: number | null;
-  day?: number | null;
-};
 
 function dateToStr(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -33,30 +27,30 @@ function addDays(d: Date, n: number): Date {
 
 function isRecurringDueOnDate(recurrence: RecurrenceConfig, date: Date, createdAt: Date, completedAt: Date | null): boolean {
   if (recurrence.type === "none") return false;
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
+  const targetStr = dateToStr(date);
+  const target = new Date(targetStr + "T00:00:00.000Z");
 
   switch (recurrence.type) {
     case "daily": {
       const interval = recurrence.intervalDays ?? 1;
-      const base = new Date(completedAt ?? createdAt);
-      base.setHours(0, 0, 0, 0);
+      const baseStr = dateToStr(completedAt ?? createdAt);
+      const base = new Date(baseStr + "T00:00:00.000Z");
       const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
       return diffDays > 0 && diffDays % interval === 0;
     }
     case "weekly": {
       const days = recurrence.daysOfWeek ?? [];
       if (days.length === 0) return false;
-      return days.includes(target.getDay());
+      return days.includes(target.getUTCDay());
     }
     case "monthly": {
       const dom = recurrence.dayOfMonth ?? 1;
-      return target.getDate() === dom;
+      return target.getUTCDate() === dom;
     }
     case "yearly": {
       const m = recurrence.month ?? 1;
       const d2 = recurrence.day ?? 1;
-      return target.getMonth() + 1 === m && target.getDate() === d2;
+      return target.getUTCMonth() + 1 === m && target.getUTCDate() === d2;
     }
     default:
       return false;
@@ -79,26 +73,6 @@ function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date): b
   return false;
 }
 
-const RANK_BASE_REWARDS: Record<string, { xp: number }> = {
-  F:   { xp: 10 },
-  E:   { xp: 25 },
-  D:   { xp: 50 },
-  C:   { xp: 100 },
-  B:   { xp: 175 },
-  A:   { xp: 275 },
-  S:   { xp: 350 },
-  SS:  { xp: 425 },
-  SSS: { xp: 500 },
-};
-
-function serializeQuest(q: typeof questsTable.$inferSelect) {
-  return {
-    ...q,
-    createdAt: q.createdAt.toISOString(),
-    completedAt: q.completedAt?.toISOString() ?? null,
-    deadline: q.deadline?.toISOString() ?? null,
-  };
-}
 
 router.get("/planner/daily", async (req, res) => {
   try {

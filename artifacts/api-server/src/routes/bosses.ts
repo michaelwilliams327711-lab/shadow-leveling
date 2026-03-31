@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
-import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS } from "@workspace/shared";
+import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -65,6 +65,11 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     let newXp = char.xp;
     let newGold = char.gold;
     let newLevel = char.level;
+    let newStrength = char.strength;
+    let newIntellect = char.intellect;
+    let newEndurance = char.endurance;
+    let newAgility = char.agility;
+    let newDiscipline = char.discipline;
 
     if (victory) {
       newXp += xpReward;
@@ -72,12 +77,24 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       const result = processLevelUp(newXp, newLevel);
       newXp = result.xp;
       newLevel = result.level;
+
+      const baseDifficultyGain = (() => {
+        const r = boss.rank;
+        if (r === "S" || r === "SS" || r === "SSS") return 3;
+        if (r === "A" || r === "B") return 2;
+        return 1;
+      })();
+      const streakMult = getStreakStatMultiplier(char.streak);
+      const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
+
+      newStrength += statGain;
+      newDiscipline += statGain;
     } else {
       newXp = Math.max(0, char.xp - xpPenalty);
     }
 
     const [updatedChar] = await db.update(characterTable)
-      .set({ xp: newXp, gold: newGold, level: newLevel })
+      .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
       .where(eq(characterTable.id, char.id))
       .returning();
     invalidateCharacterCache();

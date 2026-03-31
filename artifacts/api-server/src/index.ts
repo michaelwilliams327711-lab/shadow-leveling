@@ -17,47 +17,56 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-function getUtcDateStr(): string {
-  return new Date().toISOString().split("T")[0];
+/**
+ * Compute the "local date string" for the configured timezone.
+ * Set LOCAL_TZ_OFFSET to a signed integer (e.g. "-5" for UTC-5, "5.5" for UTC+5:30).
+ * When unset the cron fires at UTC midnight (offset = 0).
+ */
+function getLocalDateStr(): string {
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+  const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
+  return new Date(Date.now() + offsetMs).toISOString().split("T")[0];
 }
 
-function getUtcHour(): number {
-  return new Date().getUTCHours();
+function getLocalHour(): number {
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+  const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
+  return new Date(Date.now() + offsetMs).getUTCHours();
 }
 
 let lastProcessedDate: string | null = null;
 
 cron.schedule("0 * * * *", async () => {
-  const utcHour = getUtcHour();
-  const utcDate = getUtcDateStr();
+  const localHour = getLocalHour();
+  const localDate = getLocalDateStr();
 
-  if (utcHour !== 0 && utcHour !== 1) {
+  if (localHour !== 0 && localHour !== 1) {
     return;
   }
 
-  if (lastProcessedDate === utcDate) {
+  if (lastProcessedDate === localDate) {
     logger.info(
-      { utcDate, utcHour },
+      { localDate, localHour },
       "Daily quest auto-refresh: already processed for today, skipping"
     );
     return;
   }
 
-  lastProcessedDate = utcDate;
+  lastProcessedDate = localDate;
   logger.info(
-    { utcDate, utcHour },
-    "Daily quest auto-refresh: UTC midnight window detected, running overdue processing"
+    { localDate, localHour },
+    "Daily quest auto-refresh: local midnight window detected, running overdue processing"
   );
 
   try {
-    const result = await processOverdueQuestsLogic(utcDate);
+    const result = await processOverdueQuestsLogic(localDate);
     logger.info(
-      { recurringReset: result.recurringReset, penaltiesApplied: result.penaltiesApplied, utcDate },
+      { recurringReset: result.recurringReset, penaltiesApplied: result.penaltiesApplied, localDate },
       "Daily quest auto-refresh complete"
     );
   } catch (err) {
     lastProcessedDate = null;
-    logger.error({ err, utcDate }, "Daily quest auto-refresh: error during overdue processing");
+    logger.error({ err, localDate }, "Daily quest auto-refresh: error during overdue processing");
   }
 });
 

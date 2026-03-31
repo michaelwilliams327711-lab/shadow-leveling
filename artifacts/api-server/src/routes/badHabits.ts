@@ -55,8 +55,8 @@ function computeCleanStreak(logs: LogRow[], localDate?: string): number {
   return streak;
 }
 
-function computeCleanStreakFromMap(byDate: Map<string, LogRow[]>): number {
-  const today = new Date().toISOString().split("T")[0];
+function computeCleanStreakFromMap(byDate: Map<string, LogRow[]>, localDate?: string): number {
+  const today = getSystemDate(localDate);
   let streak = 0;
   let checkDate = today;
 
@@ -114,10 +114,13 @@ router.get("/bad-habits", async (req, res) => {
     }
 
     const habitIds = habits.map((h) => h.id);
+    const cutoffDate = new Date();
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 365);
+    cutoffDate.setUTCHours(0, 0, 0, 0);
     const allLogs = await db
       .select({ habitId: badHabitLogTable.habitId, date: badHabitLogTable.date, type: badHabitLogTable.type, occurredAt: badHabitLogTable.occurredAt })
       .from(badHabitLogTable)
-      .where(inArray(badHabitLogTable.habitId, habitIds))
+      .where(and(inArray(badHabitLogTable.habitId, habitIds), gte(badHabitLogTable.occurredAt, cutoffDate)))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
     const logsByHabitId = new Map<string, LogRow[]>();
@@ -285,7 +288,7 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
     for (const habit of activeHabits) {
       const logs = logsByHabitId.get(habit.id) ?? [];
       const byDate = buildDateMap(logs);
-      const streak = computeCleanStreakFromMap(byDate);
+      const streak = computeCleanStreakFromMap(byDate, todayStr);
       if (streak < purificationThreshold) {
         allPurified = false;
         break;
