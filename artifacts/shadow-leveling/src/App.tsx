@@ -21,7 +21,6 @@ import Quests from "@/pages/Quests";
 import Shop from "@/pages/Shop";
 import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
-import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
 import VocationPaths from "@/pages/VocationPaths";
@@ -128,7 +127,7 @@ function Router() {
       <Route path="/shop" component={Shop} />
       <Route path="/arena" component={BossArena} />
       <Route path="/awakening" component={Awakening} />
-      <Route path="/analytics" component={AnalyticsDashboard} />
+      <Route path="/analytics"><Redirect to="/quests" /></Route>
       <Route path="/shadow" component={ShadowDashboard} />
       <Route path="/bad-habits" component={BadHabits} />
       <Route path="/vocations" component={VocationPaths} />

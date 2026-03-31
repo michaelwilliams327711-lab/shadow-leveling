@@ -6,7 +6,6 @@ import {
   Skull, 
   BookOpen,
   LayoutDashboard,
-  BarChart2,
   TrendingDown,
   ShieldAlert,
   Layers,
@@ -25,12 +24,11 @@ import {
 
 const navItems = [
   { title: "Status", href: "/", icon: LayoutDashboard, shadow: false },
-  { title: "Quests", href: "/quests", icon: ScrollText, shadow: false },
+  { title: "Quests & Chronicle", href: "/quests", icon: ScrollText, shadow: false },
   { title: "Vocation Paths", href: "/vocations", icon: Layers, shadow: false },
   { title: "Shop", href: "/shop", icon: Store, shadow: false },
   { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
   { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
-  { title: "Hunter's Chronicle", href: "/analytics", icon: BarChart2, shadow: false },
   { title: "Bad Habits", href: "/bad-habits", icon: ShieldAlert, shadow: true },
   { title: "The Void", href: "/shadow", icon: TrendingDown, shadow: true },
 ];

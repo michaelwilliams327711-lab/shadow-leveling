@@ -29,7 +29,7 @@ import {
 import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, Package } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,11 +76,25 @@ import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MIN
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
-import { DailyOrders } from "@/components/DailyOrders";
 import { playQuestComplete } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { listVocations } from "@/lib/vocations-client";
 import type { VocationPath } from "@/lib/vocations-client";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { ActivityCalendar } from "react-activity-calendar";
 
 const QuestCategory = {
   Financial: "Financial",
@@ -873,21 +887,282 @@ function PlannerYearlyView() {
   );
 }
 
-type QuestPageMode = "questlog" | "dailyorders" | "planner";
-type PlannerView = "daily" | "weekly" | "monthly" | "yearly";
+interface DashboardStats {
+  xpByDate: { date: string; xp: number }[];
+  xpByStatCategory: { category: string; xp: number }[];
+  activityCalendar: { date: string; count: number; level: number }[];
+  outcomeBreakdown: Record<string, number>;
+  character: {
+    streak: number;
+    gold: number;
+    xp: number;
+    xpToNextLevel: number;
+    level: number;
+  };
+}
 
-const PLANNER_VIEW_TABS: { key: PlannerView; label: string; icon: typeof Calendar }[] = [
+const CHART_THEME = {
+  text: "#a1a1aa",
+  grid: "rgba(255,255,255,0.05)",
+};
+
+function ChronicleTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: "#1c1c2e", border: "1px solid #8b5cf6", borderRadius: 8, padding: "8px 14px", color: "#e4e4e7", fontSize: 13 }}>
+      {label && <p style={{ marginBottom: 4, fontWeight: 600 }}>{label}</p>}
+      {payload.map((p) => (
+        <p key={p.name} style={{ color: p.color }}>
+          {p.name}: <strong>{typeof p.value === "number" ? p.value.toLocaleString() : p.value}</strong>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function ChronicleSection() {
+  const { data, isLoading, isError, error } = useQuery<DashboardStats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/dashboard-stats", { signal });
+      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isError) {
+    return (
+      <div className="py-12 flex items-center justify-center">
+        <p className="text-red-400">Failed to load analytics: {(error as Error).message}</p>
+      </div>
+    );
+  }
+
+  if (isLoading || !data) {
+    return (
+      <div className="py-12 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary" />
+      </div>
+    );
+  }
+
+  const xpPercent = Math.round((data.character.xp / data.character.xpToNextLevel) * 100);
+
+  const outcomeChartData = [
+    { name: "Completed", value: data.outcomeBreakdown.COMPLETED ?? 0, color: "#10b981" },
+    { name: "Boss Defeated", value: data.outcomeBreakdown.BOSS_DEFEATED ?? 0, color: "#8b5cf6" },
+    { name: "Failed", value: data.outcomeBreakdown.FAILED ?? 0, color: "#ef4444" },
+    { name: "Missed Day", value: data.outcomeBreakdown.MISSED_DAY ?? 0, color: "#f59e0b" },
+  ].filter((d) => d.value > 0);
+
+  const xpByDateFormatted = data.xpByDate.map((d) => {
+    const [y, mo, dy] = d.date.split("-").map(Number);
+    return {
+      ...d,
+      date: new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    };
+  });
+
+  const xpByStatFormatted = data.xpByStatCategory.map((d) => ({ stat: d.category, xp: d.xp }));
+
+  return (
+    <div className="space-y-8">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <h2 className="font-display text-2xl font-bold tracking-widest text-white mb-1">HUNTER'S CHRONICLE</h2>
+        <p className="text-muted-foreground text-sm tracking-widest uppercase">
+          <BarChart2 className="inline w-4 h-4 mr-2 text-primary" />
+          Player Progression Overview
+        </p>
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Card className="glass-panel border border-orange-500/20">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                <Flame className="w-7 h-7 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Current Streak</p>
+                <p className="text-3xl font-stat font-bold text-orange-400">{data.character.streak}</p>
+                <p className="text-xs text-muted-foreground">days in a row</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="glass-panel border border-yellow-500/20">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <Coins className="w-7 h-7 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Treasury / Gold</p>
+                <p className="text-3xl font-stat font-bold text-yellow-400">{data.character.gold.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">gold coins</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Card className="glass-panel border border-primary/20">
+            <CardContent className="p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                  <Zap className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Next Level XP</p>
+                  <p className="text-xl font-stat font-bold text-primary">
+                    {data.character.xp.toLocaleString()} <span className="text-sm text-muted-foreground font-normal">/ {data.character.xpToNextLevel.toLocaleString()}</span>
+                  </p>
+                </div>
+              </div>
+              <Progress value={xpPercent} className="h-2" indicatorClassName="bg-primary shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+              <p className="text-xs text-muted-foreground">{xpPercent}% to next level</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <Card className="glass-panel">
+          <CardHeader>
+            <CardTitle className="font-display tracking-widest text-lg">Progression Curve — 30-Day XP</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={xpByDateFormatted} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="chronicleXpGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                <XAxis dataKey="date" tick={{ fill: CHART_THEME.text, fontSize: 11 }} tickLine={false} axisLine={false} interval={4} />
+                <YAxis tick={{ fill: CHART_THEME.text, fontSize: 11 }} tickLine={false} axisLine={false} />
+                <RechartsTooltip content={<ChronicleTooltip />} />
+                <Area type="monotone" dataKey="xp" name="XP Gained" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#chronicleXpGradient)" dot={false} activeDot={{ r: 5, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 2 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <Card className="glass-panel h-full">
+            <CardHeader>
+              <CardTitle className="font-display tracking-widest text-lg">Grind Breakdown — XP by Stat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart layout="vertical" data={xpByStatFormatted} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fill: CHART_THEME.text, fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis dataKey="stat" type="category" tick={{ fill: CHART_THEME.text, fontSize: 12 }} tickLine={false} axisLine={false} width={75} />
+                  <RechartsTooltip content={<ChronicleTooltip />} />
+                  <Bar dataKey="xp" name="XP" radius={[0, 6, 6, 0]}>
+                    {xpByStatFormatted.map((entry, i) => {
+                      const colors = ["#8b5cf6", "#10b981", "#6366f1", "#f59e0b", "#ec4899"];
+                      return <Cell key={entry.stat} fill={colors[i % colors.length]} fillOpacity={0.85} />;
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="glass-panel h-full">
+            <CardHeader>
+              <CardTitle className="font-display tracking-widest text-lg">Quest Outcome Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+              {outcomeChartData.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No quest activity recorded yet.</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width={180} height={180}>
+                    <PieChart>
+                      <Pie data={outcomeChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
+                        {outcomeChartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} fillOpacity={0.9} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                        contentStyle={{ background: "#1c1c2e", border: "1px solid #8b5cf6", borderRadius: 8, color: "#e4e4e7", fontSize: 13 }}
+                        labelStyle={{ color: "#e4e4e7" }}
+                        itemStyle={{ color: "#ffffff" }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-col gap-2 flex-1">
+                    {outcomeChartData.map((item) => (
+                      <div key={item.name} className="flex items-center gap-2">
+                        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: item.color, flexShrink: 0 }} />
+                        <span className="text-sm text-muted-foreground flex-1">{item.name}</span>
+                        <span className="text-sm font-bold text-white">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <Card className="glass-panel">
+          <CardHeader>
+            <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <ActivityCalendar
+              data={data.activityCalendar}
+              theme={{ dark: ["#1a1a2e", "#1e3a2e", "#166534", "#16a34a", "#10b981"] }}
+              colorScheme="dark"
+              labels={{
+                months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+                totalCount: "{{count}} quests completed in {{year}}",
+                legend: { less: "Less", more: "More" },
+              }}
+              style={{ color: "#a1a1aa", fontSize: 12 }}
+              blockSize={13}
+              blockMargin={4}
+              fontSize={12}
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
+
+type PageTab = "daily" | "weekly" | "monthly" | "yearly" | "questlog";
+
+const ALL_TABS: { key: PageTab; label: string; icon: typeof Calendar }[] = [
   { key: "daily", label: "Daily", icon: Calendar },
   { key: "weekly", label: "Weekly", icon: CalendarDays },
   { key: "monthly", label: "Monthly", icon: LayoutGrid },
   { key: "yearly", label: "Yearly", icon: TrendingUp },
+  { key: "questlog", label: "Quest Log", icon: ScrollText },
 ];
+
+const PLANNER_TABS: PageTab[] = ["daily", "weekly", "monthly", "yearly"];
 
 const DEFAULT_WINDOW_DAYS = 30;
 
 export default function Quests() {
-  const [pageMode, setPageMode] = useState<QuestPageMode>("questlog");
-  const [plannerView, setPlannerView] = useState<PlannerView>("daily");
+  const [activeTab, setActiveTab] = useState<PageTab>("daily");
   const [showAll, setShowAll] = useState(false);
   const windowDays = showAll ? null : DEFAULT_WINDOW_DAYS;
   const { data: quests = [], isLoading } = useListQuestsWindowed({ windowDays });
@@ -1192,63 +1467,44 @@ export default function Quests() {
         </div>
       </div>
 
-      {/* Top-level mode selector */}
-      <div className="flex gap-1 rounded-xl bg-white/5 border border-white/10 p-1 mb-8">
-        {([
-          { key: "questlog", label: "QUEST LOG", icon: ScrollText },
-          { key: "dailyorders", label: "DAILY ORDERS", icon: Package },
-          { key: "planner", label: "PLANNER", icon: Calendar },
-        ] as { key: QuestPageMode; label: string; icon: typeof ScrollText }[]).map(({ key, label, icon: Icon }) => (
+      {/* Unified tab bar: planner views + quest log + daily orders */}
+      <div className="flex flex-wrap gap-1 rounded-xl bg-white/5 border border-white/10 p-1 mb-8">
+        {ALL_TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setPageMode(key)}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold tracking-widest transition-all ${
-              pageMode === key
+            onClick={() => setActiveTab(key)}
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-bold tracking-widest transition-all ${
+              activeTab === key
                 ? "bg-primary/20 text-primary border border-primary/40 shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]"
                 : "text-muted-foreground hover:text-white hover:bg-white/5"
             }`}
           >
-            <Icon className="h-4 w-4" />
-            <span className="hidden sm:inline">{label}</span>
+            <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline truncate">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* DAILY ORDERS mode */}
-      {pageMode === "dailyorders" && <DailyOrders />}
-
-      {/* PLANNER mode */}
-      {pageMode === "planner" && (
-        <div className="space-y-6">
-          <div className="flex gap-1 rounded-xl bg-white/5 border border-white/10 p-1">
-            {PLANNER_VIEW_TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setPlannerView(key)}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
-                  plannerView === key
-                    ? "bg-primary/20 text-primary border border-primary/40 shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]"
-                    : "text-muted-foreground hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </div>
+      {/* PLANNER tabs (daily/weekly/monthly/yearly) + Chronicle stats below */}
+      {PLANNER_TABS.includes(activeTab) && (
+        <div className="space-y-8">
           <AnimatePresence mode="wait">
-            <motion.div key={plannerView} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-              {plannerView === "daily" && <PlannerDailyView />}
-              {plannerView === "weekly" && <PlannerWeeklyView />}
-              {plannerView === "monthly" && <PlannerMonthlyView />}
-              {plannerView === "yearly" && <PlannerYearlyView />}
+            <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              {activeTab === "daily" && <PlannerDailyView />}
+              {activeTab === "weekly" && <PlannerWeeklyView />}
+              {activeTab === "monthly" && <PlannerMonthlyView />}
+              {activeTab === "yearly" && <PlannerYearlyView />}
             </motion.div>
           </AnimatePresence>
+          {/* Chronicle stats embedded below planner */}
+          <div className="border-t border-white/10 pt-8">
+            <ChronicleSection />
+          </div>
         </div>
       )}
 
-      {/* QUEST LOG mode */}
-      {pageMode === "questlog" && (
+      {/* QUEST LOG tab */}
+      {activeTab === "questlog" && (
       <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
