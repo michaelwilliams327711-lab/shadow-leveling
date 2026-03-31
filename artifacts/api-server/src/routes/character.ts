@@ -13,23 +13,16 @@ import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, get
 const router: IRouter = Router();
 
 type CharacterRow = typeof characterTable.$inferSelect;
-let _characterCache: { value: CharacterRow; expiresAt: number } | null = null;
-const CHARACTER_CACHE_TTL_MS = 2000;
-
 export function invalidateCharacterCache() {
-  _characterCache = null;
+  // No-op: cache was removed to prevent race conditions on concurrent XP writes.
+  // Kept for call-site compatibility; callers do not need updating.
 }
 
 async function getOrCreateCharacter(): Promise<CharacterRow> {
-  const now = Date.now();
-  if (_characterCache && now < _characterCache.expiresAt) {
-    return _characterCache.value;
-  }
   const chars = await db.select().from(characterTable).limit(1);
   const char = chars.length > 0
     ? chars[0]
     : (await db.insert(characterTable).values({ name: "Hunter" }).returning())[0];
-  _characterCache = { value: char, expiresAt: now + CHARACTER_CACHE_TTL_MS };
   return char;
 }
 
@@ -83,7 +76,9 @@ router.patch("/character", async (req, res) => {
 });
 
 function getLastCheckinDateStr(lastCheckin: Date): string {
-  return lastCheckin.toISOString().split("T")[0];
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+  const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
+  return new Date(lastCheckin.getTime() + offsetMs).toISOString().split("T")[0];
 }
 
 router.post("/character/checkin", async (req, res) => {

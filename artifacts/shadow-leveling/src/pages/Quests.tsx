@@ -402,7 +402,7 @@ function RecurrenceFieldsUI({
           <FormItem>
             <FormLabel className="text-xs">Every N days</FormLabel>
             <FormControl>
-              <Input type="number" min={1} placeholder="1" {...field} className="h-8 text-xs bg-background/50" />
+              <Input type="number" min={1} placeholder="1" {...field} value={field.value ?? ""} className="h-8 text-xs bg-background/50" />
             </FormControl>
             <FormMessage />
           </FormItem>
