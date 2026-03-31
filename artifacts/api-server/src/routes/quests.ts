@@ -16,9 +16,25 @@ import { awardVocXp } from "./vocations.js";
 
 const router: IRouter = Router();
 
+// Per-rank XP ceiling: the total XP a quest can award is capped at the next rank's base XP.
+// This prevents low-rank quests from exploiting the duration bonus to out-earn higher-rank quests.
+const RANK_XP_CEILING: Record<string, number> = {
+  F:   RANK_BASE_REWARDS["E"]?.xp   ?? 25,   // F-rank caps at E-rank base (25 XP)
+  E:   RANK_BASE_REWARDS["D"]?.xp   ?? 50,   // E-rank caps at D-rank base (50 XP)
+  D:   RANK_BASE_REWARDS["C"]?.xp   ?? 100,  // D-rank caps at C-rank base (100 XP)
+  C:   RANK_BASE_REWARDS["B"]?.xp   ?? 175,  // C-rank caps at B-rank base (175 XP)
+  B:   RANK_BASE_REWARDS["A"]?.xp   ?? 275,  // B-rank caps at A-rank base (275 XP)
+  A:   RANK_BASE_REWARDS["S"]?.xp   ?? 350,  // A-rank caps at S-rank base (350 XP)
+  S:   RANK_BASE_REWARDS["SS"]?.xp  ?? 425,  // S-rank caps at SS-rank base (425 XP)
+  SS:  RANK_BASE_REWARDS["SSS"]?.xp ?? 500,  // SS-rank caps at SSS-rank base (500 XP)
+  SSS: RANK_BASE_REWARDS["SSS"]?.xp ?? 500,  // SSS-rank: no next tier, cap at own base
+};
+
 function calculateRewards(difficulty: string, durationMinutes: number) {
   const base = RANK_BASE_REWARDS[difficulty] ?? { xp: 50, gold: 25 };
-  const xpReward = Math.floor(base.xp + durationMinutes * DURATION_BONUS_PER_MINUTE.xp);
+  const rawXpReward = Math.floor(base.xp + durationMinutes * DURATION_BONUS_PER_MINUTE.xp);
+  const xpCeiling = RANK_XP_CEILING[difficulty] ?? rawXpReward;
+  const xpReward = Math.min(rawXpReward, xpCeiling);
   const goldReward = Math.floor(base.gold + durationMinutes * DURATION_BONUS_PER_MINUTE.gold);
   return {
     xpReward,

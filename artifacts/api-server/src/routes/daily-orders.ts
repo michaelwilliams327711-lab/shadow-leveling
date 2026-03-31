@@ -42,13 +42,16 @@ function parseCreateDailyOrderBody(body: unknown): { name: string; statCategory:
   return { name, statCategory };
 }
 
-function rollHiddenBox(statCategory: StatField): { type: "gold" | "stat_boost"; goldBonus?: number; statBoost?: number; stat?: string } {
+function rollHiddenBox(): { type: "gold" | "stat_boost"; goldBonus?: number; statBoost?: number; stat?: string } {
   const isGold = Math.random() < 0.5;
   if (isGold) {
     const goldBonus = Math.floor(Math.random() * (HIDDEN_BOX_GOLD_MAX - HIDDEN_BOX_GOLD_MIN + 1)) + HIDDEN_BOX_GOLD_MIN;
     return { type: "gold", goldBonus };
   }
-  return { type: "stat_boost", statBoost: HIDDEN_BOX_STAT_BOOST, stat: statCategory };
+  // Design intent: Hidden Box stat_boost targets a random stat from all five CHARACTER_STAT_FIELDS.
+  // This prevents the player from influencing which stat grows by controlling the last order's category.
+  const randomStat = CHARACTER_STAT_FIELDS[Math.floor(Math.random() * CHARACTER_STAT_FIELDS.length)];
+  return { type: "stat_boost", statBoost: HIDDEN_BOX_STAT_BOOST, stat: randomStat };
 }
 
 async function resolveCharacter(req: Request, res: Response, next: NextFunction) {
@@ -173,7 +176,9 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     };
     statUpdates[statCategory] = (statUpdates[statCategory] ?? 10) + DAILY_ORDER_STAT_GAIN;
 
-    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + E_RANK_XP, char.level);
+    const multiplier = char.multiplier ?? 1.0;
+    const xpAwarded = Math.floor(E_RANK_XP * multiplier);
+    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpAwarded, char.level);
     const leveledUp = newLevel > char.level;
 
     const streakResetFields = char.failStreak > 0
@@ -203,9 +208,9 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       category: "Daily",
       difficulty: "E",
       outcome: "completed",
-      xpChange: E_RANK_XP,
+      xpChange: xpAwarded,
       goldChange: 0,
-      multiplierApplied: 1.0,
+      multiplierApplied: multiplier,
       actionType: "COMPLETED",
       statCategory,
     });
@@ -239,7 +244,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
         .limit(1);
 
       if (!existingBox[0]) {
-        const rolled = rollHiddenBox(statCategory);
+        const rolled = rollHiddenBox();
         const [savedBox] = await db
           .insert(dailyHiddenBoxRewardsTable)
           .values({
@@ -261,7 +266,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     res.json({
       success: true,
       order: updatedOrder,
-      xpAwarded: E_RANK_XP,
+      xpAwarded,
       statGain: DAILY_ORDER_STAT_GAIN,
       leveledUp,
       completedCount,

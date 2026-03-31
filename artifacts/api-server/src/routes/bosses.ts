@@ -55,9 +55,9 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     }
 
     const rankRewards = RANK_BASE_REWARDS[boss.rank] ?? { xp: 350, gold: 175 };
-    const xpReward = rankRewards.xp;
+    const baseXpReward = rankRewards.xp;
     const goldReward = rankRewards.gold;
-    const xpPenalty = Math.floor(xpReward * 0.6);
+    const xpPenalty = Math.floor(baseXpReward * 0.6);
 
     const winChance = Math.min(0.85, 0.4 + (char.streak * 0.02) + (char.level * 0.01));
     const victory = Math.random() < winChance;
@@ -70,6 +70,9 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     let newEndurance = char.endurance;
     let newAgility = char.agility;
     let newDiscipline = char.discipline;
+
+    const charMultiplier = char.multiplier ?? 1.0;
+    const xpReward = Math.floor(baseXpReward * charMultiplier);
 
     if (victory) {
       newXp += xpReward;
@@ -87,8 +90,20 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       const streakMult = getStreakStatMultiplier(char.streak);
       const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
 
-      newStrength += statGain;
-      newDiscipline += statGain;
+      // Fix #4: Distribute stat gains across all five stats rather than always
+      // boosting Strength + Discipline. Pick two distinct stats randomly from the full pool.
+      const ALL_STATS = ["strength", "intellect", "endurance", "agility", "discipline"] as const;
+      type BossStat = typeof ALL_STATS[number];
+      const statVars: Record<BossStat, number> = { strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline };
+      const shuffled = [...ALL_STATS].sort(() => Math.random() - 0.5);
+      const [statA, statB] = shuffled;
+      statVars[statA] += statGain;
+      statVars[statB] += statGain;
+      newStrength = statVars.strength;
+      newIntellect = statVars.intellect;
+      newEndurance = statVars.endurance;
+      newAgility = statVars.agility;
+      newDiscipline = statVars.discipline;
     } else {
       newXp = Math.max(0, char.xp - xpPenalty);
     }
@@ -114,7 +129,7 @@ router.post("/bosses/:id/challenge", async (req, res) => {
       outcome: victory ? "completed" : "failed",
       xpChange: victory ? xpReward : -xpPenalty,
       goldChange: victory ? goldReward : 0,
-      multiplierApplied: 1.0,
+      multiplierApplied: victory ? charMultiplier : 1.0,
       actionType: victory ? "BOSS_DEFEATED" : "FAILED",
       statCategory: null,
     });
