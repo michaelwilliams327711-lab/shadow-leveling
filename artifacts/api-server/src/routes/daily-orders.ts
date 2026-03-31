@@ -1,8 +1,19 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsTable, penaltyLogTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
+import { processLevelUp } from "@workspace/shared";
+
+type CharacterRow = Awaited<ReturnType<typeof getOrCreateCharacter>>;
+
+declare global {
+  namespace Express {
+    interface Request {
+      character?: CharacterRow;
+    }
+  }
+}
 
 const router: IRouter = Router();
 
@@ -40,10 +51,22 @@ function rollHiddenBox(statCategory: StatField): { type: "gold" | "stat_boost"; 
   return { type: "stat_boost", statBoost: HIDDEN_BOX_STAT_BOOST, stat: statCategory };
 }
 
+async function resolveCharacter(req: Request, res: Response, next: NextFunction) {
+  try {
+    req.character = await getOrCreateCharacter();
+    next();
+  } catch (err) {
+    req.log.error({ err }, "Error resolving character");
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+router.use(resolveCharacter);
+
 router.post("/daily-orders", async (req, res) => {
   try {
     const body = parseCreateDailyOrderBody(req.body);
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const today = getLocalDateStr(req);
 
     const [order] = await db.insert(dailyOrdersTable).values({
@@ -62,7 +85,7 @@ router.post("/daily-orders", async (req, res) => {
 
 router.get("/daily-orders/today", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const today = getLocalDateStr(req);
 
     const orders = await db
@@ -100,7 +123,7 @@ router.get("/daily-orders/today", async (req, res) => {
 
 router.delete("/daily-orders/:id", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const { id } = req.params;
 
     const [order] = await db
@@ -121,7 +144,7 @@ router.delete("/daily-orders/:id", async (req, res) => {
 
 router.post("/daily-orders/:id/complete", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const { id } = req.params;
     const today = getLocalDateStr(req);
 
@@ -150,18 +173,8 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     };
     statUpdates[statCategory] = (statUpdates[statCategory] ?? 10) + DAILY_ORDER_STAT_GAIN;
 
-    let newXp = char.xp + E_RANK_XP;
-    let newLevel = char.level;
-    let leveledUp = false;
-    const MAX_LEVELUP_ITERATIONS = 100;
-    let levelupIterations = 0;
-    while (newXp >= XP_PER_LEVEL(newLevel)) {
-      if (levelupIterations >= MAX_LEVELUP_ITERATIONS) break;
-      newXp -= XP_PER_LEVEL(newLevel);
-      newLevel++;
-      leveledUp = true;
-      levelupIterations++;
-    }
+    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + E_RANK_XP, char.level);
+    const leveledUp = newLevel > char.level;
 
     const [updatedChar] = await db
       .update(characterTable)
@@ -262,7 +275,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
 
 router.post("/daily-orders/claim-hidden-box", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const today = getLocalDateStr(req);
 
     const pendingBoxes = await db
@@ -368,7 +381,7 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
 
 router.post("/daily-orders/expire-stale", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
+    const char = req.character!;
     const today = getLocalDateStr(req);
 
     const staleOrders = await db

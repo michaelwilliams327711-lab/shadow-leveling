@@ -7,29 +7,44 @@ import {
   useDeleteDailyOrder,
   useClaimHiddenBox,
   getDailyOrdersTodayQueryKey,
+  getPlannerDailyQueryKey,
   type DailyOrder,
   type HiddenBoxResult,
 } from "@workspace/api-client-react";
 import {
   getGetCharacterQueryKey,
 } from "@workspace/api-client-react";
+import { STAT_META, STAT_KEYS, type StatKey } from "@workspace/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Trash2, Target, Package, Zap, Dumbbell, Brain, Shield } from "lucide-react";
+import { Check, Plus, Trash2, Target, Package, Zap, Dumbbell, Brain, Shield, type LucideIcon } from "lucide-react";
 
-const STAT_OPTIONS = [
-  { value: "discipline", label: "Discipline", icon: Target, color: "text-purple-400" },
-  { value: "strength", label: "Strength", icon: Dumbbell, color: "text-red-400" },
-  { value: "agility", label: "Agility", icon: Zap, color: "text-cyan-400" },
-  { value: "endurance", label: "Endurance", icon: Shield, color: "text-green-400" },
-  { value: "intellect", label: "Intellect", icon: Brain, color: "text-blue-400" },
-] as const;
+const STAT_ICONS: Record<StatKey, LucideIcon> = {
+  discipline: Target,
+  strength: Dumbbell,
+  agility: Zap,
+  endurance: Shield,
+  intellect: Brain,
+};
 
-type StatCategory = typeof STAT_OPTIONS[number]["value"];
+const STAT_CSS_COLORS: Record<StatKey, string> = {
+  discipline: "text-purple-400",
+  strength: "text-red-400",
+  agility: "text-cyan-400",
+  endurance: "text-green-400",
+  intellect: "text-blue-400",
+};
+
+const STAT_OPTIONS = STAT_KEYS.map((key) => ({
+  value: key,
+  label: STAT_META[key].label,
+  icon: STAT_ICONS[key],
+  color: STAT_CSS_COLORS[key],
+}));
 
 function getStatOption(value: string) {
   return STAT_OPTIONS.find((s) => s.value === value) ?? STAT_OPTIONS[0];
@@ -189,7 +204,7 @@ function OrderCard({ order, onComplete, onDelete, isCompletingId, isDeletingId }
 
 export function DailyOrders() {
   const [inputValue, setInputValue] = useState("");
-  const [selectedStat, setSelectedStat] = useState<StatCategory>("discipline");
+  const [selectedStat, setSelectedStat] = useState<StatKey>("discipline");
   const [isCompletingId, setIsCompletingId] = useState<string | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [showHiddenBox, setShowHiddenBox] = useState<HiddenBoxResult | null>(null);
@@ -245,6 +260,7 @@ export function DailyOrders() {
           setIsCompletingId(null);
           queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
 
           if (result.pendingHiddenBox) {
             setShowHiddenBox(result.pendingHiddenBox);
@@ -354,14 +370,10 @@ export function DailyOrders() {
 
             <select
               value={selectedStat}
-              onChange={(e) => setSelectedStat(e.target.value as StatCategory)}
+              onChange={(e) => setSelectedStat(e.target.value as StatKey)}
               className="h-9 px-2 rounded-md text-xs font-semibold bg-black/40 border border-purple-500/30 focus:border-purple-400 focus:outline-none text-white cursor-pointer appearance-none min-w-[110px]"
               style={{
-                color: selectedStat === "discipline" ? "#c084fc"
-                  : selectedStat === "strength" ? "#f87171"
-                  : selectedStat === "agility" ? "#22d3ee"
-                  : selectedStat === "endurance" ? "#4ade80"
-                  : "#60a5fa"
+                color: STAT_META[selectedStat].color,
               }}
             >
               {STAT_OPTIONS.map((opt) => (
