@@ -165,12 +165,12 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   const allActiveQuests = await db
     .select()
     .from(questsTable)
-    .where(and(eq(questsTable.status, "active"), gte(questsTable.updatedAt, cutoffDate)));
+    .where(and(eq(questsTable.status, "active"), gte(questsTable.createdAt, cutoffDate)));
 
   const allCompletedQuests = await db
     .select()
     .from(questsTable)
-    .where(and(eq(questsTable.status, "completed"), gte(questsTable.updatedAt, cutoffDate)));
+    .where(and(eq(questsTable.status, "completed"), gte(questsTable.createdAt, cutoffDate)));
 
   const recurringToReset = allCompletedQuests.filter(q => {
     if (q.isPaused) return false;
