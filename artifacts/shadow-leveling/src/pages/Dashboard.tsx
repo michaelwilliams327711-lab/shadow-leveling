@@ -90,7 +90,14 @@ export default function Dashboard() {
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
+  const todayLocal = new Date().toLocaleDateString("en-CA");
+  const hasCheckedInToday = character
+    ? (character.lastCheckin ? character.lastCheckin.split("T")[0] === todayLocal : false)
+    : false;
+
   const handleCheckin = () => {
+    if (hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending) return;
+
     if (!reduced) playAriseClick();
     setAriseAnimating(true);
     setTimeout(() => setAriseAnimating(false), 1400);
@@ -114,11 +121,6 @@ export default function Dashboard() {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
-        
-        if (res.alreadyCheckedIn) {
-          toast({ title: "ARISE ALREADY CLAIMED", description: "You have already claimed your daily rewards." });
-          return;
-        }
 
         setAriseStreakTick(res.streak);
         setTimeout(() => setAriseStreakTick(null), 2000);
@@ -362,10 +364,14 @@ export default function Dashboard() {
                 >
                   <Button 
                     onClick={handleCheckin}
-                    disabled={checkinMutation.isPending}
-                    className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300"
+                    disabled={hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending}
+                    className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 disabled:opacity-60"
                   >
-                    {checkinMutation.isPending ? "Connecting..." : "DAILY ARISE"}
+                    {checkinMutation.isPending || recordCleanDayMutation.isPending
+                      ? "Connecting..."
+                      : hasCheckedInToday
+                        ? "ARISE COMPLETE"
+                        : "DAILY ARISE"}
                   </Button>
                 </motion.div>
                 {ariseAnimating && !reduced && (
