@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
 import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
+import { strictLimiter } from "../lib/rate-limiters.js";
 import {
   CreateQuestBody,
   UpdateQuestBody,
@@ -651,7 +652,7 @@ router.put("/quests/:id/log/:date", async (req, res) => {
   }
 });
 
-router.post("/quests/:id/complete", async (req, res) => {
+router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsTable, penaltyLogTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { processLevelUp } from "@workspace/shared";
 
@@ -97,7 +97,8 @@ router.get("/daily-orders/today", async (req, res) => {
       .where(
         and(
           eq(dailyOrdersTable.characterId, char.id),
-          eq(dailyOrdersTable.date, today)
+          eq(dailyOrdersTable.date, today),
+          isNull(dailyOrdersTable.deletedAt)
         )
       )
       .orderBy(dailyOrdersTable.createdAt);
@@ -137,7 +138,7 @@ router.delete("/daily-orders/:id", async (req, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (order.completed) return res.status(400).json({ error: "Cannot delete a completed order" });
 
-    await db.delete(dailyOrdersTable).where(eq(dailyOrdersTable.id, id));
+    await db.update(dailyOrdersTable).set({ deletedAt: new Date() }).where(eq(dailyOrdersTable.id, id));
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting daily order");
@@ -406,7 +407,8 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
           eq(dailyOrdersTable.characterId, char.id),
           sql`${dailyOrdersTable.date} >= ${lowerBound}`,
           sql`${dailyOrdersTable.date} < ${today}`,
-          eq(dailyOrdersTable.completed, false)
+          eq(dailyOrdersTable.completed, false),
+          isNull(dailyOrdersTable.deletedAt)
         )
       );
 
@@ -467,13 +469,15 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     });
 
     await db
-      .delete(dailyOrdersTable)
+      .update(dailyOrdersTable)
+      .set({ deletedAt: new Date() })
       .where(
         and(
           eq(dailyOrdersTable.characterId, char.id),
           sql`${dailyOrdersTable.date} >= ${lowerBound}`,
           sql`${dailyOrdersTable.date} < ${today}`,
-          eq(dailyOrdersTable.completed, false)
+          eq(dailyOrdersTable.completed, false),
+          isNull(dailyOrdersTable.deletedAt)
         )
       );
 

@@ -65,6 +65,7 @@ export const dailyOrdersTable = pgTable("daily_orders", {
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   date: text("date").notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const dailyHiddenBoxRewardsTable = pgTable("daily_hidden_box_rewards", {

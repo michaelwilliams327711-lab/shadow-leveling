@@ -48,11 +48,42 @@ router.delete("/shop/rewards/:id", async (req, res) => {
 router.post("/shop/rewards/:id/purchase", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, id));
-    if (!reward) return res.status(404).json({ error: "Reward not found" });
-
     const char = await getOrCreateCharacter();
-    if (char.gold < reward.goldCost) {
+
+    let purchaseResult: { newGold: number; rewardName: string; goldCost: number } | null = null;
+    let insufficientGold = false;
+    let rewardNotFound = false;
+
+    await db.transaction(async (tx) => {
+      const [reward] = await tx.select().from(rewardsTable).where(eq(rewardsTable.id, id));
+      if (!reward || reward.deletedAt) {
+        rewardNotFound = true;
+        return;
+      }
+
+      const [freshChar] = await tx.select().from(characterTable).where(eq(characterTable.id, char.id));
+      if (!freshChar || freshChar.gold < reward.goldCost) {
+        insufficientGold = true;
+        return;
+      }
+
+      const newGold = freshChar.gold - reward.goldCost;
+      await tx.update(characterTable)
+        .set({ gold: newGold })
+        .where(eq(characterTable.id, freshChar.id));
+
+      await tx.update(rewardsTable)
+        .set({ timesRedeemed: reward.timesRedeemed + 1 })
+        .where(eq(rewardsTable.id, id));
+
+      purchaseResult = { newGold, rewardName: reward.name, goldCost: reward.goldCost };
+    });
+
+    if (rewardNotFound) {
+      return res.status(404).json({ error: "Reward not found" });
+    }
+
+    if (insufficientGold) {
       return res.json({
         success: false,
         message: "Insufficient Gold. Complete more quests, Hunter.",
@@ -61,21 +92,13 @@ router.post("/shop/rewards/:id/purchase", async (req, res) => {
       });
     }
 
-    const newGold = char.gold - reward.goldCost;
-    await db.update(characterTable)
-      .set({ gold: newGold })
-      .where(eq(characterTable.id, char.id));
     invalidateCharacterCache();
 
-    await db.update(rewardsTable)
-      .set({ timesRedeemed: reward.timesRedeemed + 1 })
-      .where(eq(rewardsTable.id, id));
-
-    res.json({
+    return res.json({
       success: true,
-      message: `Reward unlocked: ${reward.name}. You earned this.`,
-      goldSpent: reward.goldCost,
-      goldRemaining: newGold,
+      message: `Reward unlocked: ${purchaseResult!.rewardName}. You earned this.`,
+      goldSpent: purchaseResult!.goldCost,
+      goldRemaining: purchaseResult!.newGold,
     });
   } catch (err) {
     req.log.error({ err }, "Error purchasing reward");

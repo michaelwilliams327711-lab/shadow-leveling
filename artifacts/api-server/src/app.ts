@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { globalLimiter } from "./lib/rate-limiters.js";
 
 const app: Express = express();
 
@@ -25,7 +26,16 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
+
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(
+  cors({
+    origin: corsOrigin ?? "*",
+    allowedHeaders: ["Content-Type", "Authorization", "x-local-date"],
+    credentials: !!corsOrigin,
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -35,13 +45,16 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
     next();
     return;
   }
-  const provided = req.headers["x-api-key"];
-  if (provided !== apiSecretKey) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  if (!token || token !== apiSecretKey) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   next();
 }
+
+app.use("/api", globalLimiter);
 
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   if (req.path === "/healthz") {

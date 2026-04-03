@@ -355,14 +355,18 @@ export async function customFetch<T = unknown>(
     }
   }
 
-  // Attach the static API key when configured and not already present.
-  const apiKey =
-    typeof import.meta !== "undefined" &&
-    (import.meta as Record<string, unknown>).env != null
-      ? ((import.meta as { env: Record<string, string | undefined> }).env.VITE_API_KEY ?? "")
-      : "";
-  if (apiKey && !headers.has("x-api-key")) {
-    headers.set("x-api-key", apiKey);
+  // Attach the static API key as a Bearer token when configured and no
+  // Authorization header has already been set (by either _authTokenGetter above
+  // or by the caller explicitly).
+  if (!headers.has("authorization")) {
+    const apiKey =
+      typeof import.meta !== "undefined" &&
+      (import.meta as Record<string, unknown>).env != null
+        ? ((import.meta as { env: Record<string, string | undefined> }).env.VITE_API_KEY ?? "")
+        : "";
+    if (apiKey) {
+      headers.set("authorization", `Bearer ${apiKey}`);
+    }
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

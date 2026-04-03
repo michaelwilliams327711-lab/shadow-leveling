@@ -4,6 +4,7 @@ import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier } from "@workspace/shared";
+import { strictLimiter } from "../lib/rate-limiters.js";
 
 const router: IRouter = Router();
 
@@ -30,7 +31,7 @@ router.get("/bosses", async (req, res) => {
   }
 });
 
-router.post("/bosses/:id/challenge", async (req, res) => {
+router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [boss] = await db.select().from(bossesTable).where(eq(bossesTable.id, id));
