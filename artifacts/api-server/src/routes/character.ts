@@ -75,10 +75,19 @@ router.patch("/character", async (req, res) => {
   }
 });
 
+const DEFAULT_TZ_OFFSET_HOURS = -5;
+
+function getLocalTzOffsetMs(): number {
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? String(DEFAULT_TZ_OFFSET_HOURS));
+  return (isNaN(offsetHours) ? DEFAULT_TZ_OFFSET_HOURS : offsetHours) * 3600 * 1000;
+}
+
 function getLastCheckinDateStr(lastCheckin: Date): string {
-  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
-  const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
-  return new Date(lastCheckin.getTime() + offsetMs).toISOString().split("T")[0];
+  return new Date(lastCheckin.getTime() + getLocalTzOffsetMs()).toISOString().split("T")[0];
+}
+
+function getLocalDateStrFromTimestamp(ts: Date): string {
+  return new Date(ts.getTime() + getLocalTzOffsetMs()).toISOString().split("T")[0];
 }
 
 router.post("/character/checkin", async (req, res) => {
@@ -202,7 +211,7 @@ router.post("/character/login", async (req, res) => {
 
     if (char.lastLoginDate) {
       const lastLogin = new Date(char.lastLoginDate);
-      const lastLoginDateStr = lastLogin.toISOString().split("T")[0];
+      const lastLoginDateStr = getLocalDateStrFromTimestamp(lastLogin);
       const lastLoginStart = new Date(lastLoginDateStr + "T00:00:00.000Z");
 
       const daysDiff = Math.floor(

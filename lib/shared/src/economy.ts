@@ -1,7 +1,7 @@
 export { XP_PER_LEVEL } from "./levelUp.js";
 
 export const CATEGORY_STAT_MAP: Record<string, string> = {
-  Financial: "intellect",
+  Financial: "discipline",
   Productivity: "intellect",
   Study: "intellect",
   Health: "endurance",

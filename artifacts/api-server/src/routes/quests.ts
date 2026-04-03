@@ -79,7 +79,7 @@ export function serializeQuest(q: typeof questsTable.$inferSelect) {
 
 function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Date | null {
   const next = new Date(fromDate);
-  next.setHours(0, 0, 0, 0);
+  next.setUTCHours(0, 0, 0, 0);
 
   switch (recurrence.type) {
     case "daily": {
@@ -674,7 +674,9 @@ router.post("/quests/:id/complete", async (req, res) => {
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
     const streakMult = getStreakStatMultiplier(char.streak);
     const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
-    const disciplineGain = statGain;
+    const disciplineGain = statField === "discipline"
+      ? 0
+      : Math.max(1, Math.floor(statGain * 0.25));
 
     const statUpdates: Record<string, number> = {
       strength: char.strength,

@@ -35,6 +35,8 @@ function dateAddDays(dateStr: string, days: number): string {
   return d.toISOString().split("T")[0];
 }
 
+const MAX_STREAK_SCAN_DAYS = 365;
+
 function computeCleanStreak(logs: LogRow[], localDate?: string): number {
   if (!logs.length) return 0;
 
@@ -43,7 +45,7 @@ function computeCleanStreak(logs: LogRow[], localDate?: string): number {
   let streak = 0;
   let checkDate = today;
 
-  while (true) {
+  while (streak < MAX_STREAK_SCAN_DAYS) {
     const status = getDayStatusFromMap(byDate, checkDate);
     if (status === "clean") {
       streak++;
@@ -60,7 +62,7 @@ function computeCleanStreakFromMap(byDate: Map<string, LogRow[]>, localDate?: st
   let streak = 0;
   let checkDate = today;
 
-  while (true) {
+  while (streak < MAX_STREAK_SCAN_DAYS) {
     const status = getDayStatusFromMap(byDate, checkDate);
     if (status === "clean") {
       streak++;

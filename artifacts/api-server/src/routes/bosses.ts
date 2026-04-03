@@ -36,6 +36,16 @@ router.post("/bosses/:id/challenge", async (req, res) => {
     const [boss] = await db.select().from(bossesTable).where(eq(bossesTable.id, id));
     if (!boss) return res.status(404).json({ error: "Boss not found" });
 
+    if (boss.isDefeated) {
+      return res.status(400).json({
+        success: false,
+        victory: false,
+        message: `${boss.name} has already been defeated. Seek a worthier challenge.`,
+        xpChange: 0,
+        goldChange: 0,
+      });
+    }
+
     const char = await getOrCreateCharacter();
     const totalXpEquiv = totalXpEarned(char.xp, char.level);
 

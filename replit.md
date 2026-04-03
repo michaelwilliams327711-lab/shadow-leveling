@@ -108,7 +108,7 @@ F(0.5x) E(0.75x) D(1x) C(1.5x) B(2x) A(3x) S(5x) SS(8x) SSS(15x)
 
 Stats gain based on quest category:
 - Financial → Discipline
-- Productivity/Study → Intellect  
+- Productivity/Study → Intellect
 - Health → Endurance
 - Creative/Social → Agility
 - Other → Strength

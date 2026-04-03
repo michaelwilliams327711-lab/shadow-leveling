@@ -394,12 +394,17 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     const char = req.character!;
     const today = getLocalDateStr(req);
 
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+    const lowerBound = thirtyDaysAgo.toISOString().split("T")[0];
+
     const staleOrders = await db
       .select()
       .from(dailyOrdersTable)
       .where(
         and(
           eq(dailyOrdersTable.characterId, char.id),
+          sql`${dailyOrdersTable.date} >= ${lowerBound}`,
           sql`${dailyOrdersTable.date} < ${today}`,
           eq(dailyOrdersTable.completed, false)
         )
@@ -466,6 +471,7 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
       .where(
         and(
           eq(dailyOrdersTable.characterId, char.id),
+          sql`${dailyOrdersTable.date} >= ${lowerBound}`,
           sql`${dailyOrdersTable.date} < ${today}`,
           eq(dailyOrdersTable.completed, false)
         )
