@@ -83,7 +83,10 @@ function getLocalTzOffsetMs(): number {
 }
 
 function getLastCheckinDateStr(lastCheckin: Date): string {
-  return new Date(lastCheckin.getTime() + getLocalTzOffsetMs()).toISOString().split("T")[0];
+  // lastCheckin is stored as midnight UTC of the local calendar date
+  // (e.g. "2026-04-03T00:00:00Z" for local date "2026-04-03").
+  // The UTC date IS already the correct local date — no offset adjustment needed.
+  return lastCheckin.toISOString().split("T")[0];
 }
 
 function getLocalDateStrFromTimestamp(ts: Date): string {
