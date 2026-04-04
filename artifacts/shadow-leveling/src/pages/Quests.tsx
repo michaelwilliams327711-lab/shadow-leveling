@@ -671,7 +671,7 @@ function PlannerWeeklyView() {
   const dragQuestRef = useRef<{ questId: number; fromDate: string } | null>(null);
   if (isLoading) return <PlannerViewSkeleton />;
   if (!data) return null;
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
   const handleDragStart = (questId: number, fromDate: string) => { dragQuestRef.current = { questId, fromDate }; };
   const handleDrop = async (toDate: string) => {
     if (!dragQuestRef.current) return;
@@ -1411,7 +1411,7 @@ export default function Quests() {
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
-    const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
+    const deadlineIso = data.deadline ? new Date(data.deadline + "T00:00:00").toISOString() : null;
     createQuest.mutate({
       data: {
         name: data.name,

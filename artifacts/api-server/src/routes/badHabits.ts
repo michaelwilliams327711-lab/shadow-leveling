@@ -202,21 +202,29 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
 
     const todayStr = getSystemDateFromReq(req);
 
-    const char = await getOrCreateCharacter();
-    const newCorruption = Math.min(100, char.corruption + corruptionDelta);
-
-    let newLevel = char.level;
-    let leftoverXp = char.xp - xpPenalty;
-    while (newLevel > 1 && leftoverXp < 0) {
-      newLevel--;
-      leftoverXp += XP_PER_LEVEL(newLevel);
-    }
-    const newXp = Math.max(0, leftoverXp);
-
+    // Read char INSIDE the transaction so the penalty is always calculated on
+    // the latest committed XP — no stale-cache de-leveling miscalculation.
+    let resultCorruption = 0;
     await db.transaction(async (tx) => {
+      const chars = await tx.select().from(characterTable).limit(1);
+      if (!chars.length) return;
+      const char = chars[0];
+
+      const newCorruption = Math.min(100, char.corruption + corruptionDelta);
+      resultCorruption = newCorruption;
+
+      let newLevel = char.level;
+      let leftoverXp = char.xp - xpPenalty;
+      while (newLevel > 1 && leftoverXp < 0) {
+        newLevel--;
+        leftoverXp += XP_PER_LEVEL(newLevel);
+      }
+      const newXp = Math.max(0, leftoverXp);
+
       await tx.update(characterTable)
         .set({ corruption: newCorruption, xp: newXp, level: newLevel })
         .where(eq(characterTable.id, char.id));
+
       await tx.insert(badHabitLogTable).values({
         habitId: id,
         date: todayStr,
@@ -230,7 +238,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
       success: true,
       corruptionDelta,
       xpPenalty,
-      newCorruption,
+      newCorruption: resultCorruption,
     });
   } catch (err) {
     req.log.error({ err }, "Error logging relapse");

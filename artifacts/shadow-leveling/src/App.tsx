@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PenaltyModal } from "@/components/PenaltyModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
 import {
   characterLogin,
@@ -162,9 +163,11 @@ function App() {
                   <span className="ml-4 font-display font-bold tracking-widest text-primary">SYSTEM OVERRIDE</span>
                 </header>
                 <main className="flex-1 overflow-y-auto scroll-smooth">
-                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                    <Router />
-                  </WouterRouter>
+                  <ErrorBoundary>
+                    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                      <Router />
+                    </WouterRouter>
+                  </ErrorBoundary>
                 </main>
               </div>
             </div>

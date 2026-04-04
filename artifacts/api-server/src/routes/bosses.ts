@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
@@ -127,17 +127,30 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     }
 
     const updatedChar = await db.transaction(async (tx) => {
-      const [updated] = await tx.update(characterTable)
-        .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
-        .where(eq(characterTable.id, char.id))
-        .returning();
-      await tx.update(bossesTable)
+      // Update the boss first. For a victory, guard with `isDefeated = false`
+      // so a concurrent double-tap can't grant rewards twice — the second
+      // request will get 0 rows and throw before touching the character.
+      const bossUpdateWhere = victory
+        ? and(eq(bossesTable.id, id), eq(bossesTable.isDefeated, false))
+        : eq(bossesTable.id, id);
+
+      const bossResult = await tx.update(bossesTable)
         .set(
           victory
             ? { isDefeated: true, defeatRecordedAt: new Date() }
             : { failureRecordedAt: new Date() }
         )
-        .where(eq(bossesTable.id, id));
+        .where(bossUpdateWhere)
+        .returning({ id: bossesTable.id });
+
+      if (victory && bossResult.length === 0) {
+        throw Object.assign(new Error("Boss already defeated"), { code: "ALREADY_DEFEATED" });
+      }
+
+      const [updated] = await tx.update(characterTable)
+        .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
+        .where(eq(characterTable.id, char.id))
+        .returning();
       return updated;
     });
     invalidateCharacterCache();
@@ -173,6 +186,9 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       },
     });
   } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ALREADY_DEFEATED") {
+      return res.status(400).json({ success: false, victory: false, message: "Boss was already defeated.", xpChange: 0, goldChange: 0 });
+    }
     req.log.error({ err }, "Error challenging boss");
     res.status(500).json({ error: "Internal server error" });
   }

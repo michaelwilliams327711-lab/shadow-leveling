@@ -712,6 +712,18 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const localMidnight = new Date(today + "T00:00:00.000Z");
 
     const [updatedChar] = await db.transaction(async (tx) => {
+      // Lock the quest row first: if two concurrent requests race, only one
+      // will transition status from "active" → "completed". The loser gets 0
+      // rows back and throws, preventing double XP/gold.
+      const questResult = await tx.update(questsTable)
+        .set({ status: "completed", completedAt: localMidnight })
+        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")))
+        .returning({ id: questsTable.id });
+
+      if (questResult.length === 0) {
+        throw Object.assign(new Error("Quest already completed"), { code: "ALREADY_COMPLETED" });
+      }
+
       const [updated] = await tx.update(characterTable)
         .set({
           xp: newXp,
@@ -728,10 +740,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         })
         .where(eq(characterTable.id, char.id))
         .returning();
-
-      await tx.update(questsTable)
-        .set({ status: "completed", completedAt: localMidnight })
-        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")));
 
       return [updated];
     });
@@ -791,6 +799,9 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     }
     res.json(responseData);
   } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ALREADY_COMPLETED") {
+      return res.status(400).json({ error: "Quest already completed" });
+    }
     req.log.error({ err }, "Error completing quest");
     res.status(500).json({ error: "Internal server error" });
   }
