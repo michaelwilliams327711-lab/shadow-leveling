@@ -161,11 +161,11 @@ export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
  * @summary Create a quest
  */
 export const CreateQuestBody = zod.object({
-  name: zod.string(),
-  category: zod.string(),
+  name: zod.string().min(1).max(200),
+  category: zod.string().max(100),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
   durationMinutes: zod.number(),
-  description: zod.string().nullish(),
+  description: zod.string().max(2000).nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
     .enum(["strength", "intellect", "endurance", "agility", "discipline"])
@@ -230,14 +230,14 @@ export const UpdateQuestParams = zod.object({
 });
 
 export const UpdateQuestBody = zod.object({
-  name: zod.string().optional(),
-  category: zod.string().optional(),
+  name: zod.string().min(1).max(200).optional(),
+  category: zod.string().max(100).optional(),
   difficulty: zod
     .enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"])
     .optional(),
   durationMinutes: zod.number().optional(),
   isPaused: zod.boolean().optional(),
-  description: zod.string().nullish(),
+  description: zod.string().max(2000).nullish(),
   statBoost: zod
     .enum(["strength", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
@@ -526,10 +526,10 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem);
  * @summary Create a custom reward
  */
 export const CreateRewardBody = zod.object({
-  name: zod.string(),
-  description: zod.string().nullish(),
+  name: zod.string().min(1).max(200),
+  description: zod.string().max(2000).nullish(),
   goldCost: zod.number(),
-  category: zod.string(),
+  category: zod.string().max(100),
 });
 
 /**

@@ -79,11 +79,12 @@ const server = app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  if (process.env.NODE_ENV === "production" && !process.env.API_SECRET_KEY) {
+  if (!process.env.API_SECRET_KEY) {
     logger.warn("========================================================");
     logger.warn("  WARNING: SECURE MODE DISABLED");
-    logger.warn("  API_SECRET_KEY is not set in production.");
+    logger.warn("  API_SECRET_KEY is not set.");
     logger.warn("  All API endpoints are publicly accessible.");
+    logger.warn("  Set API_SECRET_KEY before deploying to production.");
     logger.warn("========================================================");
   }
 });

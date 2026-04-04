@@ -65,7 +65,7 @@ function getOutcomeBadge(entry: QuestLogEntry) {
 
 const STAT_CAP = 110_000;
 
-const STREAK_MILESTONES = [7, 30, 100, 365];
+const STREAK_MILESTONES = [7, 14, 30, 60, 100];
 
 export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
