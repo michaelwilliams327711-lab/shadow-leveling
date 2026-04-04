@@ -1,5 +1,5 @@
 import { AlertTriangle, Skull, Zap, Coins } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface PenaltyEvent {
@@ -40,9 +40,9 @@ export function PenaltyModal({ penalties, onDismiss }: PenaltyModalProps) {
           <DialogTitle className="text-destructive font-display tracking-widest uppercase text-xl">
             ⚠ System Alert ⚠
           </DialogTitle>
-          <p className="text-destructive/70 text-sm tracking-wider uppercase mt-1">
+          <DialogDescription className="text-destructive/70 text-sm tracking-wider uppercase mt-1">
             Penalties Applied — Weakness Has a Price
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2 max-h-64 overflow-y-auto">

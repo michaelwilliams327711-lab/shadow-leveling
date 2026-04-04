@@ -112,12 +112,12 @@ router.get("/vocations/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const [vocation] = await db.select().from(vocationsTable).where(eq(vocationsTable.id, id));
-    if (!vocation) return res.status(404).json({ error: "Vocation not found" });
+    if (!vocation || vocation.deletedAt) return res.status(404).json({ error: "Vocation not found" });
 
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(questsTable)
-      .where(eq(questsTable.vocationId, id));
+      .where(and(eq(questsTable.vocationId, id), isNull(questsTable.deletedAt)));
 
     res.json({
       ...serializeVocation(vocation),
@@ -170,6 +170,10 @@ router.patch("/vocations/:id", async (req, res) => {
   }
   try {
     const { id } = req.params;
+
+    const [existing] = await db.select().from(vocationsTable).where(eq(vocationsTable.id, id));
+    if (!existing || existing.deletedAt) return res.status(404).json({ error: "Vocation not found" });
+
     const [updated] = await db
       .update(vocationsTable)
       .set(updates)
@@ -181,7 +185,7 @@ router.patch("/vocations/:id", async (req, res) => {
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(questsTable)
-      .where(eq(questsTable.vocationId, id));
+      .where(and(eq(questsTable.vocationId, id), isNull(questsTable.deletedAt)));
 
     res.json({ ...serializeVocation(updated), linkedQuestCount: countRow?.count ?? 0 });
   } catch (err) {

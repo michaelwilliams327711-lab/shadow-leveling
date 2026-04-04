@@ -23,6 +23,7 @@ import { playGoldSpend } from "@/lib/sounds";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -155,6 +156,7 @@ export default function Shop() {
             <DialogContent className="glass-panel border-white/10">
               <DialogHeader>
                 <DialogTitle className="font-display tracking-widest text-xl">Register Reward</DialogTitle>
+                <DialogDescription className="sr-only">Create a new shop reward</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">

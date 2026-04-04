@@ -167,12 +167,12 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   const allActiveQuests = await db
     .select()
     .from(questsTable)
-    .where(and(eq(questsTable.status, "active"), gte(questsTable.createdAt, cutoffDate)));
+    .where(and(eq(questsTable.status, "active"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
 
   const allCompletedQuests = await db
     .select()
     .from(questsTable)
-    .where(and(eq(questsTable.status, "completed"), gte(questsTable.createdAt, cutoffDate)));
+    .where(and(eq(questsTable.status, "completed"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
 
   const recurringToReset = allCompletedQuests.filter(q => {
     if (q.isPaused) return false;
@@ -551,6 +551,7 @@ router.post("/quests", async (req, res) => {
 router.get("/quests/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
     res.json(serializeQuest(quest));
@@ -563,6 +564,11 @@ router.get("/quests/:id", async (req, res) => {
 router.patch("/quests/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
+
+    const [existing] = await db.select().from(questsTable).where(eq(questsTable.id, id));
+    if (!existing || existing.deletedAt) return res.status(404).json({ error: "Quest not found" });
+
     const body = UpdateQuestBody.parse(req.body);
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
@@ -593,6 +599,7 @@ router.patch("/quests/:id", async (req, res) => {
 router.delete("/quests/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     await db.update(questsTable).set({ deletedAt: new Date() }).where(eq(questsTable.id, id));
     res.json({ success: true });
   } catch (err) {
@@ -604,6 +611,7 @@ router.delete("/quests/:id", async (req, res) => {
 router.get("/quests/:id/log", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const logs = await db
       .select()
       .from(questDailyLogTable)
@@ -621,6 +629,7 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 router.put("/quests/:id/log/:date", async (req, res) => {
   try {
     const questId = parseInt(req.params.id);
+    if (isNaN(questId)) return res.status(400).json({ error: "Invalid quest ID" });
     const date = req.params.date;
 
     if (!DATE_REGEX.test(date)) {
@@ -656,8 +665,9 @@ router.put("/quests/:id/log/:date", async (req, res) => {
 router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
-    if (!quest) return res.status(404).json({ error: "Quest not found" });
+    if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);
@@ -671,7 +681,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const activeEvent = getActiveRngEvent(today);
     const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
 
-    const totalMultiplier = char.multiplier * rngMultiplier + eventBonus;
+    const totalMultiplier = char.multiplier * rngMultiplier * (1 + eventBonus);
 
     const xpAwarded = Math.floor(xpReward * totalMultiplier);
     const goldAwarded = Math.floor(goldReward * totalMultiplier);
@@ -782,8 +792,9 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 router.post("/quests/:id/fail", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
-    if (!quest) return res.status(404).json({ error: "Quest not found" });
+    if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
 
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);

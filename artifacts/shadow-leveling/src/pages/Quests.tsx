@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -1609,6 +1610,7 @@ export default function Quests() {
           <DialogContent className="glass-panel border-white/10 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display tracking-widest text-xl">Register Mission</DialogTitle>
+              <DialogDescription className="sr-only">Create a new quest mission</DialogDescription>
             </DialogHeader>
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 pt-4">
@@ -1793,6 +1795,7 @@ export default function Quests() {
         <DialogContent className="glass-panel border-white/10 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display tracking-widest text-xl">Edit Mission</DialogTitle>
+            <DialogDescription className="sr-only">Edit an existing quest mission</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 pt-4">

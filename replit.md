@@ -104,6 +104,16 @@ All at `/api`:
 XP/Gold scaled by difficulty multiplier:
 F(0.5x) E(0.75x) D(1x) C(1.5x) B(2x) A(3x) S(5x) SS(8x) SSS(15x)
 
+## Audit Hardening (Strikes 4-6)
+
+- **Trust proxy**: `app.set("trust proxy", 1)` configured for correct rate limiter behavior behind proxy
+- **Soft-delete guards**: All mutation routes (PATCH/complete/fail) check `deletedAt` before operating on quests, vocations
+- **RNG math**: Multiplicative stacking formula `char.multiplier * rngMultiplier * (1 + eventBonus)` applied consistently across quest completion, boss challenges, and daily orders
+- **parseInt validation**: All `:id` route params validated with `isNaN()` guard returning 400
+- **Overdue processing**: `processOverdueQuestsLogic` filters out soft-deleted quests
+- **Accessibility**: All dialogs include `DialogDescription` (sr-only where appropriate)
+- **DB indexes**: B-Tree indexes on quest_log(occurred_at), quests(status, deleted_at), daily_orders(date, character_id), activity(date), bad_habits(deleted_at)
+
 ## Stat System
 
 Stats gain based on quest category:

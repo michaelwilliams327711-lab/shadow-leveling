@@ -35,6 +35,7 @@ router.get("/bosses", async (req, res) => {
 router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid boss ID" });
     const [boss] = await db.select().from(bossesTable).where(eq(bossesTable.id, id));
     if (!boss) return res.status(404).json({ error: "Boss not found" });
 
@@ -87,7 +88,7 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const today = getSystemDateFromReq(req);
     const activeEvent = getActiveRngEvent(today);
     const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
-    const totalMultiplier = charMultiplier + eventBonus;
+    const totalMultiplier = charMultiplier * (1 + eventBonus);
     const xpReward = Math.floor(baseXpReward * totalMultiplier);
     const goldRewardFinal = Math.floor(goldReward * totalMultiplier);
 

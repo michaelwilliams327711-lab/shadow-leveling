@@ -37,6 +37,7 @@ router.post("/shop/rewards", async (req, res) => {
 router.delete("/shop/rewards/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid reward ID" });
     await db.update(rewardsTable).set({ deletedAt: new Date() }).where(eq(rewardsTable.id, id));
     res.json({ success: true });
   } catch (err) {
@@ -48,6 +49,7 @@ router.delete("/shop/rewards/:id", async (req, res) => {
 router.post("/shop/rewards/:id/purchase", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid reward ID" });
     const char = await getOrCreateCharacter();
 
     let purchaseResult: { newGold: number; rewardName: string; goldCost: number } | null = null;

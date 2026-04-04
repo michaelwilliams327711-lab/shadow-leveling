@@ -4,6 +4,7 @@ import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsT
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { processLevelUp } from "@workspace/shared";
+import { getActiveRngEvent } from "./rng.js";
 
 type CharacterRow = Awaited<ReturnType<typeof getOrCreateCharacter>>;
 
@@ -178,7 +179,10 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     statUpdates[statCategory] = (statUpdates[statCategory] ?? 10) + DAILY_ORDER_STAT_GAIN;
 
     const multiplier = char.multiplier ?? 1.0;
-    const xpAwarded = Math.floor(E_RANK_XP * multiplier);
+    const activeEvent = getActiveRngEvent(today);
+    const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
+    const totalMultiplier = multiplier * (1 + eventBonus);
+    const xpAwarded = Math.floor(E_RANK_XP * totalMultiplier);
     const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpAwarded, char.level);
     const leveledUp = newLevel > char.level;
 
@@ -211,7 +215,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       outcome: "completed",
       xpChange: xpAwarded,
       goldChange: 0,
-      multiplierApplied: multiplier,
+      multiplierApplied: totalMultiplier,
       actionType: "COMPLETED",
       statCategory,
     });

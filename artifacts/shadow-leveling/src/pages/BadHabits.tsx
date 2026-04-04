@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -98,6 +99,7 @@ function ConfirmRelapseDialog({
           <DialogTitle className="font-display text-red-400 tracking-widest text-lg">
             RELAPSE CONFIRMATION
           </DialogTitle>
+          <DialogDescription className="sr-only">Confirm logging a relapse for this habit</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm text-muted-foreground">
@@ -184,6 +186,7 @@ function CreateHabitDialog({ onCreated, config }: { onCreated: () => void; confi
           <DialogTitle className="font-display text-purple-400 tracking-widest">
             REGISTER BAD HABIT
           </DialogTitle>
+          <DialogDescription className="sr-only">Register a new bad habit to track</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
