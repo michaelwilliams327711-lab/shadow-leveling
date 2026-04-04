@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { vocationsTable } from "./vocations";
@@ -21,7 +21,9 @@ export const questsTable = pgTable("quests", {
   recurrence: jsonb("recurrence"),
   vocationId: text("vocation_id").references(() => vocationsTable.id, { onDelete: "set null" }),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => [
+  index("quests_status_deleted_at_idx").on(table.status, table.deletedAt),
+]);
 
 export const questLogTable = pgTable("quest_log", {
   id: serial("id").primaryKey(),
@@ -35,7 +37,9 @@ export const questLogTable = pgTable("quest_log", {
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
   actionType: text("action_type").notNull().default("COMPLETED"),
   statCategory: text("stat_category"),
-});
+}, (table) => [
+  index("quest_log_occurred_at_idx").on(table.occurredAt),
+]);
 
 export const penaltyLogTable = pgTable("penalty_log", {
   id: serial("id").primaryKey(),
@@ -66,7 +70,9 @@ export const dailyOrdersTable = pgTable("daily_orders", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   date: text("date").notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => [
+  index("daily_orders_date_character_id_idx").on(table.date, table.characterId),
+]);
 
 export const dailyHiddenBoxRewardsTable = pgTable("daily_hidden_box_rewards", {
   id: serial("id").primaryKey(),

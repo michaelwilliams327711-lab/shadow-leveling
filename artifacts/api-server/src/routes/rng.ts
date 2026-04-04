@@ -39,19 +39,23 @@ function deterministicRng(date: string): number {
   return Math.abs(hash);
 }
 
+export function getActiveRngEvent(dateStr: string): (typeof RNG_EVENTS)[number] | null {
+  const hash = deterministicRng(dateStr);
+  const eventChance = hash % 100;
+  const hasEvent = eventChance < 30;
+  if (!hasEvent) return null;
+  const eventIndex = hash % RNG_EVENTS.length;
+  return RNG_EVENTS[eventIndex];
+}
+
 router.get("/rng/daily-event", async (req, res) => {
   try {
     const today = getSystemDateFromReq(req);
-    const hash = deterministicRng(today);
-    const eventChance = hash % 100;
-    const hasEvent = eventChance < 30;
+    const event = getActiveRngEvent(today);
 
-    if (!hasEvent) {
+    if (!event) {
       return res.json({ hasEvent: false, event: null });
     }
-
-    const eventIndex = hash % RNG_EVENTS.length;
-    const event = RNG_EVENTS[eventIndex];
 
     res.json({ hasEvent: true, event });
   } catch (err) {

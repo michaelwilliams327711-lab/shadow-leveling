@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -10,7 +10,9 @@ export const badHabitsTable = pgTable("bad_habits", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   isActive: integer("is_active").notNull().default(1),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => [
+  index("bad_habits_deleted_at_idx").on(table.deletedAt),
+]);
 
 export const badHabitLogTable = pgTable("bad_habit_log", {
   id: uuid("id").primaryKey().defaultRandom(),

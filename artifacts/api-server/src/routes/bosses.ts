@@ -3,8 +3,9 @@ import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
-import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier } from "@workspace/shared";
+import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
+import { getActiveRngEvent } from "./rng.js";
 
 const router: IRouter = Router();
 
@@ -83,11 +84,16 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     let newDiscipline = char.discipline;
 
     const charMultiplier = char.multiplier ?? 1.0;
-    const xpReward = Math.floor(baseXpReward * charMultiplier);
+    const today = getSystemDateFromReq(req);
+    const activeEvent = getActiveRngEvent(today);
+    const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
+    const totalMultiplier = charMultiplier + eventBonus;
+    const xpReward = Math.floor(baseXpReward * totalMultiplier);
+    const goldRewardFinal = Math.floor(goldReward * totalMultiplier);
 
     if (victory) {
       newXp += xpReward;
-      newGold += goldReward;
+      newGold += goldRewardFinal;
       const result = processLevelUp(newXp, newLevel);
       newXp = result.xp;
       newLevel = result.level;
@@ -139,8 +145,8 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       difficulty: boss.rank,
       outcome: victory ? "completed" : "failed",
       xpChange: victory ? xpReward : -xpPenalty,
-      goldChange: victory ? goldReward : 0,
-      multiplierApplied: victory ? charMultiplier : 1.0,
+      goldChange: victory ? goldRewardFinal : 0,
+      multiplierApplied: victory ? totalMultiplier : 1.0,
       actionType: victory ? "BOSS_DEFEATED" : "FAILED",
       statCategory: null,
     });
@@ -151,10 +157,10 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       success: true,
       victory,
       message: victory
-        ? `VICTORY! ${boss.name} has been defeated! +${xpReward} XP, +${goldReward} Gold!`
+        ? `VICTORY! ${boss.name} has been defeated! +${xpReward} XP, +${goldRewardFinal} Gold!`
         : `DEFEAT. ${boss.name} proved too powerful. -${xpPenalty} XP. This loss is now part of your permanent record.`,
       xpChange: victory ? xpReward : -xpPenalty,
-      goldChange: victory ? goldReward : 0,
+      goldChange: victory ? goldRewardFinal : 0,
       leveledUp,
       newLevel,
       character: {

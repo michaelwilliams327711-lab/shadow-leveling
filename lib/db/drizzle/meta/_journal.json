@@ -57,6 +57,13 @@
       "when": 1743566400000,
       "tag": "0007_awakening_character_id",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1743652800000,
+      "tag": "0009_scalability_indexes",
+      "breakpoints": true
     }
   ]
 }

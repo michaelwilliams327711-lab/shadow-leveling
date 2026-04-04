@@ -14,6 +14,7 @@ import {
 } from "@workspace/api-zod";
 import { getOrCreateCharacter, upsertActivity, invalidateCharacterCache } from "./character.js";
 import { awardVocXp } from "./vocations.js";
+import { getActiveRngEvent } from "./rng.js";
 
 const router: IRouter = Router();
 
@@ -551,7 +552,7 @@ router.get("/quests/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
-    if (!quest) return res.status(404).json({ error: "Quest not found" });
+    if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
     res.json(serializeQuest(quest));
   } catch (err) {
     req.log.error({ err }, "Error getting quest");
@@ -666,7 +667,11 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const rngRoll = Math.random();
     const rngBonus = rngRoll < 0.1;
     const rngMultiplier = rngBonus ? 1.5 : 1.0;
-    const totalMultiplier = char.multiplier * rngMultiplier;
+
+    const activeEvent = getActiveRngEvent(today);
+    const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
+
+    const totalMultiplier = char.multiplier * rngMultiplier + eventBonus;
 
     const xpAwarded = Math.floor(xpReward * totalMultiplier);
     const goldAwarded = Math.floor(goldReward * totalMultiplier);

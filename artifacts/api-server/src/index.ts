@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
 
@@ -23,13 +24,13 @@ if (Number.isNaN(port) || port <= 0) {
  * When unset the cron fires at UTC midnight (offset = 0).
  */
 function getLocalDateStr(): string {
-  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "-5");
   const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
   return new Date(Date.now() + offsetMs).toISOString().split("T")[0];
 }
 
 function getLocalHour(): number {
-  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "-5");
   const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
   return new Date(Date.now() + offsetMs).getUTCHours();
 }
@@ -77,11 +78,25 @@ const server = app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  if (process.env.NODE_ENV === "production" && !process.env.API_SECRET_KEY) {
+    logger.warn("========================================================");
+    logger.warn("  WARNING: SECURE MODE DISABLED");
+    logger.warn("  API_SECRET_KEY is not set in production.");
+    logger.warn("  All API endpoints are publicly accessible.");
+    logger.warn("========================================================");
+  }
 });
 
 function shutdown(signal: string) {
   logger.info({ signal }, "Received shutdown signal, closing server");
-  server.close(() => {
+  server.close(async () => {
+    try {
+      await pool.end();
+      logger.info("Database pool closed");
+    } catch (err) {
+      logger.error({ err }, "Error closing database pool");
+    }
     logger.info("Server closed, exiting");
     process.exit(0);
   });

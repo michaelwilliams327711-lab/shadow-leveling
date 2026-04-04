@@ -276,7 +276,7 @@ export async function awardVocXp(vocationId: string, difficulty: string): Promis
   newXp: number;
 } | null> {
   const [vocation] = await db.select().from(vocationsTable).where(eq(vocationsTable.id, vocationId));
-  if (!vocation) return null;
+  if (!vocation || vocation.deletedAt) return null;
 
   if (vocation.gateActive) {
     return { gateTriggered: false, gateBlocked: true, xpAwarded: 0, newLevel: vocation.currentLevel, newXp: vocation.currentXp };

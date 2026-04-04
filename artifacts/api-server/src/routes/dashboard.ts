@@ -3,13 +3,14 @@ import { db } from "@workspace/db";
 import { questLogTable } from "@workspace/db";
 import { sql, gte, inArray, and } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL } from "./character.js";
+import { getSystemDateFromReq } from "@workspace/shared";
 
 const router: IRouter = Router();
 
 router.get("/dashboard-stats", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSystemDateFromReq(req);
 
     const thirtyDaysAgo = new Date(todayStr + "T00:00:00.000Z");
     thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 29);

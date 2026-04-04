@@ -193,7 +193,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
   try {
     const { id } = req.params;
     const habit = await db.select().from(badHabitsTable).where(eq(badHabitsTable.id, id)).limit(1);
-    if (!habit.length) return res.status(404).json({ error: "Not found" });
+    if (!habit.length || habit[0].deletedAt) return res.status(404).json({ error: "Not found" });
 
     const h = habit[0];
     const severity = h.severity as HabitSeverity;
