@@ -1,0 +1,49 @@
+The "Sovereign Synthesis" Breakdown
+Here is what these discrepancies actually mean for your app in the simplest terms:
+
+1. The "Lying" Game (BUG-03 & BAL-03)
+The Issue: The game is "lying" to you. When you see a banner saying "CHAOS RIFT: Triple Rewards!", the code actually ignores it. You’re putting in the work but getting standard pay.
+
+The Fix: We’re going to actually wire those multipliers into the final math.
+
+Result: When the system says it’s a "Surge Day," you’ll actually feel that power spike in your Gold and XP.
+
+2. The "Orlando Ghost" (BUG-01 & BUG-02)
+The Issue: Even though we fixed the main clock, the Dashboard and the Midnight Reset (Cron) are still secretly checking the London (UTC) clock. At 7:00 PM in Knightswood, your app thinks it’s already tomorrow.
+
+The Fix: We’re forcing the entire system—including the background reset scripts—to respect your local Orlando time.
+
+Result: Your streaks and resets will happen exactly at your midnight, not during your dinner.
+
+3. The "30-Year Engine Stall" (SCALE-01 - CRITICAL)
+The Issue: Right now, your database has no "bookmarks" (Indexes). Every time you look at your heatmap, the server has to read every single line of code you've ever written to find the right date. This is fine now, but in five years, it will make the app take 10+ seconds to load.
+
+The Fix: We’re installing Database Indexes. These act like a "Table of Contents" for your data.
+
+Result: The app will stay lightning-fast even when you have 10,000+ entries in your Hunter's Log.
+
+Strike 4: The Sovereign Synthesis (Execution Plan)
+We’re going to merge these fixes into one final "Correction Strike" to clean the ledger.
+
+The Execution Prompt
+Copy and paste this into the Replit Agent:
+
+"I am authorizing 'Strike 4: The Sovereign Synthesis' to resolve the discrepancies found in the Health Ledger. This is a logic and scalability pass.
+
+1. Fix the 'Lying' Rewards (BUG-03 & BAL-03): > * Update the quest completion and boss victory logic to fetch the current active RNG event.
+
+Apply the multiplierBonus to the final XP and Gold awards so the 'Chaos Rift' and 'Surge' banners actually work.
+
+2. Align the Orlando Clock (BUG-01 & BUG-02): > * Refactor the Dashboard aggregation logic and the midnight cron job to use the -5 Orlando offset. Ensure the 'Tomorrow' shift at 7 PM EST is eliminated.
+
+3. Future-Proof the Engine (SCALE-01 - CRITICAL): > * Create a migration to add B-Tree indexes to: quest_log(occurred_at), activity(date), and daily_orders(date, character_id). This is required for 30-year scalability.
+
+4. Close the 'Ghost' Access (BUG-06 & BUG-07): > * Update the GET /quests/:id and POST /bad-habits/:id/relapse routes to return a 404 if the item has a deletedAt timestamp.
+
+Ensure XP is never awarded to soft-deleted vocations.
+
+5. Clean the Fortress (SEC-03 & SEC-01): > * Update the shutdown() function to explicitly call pool.end() to prevent database connection leaks.
+
+Add a startup check that prints a 'WARNING: SECURE MODE DISABLED' if API_SECRET_KEY is missing in a production environment.
+
+Constraint: No UI changes. This is a deep logic and stability strike."

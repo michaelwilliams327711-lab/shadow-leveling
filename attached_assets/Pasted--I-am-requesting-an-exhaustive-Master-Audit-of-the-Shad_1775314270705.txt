@@ -1,0 +1,33 @@
+"I am requesting an exhaustive Master Audit of the Shadow Leveling system. Perform a 'Scan-and-Report' mission across the entire codebase to identify any remaining bugs, logic errors, or mathematical discrepancies.
+
+Analyze the system across these four 'Critical Pillars':
+
+1. The 'Ghost in the Machine' (Remaining Bugs):
+
+Scan for 'Dead Code'—functions or routes that exist but are never called.
+
+Audit the 'Notification System.' Are there any scenarios where a quest completes but the UI fails to show the 'Level Up' or 'Reward' toast?
+
+Re-verify 'Temporal Sync.' Confirm that every single date-dependent calculation (especially the new Soft-Delete logic) is correctly respecting the -5 Orlando offset.
+
+2. The 'Math of the Monarch' (RPG Balance):
+
+Stat Synergy: Identify where stats (Intellect, Strength, etc.) are currently purely decorative. Propose a formula to make them mechanically relevant.
+
+Economy Check: Audit the 'Gold-to-XP' ratio. Is it possible to 'out-earn' your level to the point where the shop becomes trivial?
+
+RNG Audit: Check the 'Chaos Rift' multipliers. Are they actually being multiplied into the final rewards now, or are they still just visual banners?
+
+3. The '30-Year Anchor' (Scalability):
+
+Scan for 'Unindexed Queries.' As the quest_log grows to 10,000+ entries over the next decade, which SQL queries will become the bottleneck?
+
+Audit the 'Archive System.' Verify that 'Soft-Deleted' items are being filtered out of every active view, including the search bars and filters.
+
+4. The 'Fortress' (Deep Security):
+
+Verify that the new Bearer Token system is strictly enforced on every POST, PUT, and DELETE route. Identify any 'forgotten' endpoints.
+
+Check the database connection pool. Is the app correctly closing connections to prevent a server crash during heavy use?
+
+Deliver your findings as a 'System Health Ledger.' For every issue found, provide a 'Severity Rating' (Critical/High/Medium/Low) and a 'Complexity Rating.' Do not begin any fixes until I review the report."
