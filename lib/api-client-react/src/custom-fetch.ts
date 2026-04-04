@@ -371,7 +371,37 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const TIMEOUT_MS = 15_000;
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), TIMEOUT_MS);
+
+  const externalSignal = init.signal;
+  let combinedSignal: AbortSignal;
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      clearTimeout(timeoutId);
+      throw externalSignal.reason ?? new DOMException("The operation was aborted.", "AbortError");
+    }
+    const linked = new AbortController();
+    const onAbort = () => linked.abort();
+    externalSignal.addEventListener("abort", onAbort, { once: true });
+    timeoutController.signal.addEventListener("abort", onAbort, { once: true });
+    combinedSignal = linked.signal;
+  } else {
+    combinedSignal = timeoutController.signal;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(input, { ...init, method, headers, signal: combinedSignal });
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    if (timeoutController.signal.aborted && !(externalSignal && externalSignal.aborted)) {
+      throw new Error("Request timed out. Please check your connection.");
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

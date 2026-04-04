@@ -396,7 +396,7 @@ export default function BadHabits() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                            className="h-11 w-11 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0"
                             onClick={() => handleDelete(habit.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -467,7 +467,7 @@ export default function BadHabits() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                      className="h-11 w-11 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
                       onClick={() => handleDelete(habit.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

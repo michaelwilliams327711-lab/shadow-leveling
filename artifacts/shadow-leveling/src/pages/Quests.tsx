@@ -836,7 +836,7 @@ function PlannerYearlyView() {
       <Card className="bg-background/50 border-white/10">
         <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Flame className="h-4 w-4 text-primary" />Activity Heatmap — {data.year}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
-          <div className="relative min-w-[700px]">
+          <div className="relative w-full max-w-4xl">
             <div className="flex gap-0.5 mb-1 text-xs text-muted-foreground/60">
               {monthPositions.map((mp, i) => <div key={i} className="absolute" style={{ left: `${mp.col * 14}px` }}>{mp.month}</div>)}
             </div>
@@ -957,7 +957,7 @@ function ChronicleHeatmap({ activityCalendar }: { activityCalendar: { date: stri
         <CardTitle className="font-display tracking-widest text-lg">Activity Heatmap — Past Year</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <div className="relative min-w-[700px]">
+        <div className="relative w-full max-w-4xl">
           <div className="flex gap-0.5 mb-1 text-xs text-muted-foreground/60">
             {monthPositions.map((mp, i) => <div key={i} className="absolute" style={{ left: `${mp.col * 14}px` }}>{mp.month}</div>)}
           </div>
