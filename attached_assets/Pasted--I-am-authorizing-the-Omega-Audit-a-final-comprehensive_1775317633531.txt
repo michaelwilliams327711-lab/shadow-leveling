@@ -1,0 +1,33 @@
+"I am authorizing the 'Omega Audit'—a final, comprehensive scan for any remaining bugs, edge cases, or mobile-readiness issues. We have secured the core; now I need you to hunt for the 'Hidden Traps' in the code.
+
+Analyze the system across these four 'Omega Domains':
+
+1. The 'Mobile Frontier' (Native & Touch Readiness):
+
+Scan the UI for 'Small Targets.' Identify any buttons or links (especially in the Quest Log and Shop) that are smaller than 44x44 pixels—the minimum for reliable thumb-tapping on mobile.
+
+Audit 'Viewport Stability.' Find any elements with fixed widths (e.g., width: 800px) that will cause horizontal scrolling or 'break' the layout on a vertical phone screen.
+
+Check for 'PWA Compliance.' Identify what is missing (e.g., a manifest.json or service-worker) to allow this app to be installed on a home screen without an App Store.
+
+2. The 'Deep Resilience' (Edge Case Handling):
+
+Scan for 'Empty State' bugs. What does the app show if I have ZERO quests, ZERO gold, and ZERO history? Ensure it doesn't show a blank screen or a math error like NaN.
+
+Audit 'Network Resilience.' If the mobile data cuts out during a 'Boss Challenge' or 'Quest Completion,' does the app handle the error gracefully, or does it get stuck in a loading loop?
+
+Check for 'Integer Overflow.' Verify that Gold and XP values have caps to prevent a 'Math Crash' if numbers get into the millions over the next decade.
+
+3. The 'Memory Leak' Scan (Long-Session Stability):
+
+Scan for 'Dangling Listeners.' In Quests.tsx and Dashboard.tsx, find any useEffect hooks that set intervals or listeners but fail to clear them. These will drain a phone's battery and slow down the app over time.
+
+Audit 'Large Payloads.' Identify any API responses that are sending too much data (e.g., sending the entire 30-year history when only the last 7 days are needed).
+
+4. The 'Validation Guard' (Garbage-In/Garbage-Out):
+
+Scan for 'Unprotected Inputs.' Can a user manually type a negative number into the 'Gold' or 'Duration' fields during quest creation to exploit the system?
+
+Verify 'Schema Strictness.' Ensure the database rejects any data that doesn't perfectly match our Zod schemas.
+
+Deliver your findings as the 'Final Integrity Ledger.' Rank every issue by 'Mobile Criticality' (High/Medium/Low). Do not start any fixes until I have reviewed the report."
