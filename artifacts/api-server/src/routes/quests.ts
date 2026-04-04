@@ -813,7 +813,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
-    if (quest.status !== "active") return res.status(400).json({ error: "Quest is not active" });
+    if (quest.status !== "active") return res.status(409).json({ error: "Quest already processed" });
 
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);
@@ -843,6 +843,15 @@ router.post("/quests/:id/fail", async (req, res) => {
     statUpdates.discipline = Math.max(1, statUpdates.discipline - discPenalty);
 
     const [updatedChar] = await db.transaction(async (tx) => {
+      const questResult = await tx.update(questsTable)
+        .set({ status: "failed" })
+        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")))
+        .returning({ id: questsTable.id });
+
+      if (questResult.length === 0) {
+        throw Object.assign(new Error("Quest already processed"), { code: "ALREADY_FAILED" });
+      }
+
       const [updated] = await tx.update(characterTable)
         .set({
           xp: sql`GREATEST(0, ${characterTable.xp} - ${xpDeducted})`,
@@ -858,10 +867,6 @@ router.post("/quests/:id/fail", async (req, res) => {
         })
         .where(eq(characterTable.id, char.id))
         .returning();
-
-      await tx.update(questsTable)
-        .set({ status: "failed" })
-        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")));
 
       return [updated];
     });
@@ -902,6 +907,9 @@ router.post("/quests/:id/fail", async (req, res) => {
     });
     res.json(data);
   } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ALREADY_FAILED") {
+      return res.status(409).json({ error: "Quest already processed" });
+    }
     req.log.error({ err }, "Error failing quest");
     res.status(500).json({ error: "Internal server error" });
   }

@@ -270,11 +270,15 @@ function VocationCard({
   onEdit,
   onDelete,
   onCompleteMilestone,
+  isMilestonePending,
+  isDeletePending,
 }: {
   vocation: VocationPath;
   onEdit: (v: VocationPath) => void;
   onDelete: (v: VocationPath) => void;
   onCompleteMilestone: (v: VocationPath) => void;
+  isMilestonePending?: boolean;
+  isDeletePending?: boolean;
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const titleLadder = vocation.titleLadder ?? ["Novice"];
@@ -337,7 +341,8 @@ function VocationCard({
               </button>
               <button
                 onClick={() => onDelete(vocation)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors"
+                disabled={isDeletePending}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -417,10 +422,11 @@ function VocationCard({
               <Button
                 size="sm"
                 onClick={() => onCompleteMilestone(vocation)}
-                className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold tracking-widest"
+                disabled={isMilestonePending}
+                className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold tracking-widest disabled:opacity-50"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                MARK MILESTONE COMPLETE
+                {isMilestonePending ? "Processing..." : "MARK MILESTONE COMPLETE"}
               </Button>
             </div>
           )}
@@ -637,6 +643,8 @@ export default function VocationPaths() {
               onEdit={setEditTarget}
               onDelete={setDeleteTarget}
               onCompleteMilestone={(voc) => milestoneMutation.mutate(voc.id)}
+              isMilestonePending={milestoneMutation.isPending}
+              isDeletePending={deleteMutation.isPending}
             />
           ))}
         </div>
@@ -701,9 +709,10 @@ export default function VocationPaths() {
             <AlertDialogCancel className="border-white/20 text-white hover:bg-white/5">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-              className="bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/40"
+              disabled={deleteMutation.isPending}
+              className="bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/40 disabled:opacity-50"
             >
-              Delete
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

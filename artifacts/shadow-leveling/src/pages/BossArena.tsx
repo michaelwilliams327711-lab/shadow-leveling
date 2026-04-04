@@ -7,7 +7,7 @@ import {
   getGetCharacterQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Skull, Lock, Swords, ShieldAlert } from "lucide-react";
+import { Skull, Lock, Swords, ShieldAlert, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,7 @@ const bossImageMap: Record<number, string> = {
 
 export default function BossArena() {
   const { data: character } = useGetCharacter();
-  const { data: bosses = [], isLoading } = useListBosses();
+  const { data: bosses = [], isLoading, isError, refetch } = useListBosses();
   const challengeBoss = useChallengeBoss();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -108,6 +108,16 @@ export default function BossArena() {
           </div>
         ))}
       </div>
+    </div>
+  );
+
+  if (isError) return (
+    <div className="p-8 flex flex-col items-center justify-center h-full gap-4">
+      <AlertCircle className="w-12 h-12 text-destructive" />
+      <p className="text-muted-foreground tracking-widest uppercase text-sm">System Error — Boss Arena Offline</p>
+      <Button onClick={() => refetch()} variant="outline" className="border-white/20 tracking-widest">
+        Retry Connection
+      </Button>
     </div>
   );
 

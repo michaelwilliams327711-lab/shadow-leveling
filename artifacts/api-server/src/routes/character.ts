@@ -214,7 +214,7 @@ router.post("/character/login", async (req, res) => {
 
     if (char.lastLoginDate) {
       const lastLogin = new Date(char.lastLoginDate);
-      const lastLoginDateStr = getLocalDateStrFromTimestamp(lastLogin);
+      const lastLoginDateStr = lastLogin.toISOString().split("T")[0];
       const lastLoginStart = new Date(lastLoginDateStr + "T00:00:00.000Z");
 
       const daysDiff = Math.floor(

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsTable, penaltyLogTable } from "@workspace/db";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { processLevelUp } from "@workspace/shared";
 import { getActiveRngEvent } from "./rng.js";
@@ -159,13 +159,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       .where(and(eq(dailyOrdersTable.id, id), eq(dailyOrdersTable.characterId, char.id)));
 
     if (!order) return res.status(404).json({ error: "Order not found" });
-    if (order.completed) return res.status(400).json({ error: "Order already completed" });
-
-    const [updatedOrder] = await db
-      .update(dailyOrdersTable)
-      .set({ completed: true, completedAt: new Date() })
-      .where(eq(dailyOrdersTable.id, id))
-      .returning();
+    if (order.completed) return res.status(409).json({ error: "Order already completed" });
 
     const statCategory = isValidStatField(order.statCategory) ? order.statCategory : "discipline";
 
@@ -190,21 +184,35 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       ? { failStreak: 0, penaltyMultiplier: 1.0 }
       : {};
 
-    const [updatedChar] = await db
-      .update(characterTable)
-      .set({
-        xp: newXp,
-        level: newLevel,
-        strength: statUpdates.strength,
-        intellect: statUpdates.intellect,
-        endurance: statUpdates.endurance,
-        agility: statUpdates.agility,
-        discipline: statUpdates.discipline,
-        totalQuestsCompleted: char.totalQuestsCompleted + 1,
-        ...streakResetFields,
-      })
-      .where(eq(characterTable.id, char.id))
-      .returning();
+    const [updatedOrder, updatedChar] = await db.transaction(async (tx) => {
+      const orderResult = await tx
+        .update(dailyOrdersTable)
+        .set({ completed: true, completedAt: new Date() })
+        .where(and(eq(dailyOrdersTable.id, id), eq(dailyOrdersTable.completed, false)))
+        .returning();
+
+      if (orderResult.length === 0) {
+        throw Object.assign(new Error("Order already completed"), { code: "ALREADY_COMPLETED_ORDER" });
+      }
+
+      const [updated] = await tx
+        .update(characterTable)
+        .set({
+          xp: newXp,
+          level: newLevel,
+          strength: statUpdates.strength,
+          intellect: statUpdates.intellect,
+          endurance: statUpdates.endurance,
+          agility: statUpdates.agility,
+          discipline: statUpdates.discipline,
+          totalQuestsCompleted: char.totalQuestsCompleted + 1,
+          ...streakResetFields,
+        })
+        .where(eq(characterTable.id, char.id))
+        .returning();
+
+      return [orderResult[0], updated] as const;
+    });
 
     invalidateCharacterCache();
 
@@ -283,6 +291,9 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       },
     });
   } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ALREADY_COMPLETED_ORDER") {
+      return res.status(409).json({ error: "Order already completed" });
+    }
     req.log.error({ err }, "Error completing daily order");
     res.status(500).json({ error: "Internal server error" });
   }
@@ -435,20 +446,35 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     }
 
     const totalXpDeducted = staleOrders.length * E_RANK_XP;
-    const newXp = Math.max(0, char.xp - totalXpDeducted);
+    const staleIds = staleOrders.map((o) => o.id);
 
-    const newStats = {
-      strength: Math.max(0, char.strength - statDeductions.strength),
-      agility: Math.max(0, char.agility - statDeductions.agility),
-      endurance: Math.max(0, char.endurance - statDeductions.endurance),
-      intellect: Math.max(0, char.intellect - statDeductions.intellect),
-      discipline: Math.max(0, char.discipline - statDeductions.discipline),
-    };
+    await db.transaction(async (tx) => {
+      const deleted = await tx
+        .update(dailyOrdersTable)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(dailyOrdersTable.characterId, char.id),
+            inArray(dailyOrdersTable.id, staleIds),
+            isNull(dailyOrdersTable.deletedAt)
+          )
+        )
+        .returning({ id: dailyOrdersTable.id });
 
-    await db
-      .update(characterTable)
-      .set({ xp: newXp, ...newStats })
-      .where(eq(characterTable.id, char.id));
+      if (deleted.length === 0) return;
+
+      await tx
+        .update(characterTable)
+        .set({
+          xp: sql`GREATEST(0, ${characterTable.xp} - ${totalXpDeducted})`,
+          strength: sql`GREATEST(0, ${characterTable.strength} - ${statDeductions.strength})`,
+          agility: sql`GREATEST(0, ${characterTable.agility} - ${statDeductions.agility})`,
+          endurance: sql`GREATEST(0, ${characterTable.endurance} - ${statDeductions.endurance})`,
+          intellect: sql`GREATEST(0, ${characterTable.intellect} - ${statDeductions.intellect})`,
+          discipline: sql`GREATEST(0, ${characterTable.discipline} - ${statDeductions.discipline})`,
+        })
+        .where(eq(characterTable.id, char.id));
+    });
 
     invalidateCharacterCache();
 
@@ -472,19 +498,6 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
       xpDeducted: totalXpDeducted,
       goldDeducted: 0,
     });
-
-    await db
-      .update(dailyOrdersTable)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(
-          eq(dailyOrdersTable.characterId, char.id),
-          sql`${dailyOrdersTable.date} >= ${lowerBound}`,
-          sql`${dailyOrdersTable.date} < ${today}`,
-          eq(dailyOrdersTable.completed, false),
-          isNull(dailyOrdersTable.deletedAt)
-        )
-      );
 
     res.json({ success: true, expiredCount: staleOrders.length, xpDeducted: totalXpDeducted });
   } catch (err) {

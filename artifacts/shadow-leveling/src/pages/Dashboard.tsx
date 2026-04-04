@@ -68,7 +68,7 @@ const STAT_CAP = 110_000;
 const STREAK_MILESTONES = [7, 14, 30, 60, 100];
 
 export default function Dashboard() {
-  const { data: character, isLoading: charLoading } = useGetCharacter();
+  const { data: character, isLoading: charLoading, isError: charError, refetch: refetchChar } = useGetCharacter();
   const { data: heatmap } = useGetActivityHeatmap();
   const { data: rngEvent } = useGetDailyRngEvent();
   const { data: questLogRaw } = useGetQuestLog({ query: { refetchInterval: 60_000 } });
@@ -152,8 +152,20 @@ export default function Dashboard() {
     });
   };
 
-  if (charLoading || !character) {
+  if (charLoading) {
     return <div className="p-8 flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div></div>;
+  }
+
+  if (charError || !character) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center h-full gap-4">
+        <AlertCircle className="w-12 h-12 text-destructive" />
+        <p className="text-muted-foreground tracking-widest uppercase text-sm">System Error — Status Window Offline</p>
+        <Button onClick={() => refetchChar()} variant="outline" className="border-white/20 tracking-widest">
+          Retry Connection
+        </Button>
+      </div>
+    );
   }
 
   const xpPercent = Math.round((character.xp / character.xpToNextLevel) * 100);

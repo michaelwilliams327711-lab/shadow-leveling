@@ -11,7 +11,7 @@ import {
   getGetCharacterQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Store, Coins, Plus, ShoppingCart } from "lucide-react";
+import { Store, Coins, Plus, ShoppingCart, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ const createSchema = z.object({
 
 export default function Shop() {
   const { data: character } = useGetCharacter();
-  const { data: rewards = [], isLoading } = useListRewards();
+  const { data: rewards = [], isLoading, isError, refetch } = useListRewards();
   const createReward = useCreateReward();
   const purchaseReward = usePurchaseReward();
   const queryClient = useQueryClient();
@@ -115,6 +115,16 @@ export default function Shop() {
           </div>
         ))}
       </div>
+    </div>
+  );
+
+  if (isError) return (
+    <div className="p-8 flex flex-col items-center justify-center h-full gap-4">
+      <AlertCircle className="w-12 h-12 text-destructive" />
+      <p className="text-muted-foreground tracking-widest uppercase text-sm">System Error — Shop Offline</p>
+      <Button onClick={() => refetch()} variant="outline" className="border-white/20 tracking-widest">
+        Retry Connection
+      </Button>
     </div>
   );
 
