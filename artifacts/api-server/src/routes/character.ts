@@ -13,16 +13,23 @@ import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, get
 const router: IRouter = Router();
 
 type CharacterRow = typeof characterTable.$inferSelect;
-export function invalidateCharacterCache() {
-  // No-op: cache was removed to prevent race conditions on concurrent XP writes.
-  // Kept for call-site compatibility; callers do not need updating.
+
+let _characterCache: { char: CharacterRow; expiresAt: number } | null = null;
+
+export function invalidateCharacterCache(): void {
+  _characterCache = null;
 }
 
-async function getOrCreateCharacter(): Promise<CharacterRow> {
+export async function getOrCreateCharacter(): Promise<CharacterRow> {
+  const now = Date.now();
+  if (_characterCache && _characterCache.expiresAt > now) {
+    return _characterCache.char;
+  }
   const chars = await db.select().from(characterTable).limit(1);
   const char = chars.length > 0
     ? chars[0]
     : (await db.insert(characterTable).values({ name: "Hunter" }).returning())[0];
+  _characterCache = { char, expiresAt: now + 5_000 };
   return char;
 }
 
@@ -323,5 +330,5 @@ router.get("/activity", async (req, res) => {
 });
 
 export default router;
-export { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity };
+export { XP_PER_LEVEL, upsertActivity };
 export { getSystemDateFromReq as getLocalDateStr };

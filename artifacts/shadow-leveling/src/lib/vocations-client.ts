@@ -1,3 +1,5 @@
+import { customFetch } from "@workspace/api-client-react";
+
 export interface VocationPath {
   id: string;
   name: string;
@@ -38,67 +40,41 @@ export interface UpdateVocationPayload {
   titleLadder?: string[];
 }
 
-const BASE = "/api";
-
 export async function listVocations(): Promise<VocationPath[]> {
-  const res = await fetch(`${BASE}/vocations`);
-  if (!res.ok) throw new Error("Failed to list vocations");
-  return res.json();
+  return customFetch<VocationPath[]>("/api/vocations");
 }
 
 export async function getVocation(id: string): Promise<VocationPath> {
-  const res = await fetch(`${BASE}/vocations/${id}`);
-  if (!res.ok) throw new Error("Failed to get vocation");
-  return res.json();
+  return customFetch<VocationPath>(`/api/vocations/${id}`);
 }
 
 export async function createVocation(payload: CreateVocationPayload): Promise<VocationPath> {
-  const res = await fetch(`${BASE}/vocations`, {
+  return customFetch<VocationPath>("/api/vocations", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "Failed to create vocation");
-  }
-  return res.json();
 }
 
 export async function updateVocation(id: string, payload: UpdateVocationPayload): Promise<VocationPath> {
-  const res = await fetch(`${BASE}/vocations/${id}`, {
+  return customFetch<VocationPath>(`/api/vocations/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "Failed to update vocation");
-  }
-  return res.json();
 }
 
 export async function deleteVocation(id: string): Promise<void> {
-  const res = await fetch(`${BASE}/vocations/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete vocation");
+  await customFetch<void>(`/api/vocations/${id}`, { method: "DELETE" });
 }
 
 export async function completeMilestone(id: string): Promise<VocationPath & { oldTitle: string; newTitle: string; evolved: boolean }> {
-  const res = await fetch(`${BASE}/vocations/${id}/complete-milestone`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "Failed to complete milestone");
-  }
-  return res.json();
+  return customFetch<VocationPath & { oldTitle: string; newTitle: string; evolved: boolean }>(
+    `/api/vocations/${id}/complete-milestone`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
 }
 
 export async function getVocationLog(id: string): Promise<VocationLog[]> {
-  const res = await fetch(`${BASE}/vocations/${id}/log`);
-  if (!res.ok) throw new Error("Failed to get vocation log");
-  return res.json();
+  return customFetch<VocationLog[]>(`/api/vocations/${id}/log`);
 }
 
 export function getVocXpForLevel(level: number): number {

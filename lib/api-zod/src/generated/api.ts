@@ -131,7 +131,7 @@ export const ListQuestsResponseItem = zod.object({
   name: zod.string(),
   category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  durationMinutes: zod.number(),
+  durationMinutes: zod.number().int(),
   status: zod.enum(["active", "completed", "failed"]),
   isPaused: zod.boolean(),
   description: zod.string().nullish(),
@@ -515,7 +515,7 @@ export const ListRewardsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number(),
+  goldCost: zod.number().int().min(0),
   category: zod.string(),
   timesRedeemed: zod.number(),
   createdAt: zod.string(),
@@ -528,7 +528,7 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem);
 export const CreateRewardBody = zod.object({
   name: zod.string().min(1).max(200),
   description: zod.string().max(2000).nullish(),
-  goldCost: zod.number().min(0),
+  goldCost: zod.number().int().min(0),
   category: zod.string().max(100),
 });
 
@@ -565,7 +565,7 @@ export const ListBossesResponseItem = zod.object({
   name: zod.string(),
   description: zod.string(),
   rank: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  xpThreshold: zod.number().min(0),
+  xpThreshold: zod.number().int().min(0),
   xpReward: zod.number(),
   goldReward: zod.number(),
   xpPenalty: zod.number(),

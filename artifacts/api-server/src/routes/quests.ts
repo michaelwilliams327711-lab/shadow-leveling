@@ -164,55 +164,52 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   const cutoffDate = new Date(now);
   cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 90);
 
-  const allActiveQuests = await db
-    .select()
-    .from(questsTable)
-    .where(and(eq(questsTable.status, "active"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
-
-  const allCompletedQuests = await db
-    .select()
-    .from(questsTable)
-    .where(and(eq(questsTable.status, "completed"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
-
-  const recurringToReset = allCompletedQuests.filter(q => {
-    if (q.isPaused) return false;
-    const recurrence = q.recurrence as RecurrenceConfig | null;
-    if (!recurrence || recurrence.type === "none") return false;
-    return isRecurringQuestDueToday(recurrence, q.completedAt, q.createdAt, localDate);
-  });
-
-  for (const quest of recurringToReset) {
-    await db.update(questsTable)
-      .set({ status: "active", completedAt: null })
-      .where(eq(questsTable.id, quest.id));
-  }
-
-  const overdueQuests = allActiveQuests.filter(q => {
-    if (q.isPaused) return false;
-    const recurrence = q.recurrence as RecurrenceConfig | null;
-    if (recurrence && recurrence.type !== "none") return false;
-    if (q.deadline && new Date(q.deadline) < now) {
-      return true;
-    }
-    return false;
-  });
-
-  const char = await getOrCreateCharacter();
-
-  if (overdueQuests.length === 0) {
-    return {
-      recurringReset: recurringToReset.length,
-      penaltiesApplied: 0,
-      penalties: [],
-      autoFailedQuests: [],
-      updatedChar: char,
-    };
-  }
-
   const penalties: PenaltyDetail[] = [];
   const failedQuestsSerialized: object[] = [];
 
-  const updatedChar = await db.transaction(async (tx) => {
+  const { updatedChar, recurringReset, penaltiesApplied } = await db.transaction(async (tx) => {
+    const allActiveQuests = await tx
+      .select()
+      .from(questsTable)
+      .where(and(eq(questsTable.status, "active"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
+
+    const allCompletedQuests = await tx
+      .select()
+      .from(questsTable)
+      .where(and(eq(questsTable.status, "completed"), isNull(questsTable.deletedAt), gte(questsTable.createdAt, cutoffDate)));
+
+    const recurringToReset = allCompletedQuests.filter(q => {
+      if (q.isPaused) return false;
+      const recurrence = q.recurrence as RecurrenceConfig | null;
+      if (!recurrence || recurrence.type === "none") return false;
+      return isRecurringQuestDueToday(recurrence, q.completedAt, q.createdAt, localDate);
+    });
+
+    for (const quest of recurringToReset) {
+      await tx.update(questsTable)
+        .set({ status: "active", completedAt: null })
+        .where(eq(questsTable.id, quest.id));
+    }
+
+    const overdueQuests = allActiveQuests.filter(q => {
+      if (q.isPaused) return false;
+      const recurrence = q.recurrence as RecurrenceConfig | null;
+      if (recurrence && recurrence.type !== "none") return false;
+      if (q.deadline && new Date(q.deadline) < now) {
+        return true;
+      }
+      return false;
+    });
+
+    const chars = await tx.select().from(characterTable).limit(1);
+    const char = chars.length > 0
+      ? chars[0]
+      : (await tx.insert(characterTable).values({ name: "Hunter" }).returning())[0];
+
+    if (overdueQuests.length === 0) {
+      return { updatedChar: char, recurringReset: recurringToReset.length, penaltiesApplied: 0 };
+    }
+
     let totalXpDeducted = 0;
     let totalGoldDeducted = 0;
     let runningFailStreak = char.failStreak;
@@ -326,14 +323,14 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       .where(eq(characterTable.id, char.id))
       .returning();
 
-    return updated;
+    return { updatedChar: updated, recurringReset: recurringToReset.length, penaltiesApplied: overdueQuests.length };
   });
 
   invalidateCharacterCache();
 
   return {
-    recurringReset: recurringToReset.length,
-    penaltiesApplied: overdueQuests.length,
+    recurringReset,
+    penaltiesApplied,
     penalties,
     autoFailedQuests: failedQuestsSerialized,
     updatedChar,

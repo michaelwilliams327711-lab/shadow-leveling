@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { pool } from "@workspace/db";
+import { pool, db, characterTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
 
@@ -35,7 +36,7 @@ function getLocalHour(): number {
   return new Date(Date.now() + offsetMs).getUTCHours();
 }
 
-let lastProcessedDate: string | null = null;
+let _memLastProcessedDate: string | null = null;
 
 cron.schedule("0 * * * *", async () => {
   const localHour = getLocalHour();
@@ -45,15 +46,32 @@ cron.schedule("0 * * * *", async () => {
     return;
   }
 
-  if (lastProcessedDate === localDate) {
+  if (_memLastProcessedDate === localDate) {
+    return;
+  }
+
+  const chars = await db
+    .select({ id: characterTable.id, lastCronDate: characterTable.lastCronDate })
+    .from(characterTable)
+    .limit(1);
+
+  if (chars.length > 0 && chars[0].lastCronDate === localDate) {
+    _memLastProcessedDate = localDate;
     logger.info(
       { localDate, localHour },
-      "Daily quest auto-refresh: already processed for today, skipping"
+      "Daily quest auto-refresh: already processed for today (DB check), skipping"
     );
     return;
   }
 
-  lastProcessedDate = localDate;
+  if (chars.length > 0) {
+    await db
+      .update(characterTable)
+      .set({ lastCronDate: localDate })
+      .where(eq(characterTable.id, chars[0].id));
+  }
+
+  _memLastProcessedDate = localDate;
   logger.info(
     { localDate, localHour },
     "Daily quest auto-refresh: local midnight window detected, running overdue processing"
@@ -66,7 +84,14 @@ cron.schedule("0 * * * *", async () => {
       "Daily quest auto-refresh complete"
     );
   } catch (err) {
-    lastProcessedDate = null;
+    if (chars.length > 0) {
+      await db
+        .update(characterTable)
+        .set({ lastCronDate: null })
+        .where(eq(characterTable.id, chars[0].id))
+        .catch(() => {});
+    }
+    _memLastProcessedDate = null;
     logger.error({ err, localDate }, "Daily quest auto-refresh: error during overdue processing");
   }
 });

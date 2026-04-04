@@ -5,6 +5,7 @@ import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Zap, CheckCircle2, Clock, Layers,
   GripVertical, Star, Lock, History, TrendingUp, Award,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -335,14 +336,14 @@ function VocationCard({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onEdit(vocation)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
+                className="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onDelete(vocation)}
                 disabled={isDeletePending}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -612,8 +613,27 @@ export default function VocationPaths() {
       </motion.div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary" />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-white/10 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <Skeleton className="h-11 w-11 rounded-md" />
+                  <Skeleton className="h-11 w-11 rounded-md" />
+                </div>
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+              <div className="grid grid-cols-3 gap-3">
+                <Skeleton className="h-14 rounded-lg" />
+                <Skeleton className="h-14 rounded-lg" />
+                <Skeleton className="h-14 rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

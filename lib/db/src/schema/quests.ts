@@ -43,6 +43,7 @@ export const questLogTable = pgTable("quest_log", {
 
 export const penaltyLogTable = pgTable("penalty_log", {
   id: serial("id").primaryKey(),
+  characterId: integer("character_id"),
   type: text("type").notNull(),
   description: text("description").notNull(),
   xpDeducted: integer("xp_deducted").notNull().default(0),
@@ -50,6 +51,7 @@ export const penaltyLogTable = pgTable("penalty_log", {
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
 }, (table) => [
   index("penalty_log_occurred_at_idx").on(table.occurredAt),
+  index("penalty_log_character_id_idx").on(table.characterId),
 ]);
 
 export const questDailyLogTable = pgTable("quest_daily_log", {

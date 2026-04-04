@@ -31,6 +31,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -262,7 +263,7 @@ const createSchema = z.object({
   category: z.string().min(1, "Category is required"),
   statBoost: z.nativeEnum(StatBoost).optional(),
   difficulty: z.nativeEnum(QuestDifficulty),
-  durationMinutes: z.coerce.number().min(1),
+  durationMinutes: z.coerce.number().int().min(1),
   deadline: z.string().optional(),
   targetAmount: z.coerce.number().int().min(1).optional(),
   amountUnit: z.string().optional(),
@@ -275,7 +276,7 @@ const editSchema = z.object({
   category: z.string().min(1).optional(),
   statBoost: z.nativeEnum(StatBoost).optional().nullable(),
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
-  durationMinutes: z.coerce.number().min(1).optional(),
+  durationMinutes: z.coerce.number().int().min(1).optional(),
   targetAmount: z.coerce.number().int().min(1).optional().nullable(),
   amountUnit: z.string().optional().nullable(),
   recurrence: recurrenceSchema.optional().nullable(),
@@ -1531,7 +1532,37 @@ export default function Quests() {
     },
   };
 
-  if (isLoading) return <div className="p-8">Loading System Data...</div>;
+  if (isLoading) return (
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Skeleton className="h-10 w-10 rounded-lg" />
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+      </div>
+      <Skeleton className="h-12 w-full rounded-xl" />
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-white/10 p-5 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-3 w-72" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-md ml-4" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-11 w-11 rounded-md" />
+              <Skeleton className="h-11 w-11 rounded-md" />
+              <Skeleton className="h-11 w-24 rounded-md" />
+              <Skeleton className="h-11 w-24 rounded-md" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
@@ -2112,7 +2143,7 @@ export default function Quests() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
+                                  className="h-11 w-11 border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 hover:bg-primary/10"
                                   onClick={() => setEditingQuest(quest)}
                                   title="Edit quest"
                                 >
@@ -2178,7 +2209,7 @@ export default function Quests() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+                                className="h-11 w-11 border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10"
                                 onClick={() => onDelete(quest.id)}
                                 title="Delete quest"
                               >

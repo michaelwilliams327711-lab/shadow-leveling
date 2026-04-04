@@ -19,7 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useGetCorruptionHistory } from "@workspace/api-client-react";
+import { useGetCorruptionHistory, customFetch } from "@workspace/api-client-react";
 
 interface GraveyardEntry {
   date: string;
@@ -111,11 +111,8 @@ function ShadowTooltip({
 export default function ShadowDashboard() {
   const { data: apiData, isLoading, isError, refetch } = useQuery<ApiDashboardStats>({
     queryKey: ["dashboard-stats"],
-    queryFn: async ({ signal }) => {
-      const res = await fetch("/api/dashboard-stats", { signal });
-      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
-      return res.json();
-    },
+    queryFn: ({ signal }) =>
+      customFetch<ApiDashboardStats>("/api/dashboard-stats", { signal }),
     staleTime: 5 * 60 * 1000,
   });
 
