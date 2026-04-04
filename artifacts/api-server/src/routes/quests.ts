@@ -668,6 +668,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
+    if (quest.status !== "active") return res.status(400).json({ error: "Quest is not active" });
 
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);
@@ -708,27 +709,33 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 
     const leveledUp = newLevel > char.level;
 
-    const [updatedChar] = await db.update(characterTable)
-      .set({
-        xp: newXp,
-        level: newLevel,
-        gold: char.gold + goldAwarded,
-        strength: statUpdates.strength,
-        intellect: statUpdates.intellect,
-        endurance: statUpdates.endurance,
-        agility: statUpdates.agility,
-        discipline: statUpdates.discipline,
-        totalQuestsCompleted: char.totalQuestsCompleted + 1,
-        failStreak: 0,
-        penaltyMultiplier: 1.0,
-      })
-      .where(eq(characterTable.id, char.id))
-      .returning();
-    invalidateCharacterCache();
+    const localMidnight = new Date(today + "T00:00:00.000Z");
 
-    await db.update(questsTable)
-      .set({ status: "completed", completedAt: new Date() })
-      .where(eq(questsTable.id, id));
+    const [updatedChar] = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(characterTable)
+        .set({
+          xp: newXp,
+          level: newLevel,
+          gold: char.gold + goldAwarded,
+          strength: statUpdates.strength,
+          intellect: statUpdates.intellect,
+          endurance: statUpdates.endurance,
+          agility: statUpdates.agility,
+          discipline: statUpdates.discipline,
+          totalQuestsCompleted: char.totalQuestsCompleted + 1,
+          failStreak: 0,
+          penaltyMultiplier: 1.0,
+        })
+        .where(eq(characterTable.id, char.id))
+        .returning();
+
+      await tx.update(questsTable)
+        .set({ status: "completed", completedAt: localMidnight })
+        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")));
+
+      return [updated];
+    });
+    invalidateCharacterCache();
 
     await db.insert(questLogTable).values({
       questName: quest.name,
@@ -795,6 +802,7 @@ router.post("/quests/:id/fail", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid quest ID" });
     const [quest] = await db.select().from(questsTable).where(eq(questsTable.id, id));
     if (!quest || quest.deletedAt) return res.status(404).json({ error: "Quest not found" });
+    if (quest.status !== "active") return res.status(400).json({ error: "Quest is not active" });
 
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);
@@ -823,26 +831,30 @@ router.post("/quests/:id/fail", async (req, res) => {
     statUpdates[statField] = Math.max(1, statUpdates[statField] - catStatPenalty);
     statUpdates.discipline = Math.max(1, statUpdates.discipline - discPenalty);
 
-    const [updatedChar] = await db.update(characterTable)
-      .set({
-        xp: Math.max(0, char.xp - xpDeducted),
-        gold: Math.max(0, char.gold - goldDeducted),
-        strength: statUpdates.strength,
-        intellect: statUpdates.intellect,
-        endurance: statUpdates.endurance,
-        agility: statUpdates.agility,
-        discipline: statUpdates.discipline,
-        totalQuestsFailed: char.totalQuestsFailed + 1,
-        failStreak: newFailStreak,
-        penaltyMultiplier: xpGoldMult,
-      })
-      .where(eq(characterTable.id, char.id))
-      .returning();
-    invalidateCharacterCache();
+    const [updatedChar] = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(characterTable)
+        .set({
+          xp: Math.max(0, char.xp - xpDeducted),
+          gold: Math.max(0, char.gold - goldDeducted),
+          strength: statUpdates.strength,
+          intellect: statUpdates.intellect,
+          endurance: statUpdates.endurance,
+          agility: statUpdates.agility,
+          discipline: statUpdates.discipline,
+          totalQuestsFailed: char.totalQuestsFailed + 1,
+          failStreak: newFailStreak,
+          penaltyMultiplier: xpGoldMult,
+        })
+        .where(eq(characterTable.id, char.id))
+        .returning();
 
-    await db.update(questsTable)
-      .set({ status: "failed" })
-      .where(eq(questsTable.id, id));
+      await tx.update(questsTable)
+        .set({ status: "failed" })
+        .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")));
+
+      return [updated];
+    });
+    invalidateCharacterCache();
 
     await db.insert(questLogTable).values({
       questName: quest.name,

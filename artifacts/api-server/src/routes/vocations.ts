@@ -34,6 +34,9 @@ function serializeVocation(v: typeof vocationsTable.$inferSelect) {
 function parseCreateVocationBody(body: Record<string, unknown>) {
   const name = typeof body.name === "string" ? body.name.trim() : null;
   if (!name || name.length === 0 || name.length > 100) throw new Error("name must be a non-empty string (max 100 chars)");
+  if (typeof body.description === "string" && body.description.length > 2000) {
+    throw new Error("description must be 2000 characters or fewer");
+  }
   const description = typeof body.description === "string" ? body.description : undefined;
   const gateThreshold = typeof body.gateThreshold === "number" && body.gateThreshold > 0 ? Math.floor(body.gateThreshold) : 20;
   const milestoneQuestDescription = typeof body.milestoneQuestDescription === "string" ? body.milestoneQuestDescription : undefined;
@@ -51,7 +54,12 @@ function parseUpdateVocationBody(body: Record<string, unknown>) {
     if (!name || name.length === 0 || name.length > 100) throw new Error("name must be a non-empty string (max 100 chars)");
     result.name = name;
   }
-  if ("description" in body) result.description = body.description ?? null;
+  if ("description" in body) {
+    if (typeof body.description === "string" && body.description.length > 2000) {
+      throw new Error("description must be 2000 characters or fewer");
+    }
+    result.description = body.description ?? null;
+  }
   if (body.gateThreshold !== undefined) {
     const gt = typeof body.gateThreshold === "number" ? Math.floor(body.gateThreshold) : null;
     if (!gt || gt <= 0) throw new Error("gateThreshold must be a positive integer");

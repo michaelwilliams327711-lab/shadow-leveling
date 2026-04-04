@@ -71,7 +71,7 @@ export default function Dashboard() {
   const { data: character, isLoading: charLoading } = useGetCharacter();
   const { data: heatmap } = useGetActivityHeatmap();
   const { data: rngEvent } = useGetDailyRngEvent();
-  const { data: questLogRaw } = useGetQuestLog();
+  const { data: questLogRaw } = useGetQuestLog({ query: { refetchInterval: 60_000 } });
   const { data: badHabits } = useListBadHabits();
   const { data: corruptionConfigData } = useGetCorruptionConfig();
   const recordCleanDayMutation = useRecordCleanDay();

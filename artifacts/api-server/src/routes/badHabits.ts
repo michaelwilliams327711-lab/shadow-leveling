@@ -204,17 +204,17 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
 
     const char = await getOrCreateCharacter();
     const newCorruption = Math.min(100, char.corruption + corruptionDelta);
-    const newXp = Math.max(0, char.xp - xpPenalty);
 
     let newLevel = char.level;
-    let leftoverXp = newXp;
+    let leftoverXp = char.xp - xpPenalty;
     while (newLevel > 1 && leftoverXp < 0) {
       newLevel--;
       leftoverXp += XP_PER_LEVEL(newLevel);
     }
+    const newXp = Math.max(0, leftoverXp);
 
     await db.update(characterTable)
-      .set({ corruption: newCorruption, xp: leftoverXp, level: newLevel })
+      .set({ corruption: newCorruption, xp: newXp, level: newLevel })
       .where(eq(characterTable.id, char.id));
     invalidateCharacterCache();
 

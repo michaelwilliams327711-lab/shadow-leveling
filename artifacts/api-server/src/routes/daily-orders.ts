@@ -323,9 +323,10 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
     let finalChar = char;
 
     if (pendingBox.type === "gold" && pendingBox.goldBonus && pendingBox.goldBonus > 0) {
+      const goldBonus = pendingBox.goldBonus;
       const [withGold] = await db
         .update(characterTable)
-        .set({ gold: char.gold + pendingBox.goldBonus })
+        .set({ gold: sql`${characterTable.gold} + ${goldBonus}` })
         .where(eq(characterTable.id, char.id))
         .returning();
       finalChar = withGold;
