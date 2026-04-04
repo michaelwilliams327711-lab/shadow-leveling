@@ -126,19 +126,21 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       newXp = Math.max(0, char.xp - xpPenalty);
     }
 
-    const [updatedChar] = await db.update(characterTable)
-      .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
-      .where(eq(characterTable.id, char.id))
-      .returning();
+    const updatedChar = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(characterTable)
+        .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
+        .where(eq(characterTable.id, char.id))
+        .returning();
+      await tx.update(bossesTable)
+        .set(
+          victory
+            ? { isDefeated: true, defeatRecordedAt: new Date() }
+            : { failureRecordedAt: new Date() }
+        )
+        .where(eq(bossesTable.id, id));
+      return updated;
+    });
     invalidateCharacterCache();
-
-    await db.update(bossesTable)
-      .set(
-        victory
-          ? { isDefeated: true, defeatRecordedAt: new Date() }
-          : { failureRecordedAt: new Date() }
-      )
-      .where(eq(bossesTable.id, id));
 
     await db.insert(questLogTable).values({
       questName: boss.name,

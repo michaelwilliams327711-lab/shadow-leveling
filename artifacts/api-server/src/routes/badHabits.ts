@@ -213,17 +213,18 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
     }
     const newXp = Math.max(0, leftoverXp);
 
-    await db.update(characterTable)
-      .set({ corruption: newCorruption, xp: newXp, level: newLevel })
-      .where(eq(characterTable.id, char.id));
-    invalidateCharacterCache();
-
-    await db.insert(badHabitLogTable).values({
-      habitId: id,
-      date: todayStr,
-      type: "relapse",
-      corruptionDelta,
+    await db.transaction(async (tx) => {
+      await tx.update(characterTable)
+        .set({ corruption: newCorruption, xp: newXp, level: newLevel })
+        .where(eq(characterTable.id, char.id));
+      await tx.insert(badHabitLogTable).values({
+        habitId: id,
+        date: todayStr,
+        type: "relapse",
+        corruptionDelta,
+      });
     });
+    invalidateCharacterCache();
 
     res.json({
       success: true,

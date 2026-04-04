@@ -77,7 +77,7 @@ function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date): b
 router.get("/planner/daily", async (req, res) => {
   try {
     const today = getLocalDateStr(req);
-    const todayDate = new Date(today + "T00:00:00");
+    const todayDate = new Date(today + "T00:00:00.000Z");
 
     const dayWindowStart = new Date(todayDate);
     dayWindowStart.setDate(dayWindowStart.getDate() - 1);
@@ -166,9 +166,9 @@ router.get("/planner/daily", async (req, res) => {
 router.get("/planner/weekly", async (req, res) => {
   try {
     const today = getLocalDateStr(req);
-    const todayDate = new Date(today + "T00:00:00");
+    const todayDate = new Date(today + "T00:00:00.000Z");
 
-    const dayOfWeek = todayDate.getDay();
+    const dayOfWeek = todayDate.getUTCDay();
     const weekStart = addDays(todayDate, -dayOfWeek);
     const weekEnd = addDays(weekStart, 6);
 
@@ -234,13 +234,13 @@ router.get("/planner/weekly", async (req, res) => {
 router.get("/planner/monthly", async (req, res) => {
   try {
     const today = getLocalDateStr(req);
-    const todayDate = new Date(today + "T00:00:00");
+    const todayDate = new Date(today + "T00:00:00.000Z");
 
-    const year = todayDate.getFullYear();
-    const month = todayDate.getMonth();
+    const year = todayDate.getUTCFullYear();
+    const month = todayDate.getUTCMonth();
 
-    const monthStart = new Date(year, month, 1);
-    const monthEnd = new Date(year, month + 1, 0);
+    const monthStart = new Date(Date.UTC(year, month, 1));
+    const monthEnd = new Date(Date.UTC(year, month + 1, 0));
 
     const monthWindowStart = addDays(monthStart, -1);
     const monthWindowEnd = addDays(monthEnd, 1);
@@ -293,7 +293,7 @@ router.get("/planner/monthly", async (req, res) => {
       byAction.set(entry.actionType, Number(entry.count));
     }
 
-    const daysInMonth = monthEnd.getDate();
+    const daysInMonth = monthEnd.getUTCDate();
     const days: DayData[] = [];
 
     const upcomingByDate = new Map<string, (typeof questsTable.$inferSelect)[]>();
@@ -313,9 +313,9 @@ router.get("/planner/monthly", async (req, res) => {
           case "daily": {
             const interval = recurrence.intervalDays ?? 1;
             const base = new Date(q.completedAt ?? q.createdAt);
-            base.setHours(0, 0, 0, 0);
+            base.setUTCHours(0, 0, 0, 0);
             for (let d = 1; d <= daysInMonth; d++) {
-              const target = new Date(year, month, d);
+              const target = new Date(Date.UTC(year, month, d));
               const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
               if (diffDays > 0 && diffDays % interval === 0) {
                 addToUpcoming(dateToStr(target), q);
@@ -327,8 +327,8 @@ router.get("/planner/monthly", async (req, res) => {
             const dows = recurrence.daysOfWeek ?? [];
             if (dows.length > 0) {
               for (let d = 1; d <= daysInMonth; d++) {
-                const target = new Date(year, month, d);
-                if (dows.includes(target.getDay())) {
+                const target = new Date(Date.UTC(year, month, d));
+                if (dows.includes(target.getUTCDay())) {
                   addToUpcoming(dateToStr(target), q);
                 }
               }
@@ -338,7 +338,7 @@ router.get("/planner/monthly", async (req, res) => {
           case "monthly": {
             const dom = recurrence.dayOfMonth ?? 1;
             if (dom <= daysInMonth) {
-              addToUpcoming(dateToStr(new Date(year, month, dom)), q);
+              addToUpcoming(dateToStr(new Date(Date.UTC(year, month, dom))), q);
             }
             break;
           }
@@ -346,7 +346,7 @@ router.get("/planner/monthly", async (req, res) => {
             const m = recurrence.month ?? 1;
             const dy = recurrence.day ?? 1;
             if (m === month + 1 && dy <= daysInMonth) {
-              addToUpcoming(dateToStr(new Date(year, month, dy)), q);
+              addToUpcoming(dateToStr(new Date(Date.UTC(year, month, dy))), q);
             }
             break;
           }
@@ -370,7 +370,7 @@ router.get("/planner/monthly", async (req, res) => {
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const dayDate = new Date(year, month, d);
+      const dayDate = new Date(Date.UTC(year, month, d));
       const dayStr = dateToStr(dayDate);
 
       const byAction = questLogByDate.get(dayStr);
@@ -405,11 +405,11 @@ router.get("/planner/monthly", async (req, res) => {
 router.get("/planner/yearly", async (req, res) => {
   try {
     const today = getLocalDateStr(req);
-    const todayDate = new Date(today + "T00:00:00");
-    const year = todayDate.getFullYear();
+    const todayDate = new Date(today + "T00:00:00.000Z");
+    const year = todayDate.getUTCFullYear();
 
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
 
     const questLogEntries = await db
       .select({

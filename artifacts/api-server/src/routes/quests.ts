@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray } from "drizzle-orm";
+import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
 import {
@@ -716,13 +716,13 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         .set({
           xp: newXp,
           level: newLevel,
-          gold: char.gold + goldAwarded,
+          gold: sql`${characterTable.gold} + ${goldAwarded}`,
           strength: statUpdates.strength,
           intellect: statUpdates.intellect,
           endurance: statUpdates.endurance,
           agility: statUpdates.agility,
           discipline: statUpdates.discipline,
-          totalQuestsCompleted: char.totalQuestsCompleted + 1,
+          totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           failStreak: 0,
           penaltyMultiplier: 1.0,
         })
@@ -834,14 +834,14 @@ router.post("/quests/:id/fail", async (req, res) => {
     const [updatedChar] = await db.transaction(async (tx) => {
       const [updated] = await tx.update(characterTable)
         .set({
-          xp: Math.max(0, char.xp - xpDeducted),
-          gold: Math.max(0, char.gold - goldDeducted),
+          xp: sql`GREATEST(0, ${characterTable.xp} - ${xpDeducted})`,
+          gold: sql`GREATEST(0, ${characterTable.gold} - ${goldDeducted})`,
           strength: statUpdates.strength,
           intellect: statUpdates.intellect,
           endurance: statUpdates.endurance,
           agility: statUpdates.agility,
           discipline: statUpdates.discipline,
-          totalQuestsFailed: char.totalQuestsFailed + 1,
+          totalQuestsFailed: sql`${characterTable.totalQuestsFailed} + 1`,
           failStreak: newFailStreak,
           penaltyMultiplier: xpGoldMult,
         })
