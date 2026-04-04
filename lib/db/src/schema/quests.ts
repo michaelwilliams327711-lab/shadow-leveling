@@ -48,7 +48,9 @@ export const penaltyLogTable = pgTable("penalty_log", {
   xpDeducted: integer("xp_deducted").notNull().default(0),
   goldDeducted: integer("gold_deducted").notNull().default(0),
   occurredAt: timestamp("occurred_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("penalty_log_occurred_at_idx").on(table.occurredAt),
+]);
 
 export const questDailyLogTable = pgTable("quest_daily_log", {
   id: serial("id").primaryKey(),
@@ -58,6 +60,7 @@ export const questDailyLogTable = pgTable("quest_daily_log", {
   isCompleted: boolean("is_completed").notNull().default(false),
 }, (table) => [
   unique("quest_daily_log_quest_id_date_unique").on(table.questId, table.date),
+  index("quest_daily_log_quest_id_idx").on(table.questId),
 ]);
 
 export const dailyOrdersTable = pgTable("daily_orders", {

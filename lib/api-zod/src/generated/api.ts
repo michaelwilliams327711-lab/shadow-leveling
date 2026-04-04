@@ -164,7 +164,7 @@ export const CreateQuestBody = zod.object({
   name: zod.string().min(1).max(200),
   category: zod.string().max(100),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  durationMinutes: zod.number().min(0),
+  durationMinutes: zod.number().int().min(0),
   description: zod.string().max(2000).nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
@@ -235,7 +235,7 @@ export const UpdateQuestBody = zod.object({
   difficulty: zod
     .enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"])
     .optional(),
-  durationMinutes: zod.number().min(0).optional(),
+  durationMinutes: zod.number().int().min(0).optional(),
   isPaused: zod.boolean().optional(),
   description: zod.string().max(2000).nullish(),
   statBoost: zod

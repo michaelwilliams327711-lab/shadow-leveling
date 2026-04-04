@@ -23,6 +23,7 @@ export const characterTable = pgTable("character", {
   failStreak: integer("fail_streak").notNull().default(0),
   penaltyMultiplier: real("penalty_multiplier").notNull().default(1.0),
   corruption: integer("corruption").notNull().default(0),
+  lastCronDate: text("last_cron_date"),
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });
