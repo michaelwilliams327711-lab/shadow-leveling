@@ -205,8 +205,10 @@ router.patch("/vocations/:id", async (req, res) => {
 router.delete("/vocations/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await db.update(questsTable).set({ vocationId: null }).where(eq(questsTable.vocationId, id));
-    await db.update(vocationsTable).set({ deletedAt: new Date() }).where(eq(vocationsTable.id, id));
+    await db.transaction(async (tx) => {
+      await tx.update(questsTable).set({ vocationId: null }).where(eq(questsTable.vocationId, id));
+      await tx.update(vocationsTable).set({ deletedAt: new Date() }).where(eq(vocationsTable.id, id));
+    });
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting vocation");

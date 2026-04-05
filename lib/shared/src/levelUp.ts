@@ -1,7 +1,7 @@
 export const MAX_LEVELUP_ITERATIONS = 100;
 
 export function XP_PER_LEVEL(level: number): number {
-  return Math.floor(100 * Math.pow(level, 1.5));
+  return Math.floor(100 * Math.pow(Math.max(1, level), 1.5));
 }
 
 export function totalXpEarned(xp: number, level: number): number {

@@ -194,6 +194,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
     const { id } = req.params;
     const habit = await db.select().from(badHabitsTable).where(eq(badHabitsTable.id, id)).limit(1);
     if (!habit.length || habit[0].deletedAt) return res.status(404).json({ error: "Not found" });
+    if (habit[0].isActive === 0) return res.status(400).json({ error: "Cannot relapse on an archived habit" });
 
     const h = habit[0];
     const severity = h.severity as HabitSeverity;
