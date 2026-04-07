@@ -233,6 +233,18 @@ export default function BossArena() {
                       </div>
                     </InfoTooltip>
                     <InfoTooltip
+                      what="Victory Chance — your calculated odds of winning based on your current streak and level."
+                      fn={`Formula: min(85%, 40% + streak×2% + level×1%). Your streak is ${character?.streak ?? 0}, level is ${character?.level ?? 1}.`}
+                      usage="Higher streaks and levels improve your odds. Maximises at 85% — there is always risk."
+                    >
+                      <div className="text-center space-y-1">
+                        <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Win Chance</p>
+                        <p className="text-yellow-400 font-stat font-bold text-lg">
+                          ~{Math.round(Math.min(0.85, 0.4 + (character?.streak ?? 0) * 0.02 + (character?.level ?? 1) * 0.01) * 100)}%
+                        </p>
+                      </div>
+                    </InfoTooltip>
+                    <InfoTooltip
                       what="Defeat Penalty — what you lose if you fail."
                       fn={`Failing this boss costs ${boss.xpPenalty} XP and randomly reduces one or more character stats.`}
                       usage="The penalty is applied automatically when you click ENTER DUNGEON and later admit defeat. This risk/reward mechanic makes victories meaningful."

@@ -80,7 +80,15 @@ export default function Shop() {
         });
         setTimeout(() => setPurchasingId(null), 1000);
       },
-      onError: () => setPurchasingId(null),
+      onError: (err) => {
+        setPurchasingId(null);
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 402) {
+          toast({ title: "Not enough Gold", description: "Complete more quests to earn Gold, Hunter.", variant: "destructive" });
+        } else {
+          toast({ title: "Purchase Failed", description: "An error occurred. Please try again.", variant: "destructive" });
+        }
+      },
     });
   };
 

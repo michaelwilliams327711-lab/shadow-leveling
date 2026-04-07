@@ -86,7 +86,7 @@ router.post("/shop/rewards/:id/purchase", async (req, res) => {
     }
 
     if (insufficientGold) {
-      return res.json({
+      return res.status(402).json({
         success: false,
         message: "Insufficient Gold. Complete more quests, Hunter.",
         goldSpent: 0,

@@ -179,7 +179,9 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     // stat column. This prevents concurrent writes from clobbering a value that was
     // computed from a stale in-memory snapshot.
     // F-006: totalQuestsCompleted also increments atomically via SQL.
-    const [updatedOrder, updatedChar] = await db.transaction(async (tx) => {
+    // P-003: completedCount is queried INSIDE the transaction so the count reflects
+    // the committed row before any concurrent writer can interfere.
+    const [updatedOrder, updatedChar, completedCount] = await db.transaction(async (tx) => {
       const orderResult = await tx
         .update(dailyOrdersTable)
         .set({ completed: true, completedAt: new Date() })
@@ -206,7 +208,19 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
         .where(eq(characterTable.id, char.id))
         .returning();
 
-      return [orderResult[0], updated] as const;
+      const completedTodayCount = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(dailyOrdersTable)
+        .where(
+          and(
+            eq(dailyOrdersTable.characterId, char.id),
+            eq(dailyOrdersTable.date, today),
+            eq(dailyOrdersTable.completed, true)
+          )
+        );
+      const count = Number(completedTodayCount[0]?.count ?? 0);
+
+      return [orderResult[0], updated, count] as const;
     });
 
     invalidateCharacterCache();
@@ -224,18 +238,6 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     });
 
     await upsertActivity(today);
-
-    const completedTodayCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(dailyOrdersTable)
-      .where(
-        and(
-          eq(dailyOrdersTable.characterId, char.id),
-          eq(dailyOrdersTable.date, today),
-          eq(dailyOrdersTable.completed, true)
-        )
-      );
-    const completedCount = Number(completedTodayCount[0]?.count ?? 0);
 
     let pendingHiddenBox: { id: number; type: string; goldBonus: number | null; statBoost: number | null; stat: string | null } | null = null;
 
