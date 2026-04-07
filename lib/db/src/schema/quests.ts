@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { characterTable } from "./character";
 import { vocationsTable } from "./vocations";
 
 export const questsTable = pgTable("quests", {
@@ -22,7 +23,7 @@ export const questsTable = pgTable("quests", {
   vocationId: text("vocation_id").references(() => vocationsTable.id, { onDelete: "set null" }),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
-  index("quests_status_deleted_at_idx").on(table.status, table.deletedAt),
+  index("quests_status_deleted_at_created_at_idx").on(table.status, table.deletedAt, table.createdAt),
 ]);
 
 export const questLogTable = pgTable("quest_log", {
@@ -39,11 +40,12 @@ export const questLogTable = pgTable("quest_log", {
   statCategory: text("stat_category"),
 }, (table) => [
   index("quest_log_occurred_at_idx").on(table.occurredAt),
+  index("quest_log_action_type_idx").on(table.actionType),
 ]);
 
 export const penaltyLogTable = pgTable("penalty_log", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id"),
+  characterId: integer("character_id").references(() => characterTable.id, { onDelete: "cascade" }),
   type: text("type").notNull(),
   description: text("description").notNull(),
   xpDeducted: integer("xp_deducted").notNull().default(0),

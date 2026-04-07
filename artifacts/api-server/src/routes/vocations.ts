@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { vocationsTable, vocationLogTable, questsTable } from "@workspace/db";
 import { eq, sql, desc, isNull, and } from "drizzle-orm";
+import { MAX_LEVELUP_ITERATIONS } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -301,9 +302,8 @@ export async function awardVocXp(vocationId: string, difficulty: string): Promis
   let newLevel = vocation.currentLevel;
   let gateTriggered = false;
 
-  const MAX_ITER = 50;
   let iter = 0;
-  while (newXp >= VOC_XP_PER_LEVEL(newLevel) && iter < MAX_ITER) {
+  while (newXp >= VOC_XP_PER_LEVEL(newLevel) && iter < MAX_LEVELUP_ITERATIONS) {
     newXp -= VOC_XP_PER_LEVEL(newLevel);
     newLevel += 1;
     iter++;

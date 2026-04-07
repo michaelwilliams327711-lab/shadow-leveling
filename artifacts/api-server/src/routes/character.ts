@@ -14,20 +14,15 @@ const router: IRouter = Router();
 
 type CharacterRow = typeof characterTable.$inferSelect;
 
-let _characterCache: { char: CharacterRow; expiresAt: number } | null = null;
-
 export function invalidateCharacterCache(): void {
-  _characterCache = null;
+  // No-op: in-memory cache removed (P-002). PostgreSQL PK lookups are ~1ms
+  // and stateless reads ensure cross-device consistency with no TTL lag.
 }
 
 // F-004: Serialize character init with a PostgreSQL advisory lock to prevent
 // concurrent INSERT races on the very first request. Key 9001 is an arbitrary
 // stable application-level mutex — any fixed bigint works.
 export async function getOrCreateCharacter(): Promise<CharacterRow> {
-  const now = Date.now();
-  if (_characterCache && _characterCache.expiresAt > now) {
-    return _characterCache.char;
-  }
   const char = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(9001)`);
     const rows = await tx.select().from(characterTable).limit(1);
@@ -35,7 +30,6 @@ export async function getOrCreateCharacter(): Promise<CharacterRow> {
     const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();
     return created;
   });
-  _characterCache = { char, expiresAt: now + 5_000 };
   return char;
 }
 
