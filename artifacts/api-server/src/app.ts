@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { globalLimiter } from "./lib/rate-limiters.js";
+import { validateDateHeader } from "@workspace/shared";
 
 const app: Express = express();
 
@@ -38,8 +39,21 @@ app.use(
   }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
+  const header = req.headers["x-local-date"];
+  const headerVal = Array.isArray(header) ? header[0] : header;
+  if (headerVal) {
+    const result = validateDateHeader(headerVal);
+    if (!result.valid) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+  }
+  next();
+});
 
 function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const apiSecretKey = process.env.API_SECRET_KEY;

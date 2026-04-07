@@ -163,15 +163,6 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
 
     const statCategory = isValidStatField(order.statCategory) ? order.statCategory : "discipline";
 
-    const statUpdates: Record<string, number> = {
-      strength: char.strength,
-      intellect: char.intellect,
-      endurance: char.endurance,
-      agility: char.agility,
-      discipline: char.discipline,
-    };
-    statUpdates[statCategory] = (statUpdates[statCategory] ?? 10) + DAILY_ORDER_STAT_GAIN;
-
     const multiplier = char.multiplier ?? 1.0;
     const activeEvent = getActiveRngEvent(today);
     const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
@@ -184,6 +175,10 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       ? { failStreak: 0, penaltyMultiplier: 1.0 }
       : {};
 
+    // F-001: Each stat uses a SQL increment expression targeting only the relevant
+    // stat column. This prevents concurrent writes from clobbering a value that was
+    // computed from a stale in-memory snapshot.
+    // F-006: totalQuestsCompleted also increments atomically via SQL.
     const [updatedOrder, updatedChar] = await db.transaction(async (tx) => {
       const orderResult = await tx
         .update(dailyOrdersTable)
@@ -200,12 +195,12 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
         .set({
           xp: newXp,
           level: newLevel,
-          strength: statUpdates.strength,
-          intellect: statUpdates.intellect,
-          endurance: statUpdates.endurance,
-          agility: statUpdates.agility,
-          discipline: statUpdates.discipline,
-          totalQuestsCompleted: char.totalQuestsCompleted + 1,
+          strength:   sql`${characterTable.strength}   + ${statCategory === "strength"   ? DAILY_ORDER_STAT_GAIN : 0}`,
+          intellect:  sql`${characterTable.intellect}  + ${statCategory === "intellect"  ? DAILY_ORDER_STAT_GAIN : 0}`,
+          endurance:  sql`${characterTable.endurance}  + ${statCategory === "endurance"  ? DAILY_ORDER_STAT_GAIN : 0}`,
+          agility:    sql`${characterTable.agility}    + ${statCategory === "agility"    ? DAILY_ORDER_STAT_GAIN : 0}`,
+          discipline: sql`${characterTable.discipline} + ${statCategory === "discipline" ? DAILY_ORDER_STAT_GAIN : 0}`,
+          totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           ...streakResetFields,
         })
         .where(eq(characterTable.id, char.id))
@@ -355,23 +350,18 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
       });
     } else if (pendingBox.type === "stat_boost" && pendingBox.stat && pendingBox.statBoost && pendingBox.statBoost > 0) {
       const stat = isValidStatField(pendingBox.stat) ? pendingBox.stat : "discipline";
-      const boostUpdates: Record<string, number> = {
-        strength: char.strength,
-        intellect: char.intellect,
-        endurance: char.endurance,
-        agility: char.agility,
-        discipline: char.discipline,
-      };
-      boostUpdates[stat] = (boostUpdates[stat] ?? 10) + pendingBox.statBoost;
+      const boost = pendingBox.statBoost;
 
+      // F-002: Single-stat SQL increment — no absolute-value object needed.
+      // Only the target stat column is updated; others are left untouched.
       const [withBoost] = await db
         .update(characterTable)
         .set({
-          strength: boostUpdates.strength,
-          intellect: boostUpdates.intellect,
-          endurance: boostUpdates.endurance,
-          agility: boostUpdates.agility,
-          discipline: boostUpdates.discipline,
+          strength:   sql`${characterTable.strength}   + ${stat === "strength"   ? boost : 0}`,
+          intellect:  sql`${characterTable.intellect}  + ${stat === "intellect"  ? boost : 0}`,
+          endurance:  sql`${characterTable.endurance}  + ${stat === "endurance"  ? boost : 0}`,
+          agility:    sql`${characterTable.agility}    + ${stat === "agility"    ? boost : 0}`,
+          discipline: sql`${characterTable.discipline} + ${stat === "discipline" ? boost : 0}`,
         })
         .where(eq(characterTable.id, char.id))
         .returning();
@@ -463,15 +453,17 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
 
       if (deleted.length === 0) return;
 
+      // F-007: Use GREATEST(1, ...) — stats must never fall to 0.
+      // All other penalty handlers (quests fail/overdue) use the same floor of 1.
       await tx
         .update(characterTable)
         .set({
-          xp: sql`GREATEST(0, ${characterTable.xp} - ${totalXpDeducted})`,
-          strength: sql`GREATEST(0, ${characterTable.strength} - ${statDeductions.strength})`,
-          agility: sql`GREATEST(0, ${characterTable.agility} - ${statDeductions.agility})`,
-          endurance: sql`GREATEST(0, ${characterTable.endurance} - ${statDeductions.endurance})`,
-          intellect: sql`GREATEST(0, ${characterTable.intellect} - ${statDeductions.intellect})`,
-          discipline: sql`GREATEST(0, ${characterTable.discipline} - ${statDeductions.discipline})`,
+          xp:         sql`GREATEST(0, ${characterTable.xp}         - ${totalXpDeducted})`,
+          strength:   sql`GREATEST(1, ${characterTable.strength}   - ${statDeductions.strength})`,
+          agility:    sql`GREATEST(1, ${characterTable.agility}    - ${statDeductions.agility})`,
+          endurance:  sql`GREATEST(1, ${characterTable.endurance}  - ${statDeductions.endurance})`,
+          intellect:  sql`GREATEST(1, ${characterTable.intellect}  - ${statDeductions.intellect})`,
+          discipline: sql`GREATEST(1, ${characterTable.discipline} - ${statDeductions.discipline})`,
         })
         .where(eq(characterTable.id, char.id));
     });

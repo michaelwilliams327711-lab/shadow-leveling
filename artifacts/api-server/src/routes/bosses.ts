@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { bossesTable, characterTable, questLogTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
@@ -75,15 +75,6 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const winChance = Math.min(0.85, 0.4 + (char.streak * 0.02) + (char.level * 0.01));
     const victory = Math.random() < winChance;
 
-    let newXp = char.xp;
-    let newGold = char.gold;
-    let newLevel = char.level;
-    let newStrength = char.strength;
-    let newIntellect = char.intellect;
-    let newEndurance = char.endurance;
-    let newAgility = char.agility;
-    let newDiscipline = char.discipline;
-
     const charMultiplier = char.multiplier ?? 1.0;
     const today = getSystemDateFromReq(req);
     const activeEvent = getActiveRngEvent(today);
@@ -92,13 +83,26 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const xpReward = Math.floor(baseXpReward * totalMultiplier);
     const goldRewardFinal = Math.floor(goldReward * totalMultiplier);
 
-    if (victory) {
-      newXp += xpReward;
-      newGold += goldRewardFinal;
-      const result = processLevelUp(newXp, newLevel);
-      newXp = result.xp;
-      newLevel = result.level;
+    // Pre-compute XP/level for victory path (processLevelUp requires app-side logic).
+    let newXp = victory
+      ? (() => { const r = processLevelUp(char.xp + xpReward, char.level); return r.xp; })()
+      : Math.max(0, char.xp - xpPenalty);
+    let newGold = victory ? char.gold + goldRewardFinal : char.gold;
+    let newLevel = victory
+      ? processLevelUp(char.xp + xpReward, char.level).level
+      : char.level;
 
+    // F-003: Compute per-stat deltas for the victory stat boost. Two distinct stats
+    // are chosen randomly and each receives +statGain. Writing as SQL increments
+    // prevents concurrent writes from clobbering values computed from a stale snapshot.
+    const ALL_STATS = ["strength", "intellect", "endurance", "agility", "discipline"] as const;
+    type BossStat = typeof ALL_STATS[number];
+
+    let statA: BossStat = "strength";
+    let statB: BossStat = "discipline";
+    let statGain = 0;
+
+    if (victory) {
       const baseDifficultyGain = (() => {
         const r = boss.rank;
         if (r === "S" || r === "SS" || r === "SSS") return 3;
@@ -106,30 +110,18 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
         return 1;
       })();
       const streakMult = getStreakStatMultiplier(char.streak);
-      const statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
-
-      // Fix #4: Distribute stat gains across all five stats rather than always
-      // boosting Strength + Discipline. Pick two distinct stats randomly from the full pool.
-      const ALL_STATS = ["strength", "intellect", "endurance", "agility", "discipline"] as const;
-      type BossStat = typeof ALL_STATS[number];
-      const statVars: Record<BossStat, number> = { strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline };
+      statGain = Math.max(1, Math.floor(baseDifficultyGain * streakMult));
       const shuffled = [...ALL_STATS].sort(() => Math.random() - 0.5);
-      const [statA, statB] = shuffled;
-      statVars[statA] += statGain;
-      statVars[statB] += statGain;
-      newStrength = statVars.strength;
-      newIntellect = statVars.intellect;
-      newEndurance = statVars.endurance;
-      newAgility = statVars.agility;
-      newDiscipline = statVars.discipline;
-    } else {
-      newXp = Math.max(0, char.xp - xpPenalty);
+      statA = shuffled[0];
+      statB = shuffled[1];
     }
 
+    const statDelta = (s: BossStat): number =>
+      (s === statA ? statGain : 0) + (s === statB ? statGain : 0);
+
     const updatedChar = await db.transaction(async (tx) => {
-      // Update the boss first. For a victory, guard with `isDefeated = false`
-      // so a concurrent double-tap can't grant rewards twice — the second
-      // request will get 0 rows and throw before touching the character.
+      // Guard victory with isDefeated = false so a concurrent double-tap
+      // cannot grant rewards twice — the second request gets 0 rows and throws.
       const bossUpdateWhere = victory
         ? and(eq(bossesTable.id, id), eq(bossesTable.isDefeated, false))
         : eq(bossesTable.id, id);
@@ -147,8 +139,26 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
         throw Object.assign(new Error("Boss already defeated"), { code: "ALREADY_DEFEATED" });
       }
 
+      // F-003: Stat writes use SQL increment expressions so concurrent writes
+      // cannot silently clobber each other. On defeat only XP changes; stats are
+      // untouched (delta is 0 for all — the conditional avoids unnecessary writes).
       const [updated] = await tx.update(characterTable)
-        .set({ xp: newXp, gold: newGold, level: newLevel, strength: newStrength, intellect: newIntellect, endurance: newEndurance, agility: newAgility, discipline: newDiscipline })
+        .set(
+          victory
+            ? {
+                xp: newXp,
+                gold: newGold,
+                level: newLevel,
+                strength:   sql`${characterTable.strength}   + ${statDelta("strength")}`,
+                intellect:  sql`${characterTable.intellect}  + ${statDelta("intellect")}`,
+                endurance:  sql`${characterTable.endurance}  + ${statDelta("endurance")}`,
+                agility:    sql`${characterTable.agility}    + ${statDelta("agility")}`,
+                discipline: sql`${characterTable.discipline} + ${statDelta("discipline")}`,
+              }
+            : {
+                xp: sql`GREATEST(0, ${characterTable.xp} - ${xpPenalty})`,
+              }
+        )
         .where(eq(characterTable.id, char.id))
         .returning();
       return updated;
