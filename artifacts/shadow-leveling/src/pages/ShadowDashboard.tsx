@@ -206,6 +206,34 @@ export default function ShadowDashboard() {
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
             <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
+              {Array.from({ length: 40 }, (_, i) => {
+                const colors = [
+                  "rgba(239,68,68,0.9)", "rgba(255,110,40,0.8)", "rgba(220,30,30,0.85)",
+                  "rgba(255,140,50,0.75)", "rgba(200,50,50,0.9)", "rgba(255,60,0,0.8)",
+                  "rgba(255,80,20,0.7)", "rgba(180,20,20,0.85)", "rgba(255,100,30,0.8)",
+                ];
+                const size = [1.5, 2, 2.5, 1, 3, 1.5, 2, 1, 2.5][i % 9];
+                const left = ((i * 2.47 + 3) % 92) + 4;
+                const delay = (i * 0.18) % 7;
+                const dur = 5 + (i % 5) * 0.5;
+                const drift = (i % 2 === 0 ? 1 : -1) * (3 + (i % 6));
+                const color = colors[i % colors.length];
+                return (
+                  <span
+                    key={i}
+                    className="ember-particle"
+                    style={{
+                      left: `${left}%`,
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      background: color,
+                      "--delay": `${delay}s`,
+                      "--dur": `${dur}s`,
+                      "--drift": `${drift}px`,
+                    } as React.CSSProperties}
+                  />
+                );
+              })}
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
