@@ -461,7 +461,8 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="glass-panel border border-red-900/30 h-full">
+          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
+            <EmberParticles palette="crimson" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Graveyard — a log of your most recent failures."
