@@ -205,7 +205,7 @@ export default function ShadowDashboard() {
             fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
-            <Card className="glass-panel border border-red-500/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
+            <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
