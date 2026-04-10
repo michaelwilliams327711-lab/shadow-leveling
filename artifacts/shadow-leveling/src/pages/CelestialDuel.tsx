@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import sinsImg from "@assets/Gemini_Generated_Image_vf7zv9vf7zv9vf7z_(1)_1775835523630.png";
-import virtuesImg from "@assets/Gemini_Generated_Image_f4s7hhf4s7hhf4s7_(1)_1775835495990.png";
 
 const ANIM_STYLES = `
 @keyframes sinGlow {
@@ -164,48 +162,53 @@ export default function CelestialDuel() {
       <style>{ANIM_STYLES}</style>
 
       {/* ── Split-Screen Animated Banner ───────────────────────────── */}
-      <div className="relative flex h-48 md:h-64 overflow-hidden">
-        <div
-          className="flex-1 flex items-center justify-center relative"
-          style={{
-            backgroundImage: `url(${sinsImg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center 50%",
-            animation: "bgDrift 12s ease-in-out infinite, sinGlow 4s ease-in-out infinite",
-          }}
-        >
-          <div className="absolute inset-0 bg-black/30" />
-          <div className="relative z-10 text-center select-none">
-            <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
-            <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg">
-              SINS
-            </h2>
+      <div className="relative flex h-72 md:h-96 overflow-hidden">
+        {/* SINS half */}
+        <div className="flex-1 relative overflow-hidden" style={{ animation: "sinGlow 4s ease-in-out infinite" }}>
+          <img
+            src="/images/sins-bg.png"
+            alt="Seven Deadly Sins"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ animation: "bgDrift 12s ease-in-out infinite", objectPosition: "center" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/60" />
+          <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
+            <div className="text-center select-none drop-shadow-lg">
+              <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
+              <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-red-300"
+                style={{ textShadow: "0 0 30px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
+                SINS
+              </h2>
+            </div>
           </div>
         </div>
 
-        <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/20 z-20" />
+        {/* Center divider + scale */}
+        <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/25 z-20" />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/80"
-            style={{ boxShadow: "0 0 20px rgba(255,255,255,0.15)" }}>
-            <span className="text-white font-display font-black text-lg">⚖</span>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/40 bg-black/90"
+            style={{ boxShadow: "0 0 24px rgba(255,255,255,0.2), 0 0 48px rgba(255,255,255,0.05)" }}>
+            <span className="text-white text-2xl">⚖</span>
           </div>
         </div>
 
-        <div
-          className="flex-1 flex items-center justify-center relative"
-          style={{
-            backgroundImage: `url(${virtuesImg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center 50%",
-            animation: "bgDrift 14s ease-in-out infinite reverse, virtueGlow 5s ease-in-out infinite",
-          }}
-        >
-          <div className="absolute inset-0 bg-black/30" />
-          <div className="relative z-10 text-center select-none">
-            <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
-            <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg">
-              VIRTUES
-            </h2>
+        {/* VIRTUES half */}
+        <div className="flex-1 relative overflow-hidden" style={{ animation: "virtueGlow 5s ease-in-out infinite" }}>
+          <img
+            src="/images/virtues-bg.png"
+            alt="Seven Heavenly Virtues"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ animation: "bgDrift 14s ease-in-out infinite reverse", objectPosition: "center" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-black/20 to-black/60" />
+          <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
+            <div className="text-center select-none drop-shadow-lg">
+              <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
+              <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-amber-200"
+                style={{ textShadow: "0 0 30px rgba(245,158,11,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
+                VIRTUES
+              </h2>
+            </div>
           </div>
         </div>
       </div>
