@@ -386,7 +386,8 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Card className="glass-panel border border-red-900/30 h-full">
+          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
+            <EmberParticles palette="red" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Time Sink — your failures broken down by quest category."
