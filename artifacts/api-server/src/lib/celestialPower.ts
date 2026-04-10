@@ -12,9 +12,8 @@ export const VIRTUE_DOMAIN_MAP: Record<string, string> = {
   humility:   "pride_humility",
 };
 
-const VICE_OVERFLOW_THRESHOLD = 100;
-const VICE_OVERFLOW_CORRUPTION = 20;
-const VICE_OVERFLOW_XP_PENALTY = 500;
+export const VICE_OVERFLOW_THRESHOLD = 100;
+export const VICE_OVERFLOW_CORRUPTION = 20;
 
 export async function applyViceRetaliation(characterId: number, virtueCategory: string): Promise<void> {
   const domainPair = VIRTUE_DOMAIN_MAP[virtueCategory.toLowerCase()];
@@ -44,11 +43,14 @@ export async function applyViceRetaliation(characterId: number, virtueCategory: 
       .set({ viceScore: 0 })
       .where(eq(celestialPowerTable.id, row.id));
 
+    // Momentum Penalty: halve gold, reset streak & multiplier, +20 corruption
     await db
       .update(characterTable)
       .set({
         corruption: sql`${characterTable.corruption} + ${VICE_OVERFLOW_CORRUPTION}`,
-        xp: sql`GREATEST(0, ${characterTable.xp} - ${VICE_OVERFLOW_XP_PENALTY})`,
+        gold:       sql`FLOOR(${characterTable.gold} * 0.5)`,
+        streak:     0,
+        multiplier: 1.0,
       })
       .where(eq(characterTable.id, characterId));
   }

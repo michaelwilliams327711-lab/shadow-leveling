@@ -9,6 +9,7 @@ import {
   TrendingDown,
   ShieldAlert,
   Layers,
+  Scale,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const navItems = [
   { title: "Shop", href: "/shop", icon: Store, shadow: false },
   { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
   { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
+  { title: "Scale of Souls", href: "/celestial", icon: Scale, shadow: false },
   { title: "Bad Habits", href: "/bad-habits", icon: ShieldAlert, shadow: true },
   { title: "The Void", href: "/shadow", icon: TrendingDown, shadow: true },
 ];

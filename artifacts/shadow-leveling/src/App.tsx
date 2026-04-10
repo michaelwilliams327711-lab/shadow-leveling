@@ -25,6 +25,7 @@ import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
 import VocationPaths from "@/pages/VocationPaths";
+import CelestialDuel from "@/pages/CelestialDuel";
 import NotFound from "@/pages/not-found";
 
 const heroBgImg = "/images/hero-bg.png";
@@ -132,6 +133,7 @@ function Router() {
       <Route path="/shadow" component={ShadowDashboard} />
       <Route path="/bad-habits" component={BadHabits} />
       <Route path="/vocations" component={VocationPaths} />
+      <Route path="/celestial" component={CelestialDuel} />
       <Route path="/planner"><Redirect to="/quests" /></Route>
       <Route component={NotFound} />
     </Switch>
