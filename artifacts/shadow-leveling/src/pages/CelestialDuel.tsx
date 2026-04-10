@@ -19,6 +19,7 @@ interface BattlefieldProps {
   glitching: boolean;
   shimmering: boolean;
   flaring: boolean;
+  clashSide: "virtue" | "sin" | null;
 }
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -84,7 +85,7 @@ function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: nu
 }
 
 // ── GlobalBattlefield ─────────────────────────────────────────────────────────
-function GlobalBattlefield({ powers, glitching, shimmering, flaring }: BattlefieldProps) {
+function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }: BattlefieldProps) {
   const totals = useMemo(() => powers.reduce((acc, p) => ({
     vice: acc.vice + p.viceScore,
     virtue: acc.virtue + p.virtueScore
@@ -92,6 +93,37 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring }: Battlefie
 
   const totalPoints = totals.vice + totals.virtue;
   const virtueGloballyWinning = totals.virtue > totals.vice;
+  const tied = totals.virtue === totals.vice;
+
+  // ── Weight Engine ──────────────────────────────────────────────────────────
+  // virtueWeight: 0–100, drives both width and filter intensity
+  const virtueWeight  = totalPoints === 0 ? 50 : (totals.virtue / totalPoints) * 100;
+  // Clamp so labels never fully vanish from layout (opacity handles the "invisible" part)
+  const virtueW = Math.min(92, Math.max(8, virtueWeight));
+  const viceW   = 100 - virtueW;
+
+  // Losing T: 0 when tied/winning, ramps to 1 when completely dominated
+  const sinLosingT    = virtueGloballyWinning ? Math.max(0, (virtueWeight - 50) / 50) : 0;
+  const virtueLosingT = (!virtueGloballyWinning && !tied) ? Math.max(0, ((100 - virtueWeight) - 50) / 50) : 0;
+
+  // ── Erasure Filters ────────────────────────────────────────────────────────
+  const SIDE_TRANSITION = "width 1.5s cubic-bezier(0.4,0,0.2,1), filter 1.2s ease-out, transform 0.3s ease-out";
+
+  const virtueFilter = tied
+    ? "brightness(1)"
+    : virtueGloballyWinning
+      ? "brightness(1.3) contrast(1.2) drop-shadow(0 0 28px rgba(245,158,11,0.7))"
+      : `grayscale(${virtueLosingT.toFixed(2)}) blur(${(virtueLosingT * 12).toFixed(1)}px) opacity(${Math.max(0.15, 1 - virtueLosingT * 0.85).toFixed(2)})`;
+
+  const sinFilter = tied
+    ? "brightness(1)"
+    : !virtueGloballyWinning
+      ? "brightness(1.3) contrast(1.2) drop-shadow(0 0 28px rgba(167,139,250,0.7))"
+      : `grayscale(${sinLosingT.toFixed(2)}) blur(${(sinLosingT * 12).toFixed(1)}px) opacity(${Math.max(0.15, 1 - sinLosingT * 0.85).toFixed(2)})`;
+
+  // ── Clash Impact scale ─────────────────────────────────────────────────────
+  const virtueTransform = clashSide === "virtue" ? "scale(1.05)" : "scale(1)";
+  const sinTransform    = clashSide === "sin"    ? "scale(1.05)" : "scale(1)";
 
   // Glitch key — remounting ::before/::after pseudo-elements on each trigger
   const [glitchKey, setGlitchKey] = useState(0);
@@ -121,32 +153,26 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring }: Battlefie
   return (
     <div className="relative flex h-56 md:h-72 overflow-hidden border-b border-white/10 bg-black">
 
-      {/* ── Virtue Side ── */}
+      {/* ── Virtue Side — weighted width, erasure filter, clash scale ── */}
       <div
-        className={[
-          "absolute inset-y-0 right-0 z-10 flex items-center justify-center overflow-hidden",
-          "transition-all duration-1000 ease-out",
-          virtueGloballyWinning ? "winner-virtue" : "loser-virtue",
-          shimmering ? "shimmer-sweep" : "",
-        ].join(" ")}
+        className={["absolute inset-y-0 right-0 z-10 flex items-center justify-center overflow-hidden", shimmering ? "shimmer-sweep" : ""].join(" ")}
         style={{
+          width: `${virtueW}%`,
           background: `url(${virtuesImg}) center/cover, linear-gradient(135deg,#a16207 0%,#065f46 100%)`,
-          animation: virtueGloballyWinning
-            ? "clash-virtue-win 1.5s forwards ease-out"
-            : "clash-virtue-retreat 1.5s forwards ease-in",
+          filter: virtueFilter,
+          transform: virtueTransform,
+          transformOrigin: "right center",
+          transition: SIDE_TRANSITION,
         }}
       >
         <div
-          className="absolute inset-0 bg-black/40"
+          className="absolute inset-0 bg-black/30"
           style={{ animation: virtueGloballyWinning ? "virtueGlow 5s infinite" : "none" }}
         />
         {virtueGloballyWinning && <div className="absolute inset-0 z-10 arise-mana" />}
         <div className="relative z-20 text-center px-4">
           <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
-          <h2
-            className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg"
-            data-text="VIRTUES"
-          >
+          <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg">
             VIRTUES
           </h2>
           {virtueGloballyWinning && (
@@ -166,30 +192,27 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring }: Battlefie
         </div>
       </div>
 
-      {/* ── Sin Side ── */}
+      {/* ── Sin Side — weighted width, erasure filter, clash scale ── */}
       <div
-        className={[
-          "absolute inset-y-0 left-0 z-10 flex items-center justify-center overflow-hidden",
-          "transition-all duration-1000 ease-out",
-          !virtueGloballyWinning ? "winner-sin" : "loser-sin",
-        ].join(" ")}
+        className="absolute inset-y-0 left-0 z-10 flex items-center justify-center overflow-hidden"
         style={{
+          width: `${viceW}%`,
           background: `url(${sinsImg}) center/cover, linear-gradient(135deg,#3b0764 0%,#7f1d1d 100%)`,
-          animation: !virtueGloballyWinning
-            ? "clash-sin-win 1.5s forwards ease-out"
-            : "clash-sin-retreat 1.5s forwards ease-in",
+          filter: sinFilter,
+          transform: sinTransform,
+          transformOrigin: "left center",
+          transition: SIDE_TRANSITION,
         }}
       >
         <div
-          className="absolute inset-0 bg-black/40"
+          className="absolute inset-0 bg-black/30"
           style={{ animation: !virtueGloballyWinning ? "sinGlow 5s infinite" : "none" }}
         />
         {virtueGloballyWinning && (
-          <div className="absolute inset-0 z-10 corruption-smoke" style={{ opacity: 0.3 }} />
+          <div className="absolute inset-0 z-10 corruption-smoke" style={{ opacity: 0.4 }} />
         )}
         <div className="relative z-20 text-center px-4">
           <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
-          {/* Glitch target: data-text drives the ::before/::after pseudo-elements */}
           <h2
             key={glitchKey}
             className={[
@@ -200,7 +223,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring }: Battlefie
           >
             SINS
           </h2>
-          {!virtueGloballyWinning && (
+          {!virtueGloballyWinning && !tied && (
             <span className="text-[10px] tracking-widest text-white/70 uppercase">← DRIVING THE TIDE →</span>
           )}
           <p className="text-xs text-red-400/60 font-stat mt-1">{totals.vice} pts</p>
@@ -213,14 +236,16 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring }: Battlefie
 // ── CelestialDuel Page ────────────────────────────────────────────────────────
 export default function CelestialDuel() {
   const queryClient = useQueryClient();
-  const [logging, setLogging]     = useState<string | null>(null);
-  const [glitching, setGlitching] = useState(false);
+  const [logging, setLogging]       = useState<string | null>(null);
+  const [glitching, setGlitching]   = useState(false);
   const [shimmering, setShimmering] = useState(false);
-  const [flaring, setFlaring]     = useState(false);
+  const [flaring, setFlaring]       = useState(false);
+  const [clashSide, setClashSide]   = useState<"virtue" | "sin" | null>(null);
 
   const glitchTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shimmerTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flareTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clashTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevVirtueWinRef = useRef<boolean | null>(null);
 
   // ── Effect trigger helpers ──────────────────────────────────────────────────
@@ -254,6 +279,7 @@ export default function CelestialDuel() {
     if (glitchTimer.current) clearTimeout(glitchTimer.current);
     if (shimmerTimer.current) clearTimeout(shimmerTimer.current);
     if (flareTimer.current) clearTimeout(flareTimer.current);
+    if (clashTimer.current) clearTimeout(clashTimer.current);
   }, []);
 
   // ── Data ───────────────────────────────────────────────────────────────────
@@ -303,6 +329,11 @@ export default function CelestialDuel() {
 
       queryClient.invalidateQueries({ queryKey: ["ascension", "powers"] });
       queryClient.invalidateQueries({ queryKey: ["getCharacter"] });
+
+      // ── Clash impact: winning side shoves for 300ms ────────────────────────
+      if (clashTimer.current) clearTimeout(clashTimer.current);
+      setClashSide(type === "virtue" ? "virtue" : "sin");
+      clashTimer.current = setTimeout(() => setClashSide(null), 300);
 
       if (result.greatFall) {
         triggerGlitch();
