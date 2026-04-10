@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --chart-1: 221.2 83.2% 53.3%;
+    --chart-2: 162.6 93.5% 30.4%;
+    --chart-3: 196.8 19.1% 26.8%;
+    --chart-4: 43 74.5% 65.9%;
+    --chart-5: 27 87% 67.9%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Celestial Duel — Tug-of-War Aesthetics */
+.font-stat {
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Global Keyframes ──────────────────────────────────────────────────────── */
+
+/* Background Domain Parallax */
+@keyframes domainDriftLeft {
+  0% { background-position: 48% 50%; }
+  50% { background-position: 52% 50%; }
+  100% { background-position: 48% 50%; }
+}
+@keyframes domainDriftRight {
+  0% { background-position: 52% 50%; saturate: 0.35; }
+  50% { background-position: 48% 50%; saturate: 0.5; }
+  100% { background-position: 52% 50%; saturate: 0.35; }
+}
+
+/* TugBar Elastic Bounce */
+.tug-bounce {
+  transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Siege Pulse (Ascended domain under attack) */
+@keyframes siegePulse {
+  0% { box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.2), inset 0 0 10px rgba(127, 29, 29, 0.2); border-color: rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 16px 3px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(127, 29, 29, 0.4); border-color: rgba(239, 68, 68, 0.6); }
+  100% { box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.2), inset 0 0 10px rgba(127, 29, 29, 0.2); border-color: rgba(239, 68, 68, 0.3); }
+}
+.under-siege {
+  animation: siegePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Background Animations (Strike 17) ─────────────────────────────────────── */
+
+/* 1. Corruption Smoke & Ember Particles (Sin Winning) */
+@keyframes smoke-drift {
+  0% { background-position: 0% 50%; opacity: 0.6; }
+  50% { background-position: 100% 50%; opacity: 0.8; }
+  100% { background-position: 0% 50%; opacity: 0.6; }
+}
+
+.corruption-smoke {
+  position: relative;
+  overflow: hidden;
+}
+
+.corruption-smoke::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 20% 80%, rgba(127, 29, 29, 0.15) 0%, transparent 40%),
+              radial-gradient(circle at 80% 20%, rgba(59, 7, 100, 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, rgba(127, 29, 29, 0.05) 0%, transparent 60%);
+  background-size: 200% 200%;
+  animation: smoke-drift 12s ease-in-out infinite;
+  filter: blur(10px);
+}
+
+/* Ember Particle System */
+@keyframes ember-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 0.8; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(-120px) scale(0.5); opacity: 0; }
+}
+
+.corruption-smoke::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: 
+    radial-gradient(2px 2px at 20px 100px, rgba(239, 68, 68, 0.8), rgba(239, 68, 68, 0)),
+    radial-gradient(3px 3px at 60px 150px, rgba(249, 115, 22, 0.7), rgba(249, 115, 22, 0)),
+    radial-gradient(2px 2px at 110px 120px, rgba(239, 68, 68, 0.6), rgba(239, 68, 68, 0)),
+    radial-gradient(3px 3px at 150px 180px, rgba(249, 115, 22, 0.8), rgba(249, 115, 22, 0)),
+    radial-gradient(2px 2px at 200px 140px, rgba(239, 68, 68, 0.7), rgba(239, 68, 68, 0)),
+    radial-gradient(4px 4px at 250px 190px, rgba(249, 115, 22, 0.6), rgba(249, 115, 22, 0));
+  background-size: 300px 200px;
+  animation: ember-rise 7s linear infinite;
+  opacity: 0.5;
+}
+
+/* 2. Arise Mana & Blue Shimmer Particles (Virtue Winning) */
+@keyframes mana-shimmer {
+  0% { background-position: 100% 50%; opacity: 0.5; }
+  50% { background-position: 0% 50%; opacity: 0.8; }
+  100% { background-position: 100% 50%; opacity: 0.5; }
+}
+
+.arise-mana {
+  position: relative;
+  overflow: hidden;
+}
+
+.arise-mana::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 10% 10%, rgba(30, 64, 175, 0.12) 0%, transparent 40%),
+              radial-gradient(circle at 90% 90%, rgba(161, 98, 7, 0.08) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, rgba(30, 64, 175, 0.05) 0%, transparent 60%);
+  background-size: 200% 200%;
+  animation: mana-shimmer 10s ease-in-out infinite;
+  filter: blur(8px);
+}
+
+/* Mana Particle System */
+@keyframes mana-particle-rise {
+  0% { transform: translateY(10px) scale(0.8); opacity: 0; }
+  15% { opacity: 0.9; }
+  85% { opacity: 0.7; }
+  100% { transform: translateY(-130px) scale(1.1); opacity: 0; }
+}
+
+.arise-mana::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: 
+    radial-gradient(3px 3px at 30px 110px, rgba(56, 189, 248, 0.8), rgba(56, 189, 248, 0)),
+    radial-gradient(2px 2px at 70px 160px, rgba(251, 191, 36, 0.7), rgba(251, 191, 36, 0)),
+    radial-gradient(4px 4px at 120px 130px, rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0)),
+    radial-gradient(3px 3px at 170px 190px, rgba(251, 191, 36, 0.8), rgba(251, 191, 36, 0)),
+    radial-gradient(2px 2px at 220px 150px, rgba(139, 92, 246, 0.5), rgba(139, 92, 246, 0)),
+    radial-gradient(3px 3px at 270px 180px, rgba(56, 189, 248, 0.7), rgba(56, 189, 248, 0));
+  background-size: 320px 210px;
+  animation: mana-particle-rise 6s linear infinite;
+  opacity: 0.6;
+}
+
+/* 3. Runic Siege (Ascended & Under Attack — Supercedes Smoke) */
+@keyframes runic-scroll {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
+@keyframes runic-pulse {
+  0% { opacity: 0.1; }
+  50% { opacity: 0.25; }
+  100% { opacity: 0.1; }
+}
+
+.runic-siege {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Remove competing background VFX */
+.runic-siege::before, .runic-siege::after {
+  display: none !important;
+}
+
+/* Runic Text Layer */
+.runic-siege::before {
+  content: "ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ";
+  display: block !important;
+  position: absolute;
+  inset: -50px;
+  z-index: -1;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.2;
+  color: rgba(239, 68, 68, 0.11);
+  text-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+  word-break: break-all;
+  opacity: 0.7;
+  transform: rotate(-15deg) scale(1.1);
+  animation: runic-scroll 14s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+
+/* Runic Pulse Overlay */
+.runic-siege::after {
+  content: "";
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle, rgba(127, 29, 29, 0.3) 0%, transparent 70%);
+  animation: runic-pulse 3.5s ease-in-out infinite;
+}
+
+/* ── Banner Clash Animations (Omega Audit) ─────────────────────────────────── */
+
+@keyframes clash-virtue-win {
+  0%   { background-position: 50% 50%; width: 50%; opacity: 0.7; }
+  50%  { background-position: 35% 50%; width: 65%; opacity: 1.0; } /* Drives forward */
+  100% { background-position: 30% 50%; width: 70%; opacity: 0.9; } /* Holds ground */
+}
+
+@keyframes clash-sin-retreat {
+  0%   { background-position: 50% 50%; width: 50%; opacity: 0.7; filter: blur(0px); }
+  50%  { background-position: 65% 50%; width: 35%; opacity: 0.3; filter: blur(3px); } /* Retreats */
+  100% { background-position: 70% 50%; width: 30%; opacity: 0.2; filter: blur(5px); } /* Stabilizes/Fades */
+}
+
+@keyframes battlefield-particles-virtue-win {
+  0%   { transform: translateY(0) scale(1); opacity: 0.1; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+}
+
+@keyframes sinGlow {
+  0% { inset-shadow: 0 0 30px rgba(127, 29, 29, 0.3); }
+  50% { inset-shadow: 0 0 50px rgba(127, 29, 29, 0.6); }
+  100% { inset-shadow: 0 0 30px rgba(127, 29, 29, 0.3); }
+}
+
+@keyframes virtueGlow {
+  0% { inset-shadow: 0 0 30px rgba(30, 64, 175, 0.3); }
+  50% { inset-shadow: 0 0 50px rgba(30, 64, 175, 0.6); }
+  100% { inset-shadow: 0 0 30px rgba(30, 64, 175, 0.3); }
+}
+
+@keyframes bgDrift {
+  0% { background-position: 50% 50%; }
+  50% { background-position: 53% 53%; }
+  100% { background-position: 50% 50%; }
+}

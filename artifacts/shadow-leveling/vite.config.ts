@@ -76,6 +76,7 @@ export default defineConfig({
         path.resolve(import.meta.dirname),
         path.resolve(import.meta.dirname, "../../lib/shared"),
         path.resolve(import.meta.dirname, "../../lib/api-client-react"),
+        path.resolve(import.meta.dirname, "../../attached_assets"),
       ],
     },
   },
