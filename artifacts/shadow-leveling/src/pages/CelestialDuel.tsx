@@ -371,10 +371,10 @@ export default function CelestialDuel() {
           flaring={flaring}
         />
 
-        <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-12">
+        <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-12 corruption-smoke">
 
           {/* Domain Balance Section */}
-          <section>
+          <section className="corruption-smoke">
             <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-8 text-center">
               Scale of Souls — Domain Balance
             </h3>
@@ -426,7 +426,7 @@ export default function CelestialDuel() {
           </section>
 
           {/* Quick-Log Section */}
-          <section>
+          <section className="corruption-smoke">
             <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-8 text-center">
               Quick-Log — Manifest Your Will
             </h3>
@@ -478,7 +478,7 @@ export default function CelestialDuel() {
           </section>
 
           {/* Info Panels */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 corruption-smoke">
             <section className="rounded-2xl border border-red-900/30 bg-red-950/10 p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
                 <LucideAlertTriangle className="h-8 w-8 text-red-500 flex-shrink-0 mt-0.5" />
@@ -490,7 +490,7 @@ export default function CelestialDuel() {
                 </div>
               </div>
             </section>
-            <section className="rounded-2xl border border-orange-900/30 bg-orange-950/10 p-6 shadow-inner">
+            <section className="rounded-2xl border border-orange-900/30 bg-orange-950/10 p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
                 <LucideAlertTriangle className="h-8 w-8 text-orange-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
