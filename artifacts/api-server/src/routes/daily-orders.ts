@@ -169,20 +169,12 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
     const totalMultiplier = multiplier * (1 + eventBonus);
     const xpAwarded = Math.floor(E_RANK_XP * totalMultiplier);
-    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpAwarded, char.level);
-    const leveledUp = newLevel > char.level;
 
     const streakResetFields = char.failStreak > 0
       ? { failStreak: 0, penaltyMultiplier: 1.0 }
       : {};
 
-    // F-001: Each stat uses a SQL increment expression targeting only the relevant
-    // stat column. This prevents concurrent writes from clobbering a value that was
-    // computed from a stale in-memory snapshot.
-    // F-006: totalQuestsCompleted also increments atomically via SQL.
-    // P-003: completedCount is queried INSIDE the transaction so the count reflects
-    // the committed row before any concurrent writer can interfere.
-    const [updatedOrder, updatedChar, completedCount] = await db.transaction(async (tx) => {
+    const [updatedOrder, updatedChar, completedCount, leveledUp] = await db.transaction(async (tx) => {
       const orderResult = await tx
         .update(dailyOrdersTable)
         .set({ completed: true, completedAt: new Date() })
@@ -192,6 +184,15 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
       if (orderResult.length === 0) {
         throw Object.assign(new Error("Order already completed"), { code: "ALREADY_COMPLETED_ORDER" });
       }
+
+      const [lockedChar] = await tx
+        .select({ xp: characterTable.xp, level: characterTable.level })
+        .from(characterTable)
+        .where(eq(characterTable.id, char.id))
+        .for("update");
+
+      const { xp: newXp, level: newLevel } = processLevelUp(lockedChar.xp + xpAwarded, lockedChar.level);
+      const txLeveledUp = newLevel > lockedChar.level;
 
       const [updated] = await tx
         .update(characterTable)
@@ -221,7 +222,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
         );
       const count = Number(completedTodayCount[0]?.count ?? 0);
 
-      return [orderResult[0], updated, count] as const;
+      return [orderResult[0], updated, count, txLeveledUp] as const;
     });
 
     invalidateCharacterCache();

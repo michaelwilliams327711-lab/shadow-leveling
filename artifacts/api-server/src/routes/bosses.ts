@@ -83,18 +83,6 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const xpReward = Math.floor(baseXpReward * totalMultiplier);
     const goldRewardFinal = Math.floor(goldReward * totalMultiplier);
 
-    // Pre-compute XP/level for victory path (processLevelUp requires app-side logic).
-    let newXp = victory
-      ? (() => { const r = processLevelUp(char.xp + xpReward, char.level); return r.xp; })()
-      : Math.max(0, char.xp - xpPenalty);
-    let newGold = victory ? char.gold + goldRewardFinal : char.gold;
-    let newLevel = victory
-      ? processLevelUp(char.xp + xpReward, char.level).level
-      : char.level;
-
-    // F-003: Compute per-stat deltas for the victory stat boost. Two distinct stats
-    // are chosen randomly and each receives +statGain. Writing as SQL increments
-    // prevents concurrent writes from clobbering values computed from a stale snapshot.
     const ALL_STATS = ["strength", "intellect", "endurance", "agility", "discipline"] as const;
     type BossStat = typeof ALL_STATS[number];
 
@@ -119,9 +107,7 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const statDelta = (s: BossStat): number =>
       (s === statA ? statGain : 0) + (s === statB ? statGain : 0);
 
-    const updatedChar = await db.transaction(async (tx) => {
-      // Guard victory with isDefeated = false so a concurrent double-tap
-      // cannot grant rewards twice — the second request gets 0 rows and throws.
+    const [updatedChar, newLevel, leveledUp] = await db.transaction(async (tx) => {
       const bossUpdateWhere = victory
         ? and(eq(bossesTable.id, id), eq(bossesTable.isDefeated, false))
         : eq(bossesTable.id, id);
@@ -139,16 +125,25 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
         throw Object.assign(new Error("Boss already defeated"), { code: "ALREADY_DEFEATED" });
       }
 
-      // F-003: Stat writes use SQL increment expressions so concurrent writes
-      // cannot silently clobber each other. On defeat only XP changes; stats are
-      // untouched (delta is 0 for all — the conditional avoids unnecessary writes).
+      const [lockedChar] = await tx
+        .select({ xp: characterTable.xp, gold: characterTable.gold, level: characterTable.level })
+        .from(characterTable)
+        .where(eq(characterTable.id, char.id))
+        .for("update");
+
+      const { xp: newXp, level: txNewLevel } = victory
+        ? processLevelUp(lockedChar.xp + xpReward, lockedChar.level)
+        : { xp: Math.max(0, lockedChar.xp - xpPenalty), level: lockedChar.level };
+      const newGold = victory ? lockedChar.gold + goldRewardFinal : lockedChar.gold;
+      const txLeveledUp = txNewLevel > lockedChar.level;
+
       const [updated] = await tx.update(characterTable)
         .set(
           victory
             ? {
                 xp: newXp,
                 gold: newGold,
-                level: newLevel,
+                level: txNewLevel,
                 strength:   sql`${characterTable.strength}   + ${statDelta("strength")}`,
                 intellect:  sql`${characterTable.intellect}  + ${statDelta("intellect")}`,
                 endurance:  sql`${characterTable.endurance}  + ${statDelta("endurance")}`,
@@ -161,7 +156,8 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
         )
         .where(eq(characterTable.id, char.id))
         .returning();
-      return updated;
+
+      return [updated, txNewLevel, txLeveledUp] as const;
     });
     invalidateCharacterCache();
 
@@ -176,8 +172,6 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       actionType: victory ? "BOSS_DEFEATED" : "FAILED",
       statCategory: null,
     });
-
-    const leveledUp = newLevel > char.level;
 
     res.json({
       success: true,

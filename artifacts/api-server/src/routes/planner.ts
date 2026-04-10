@@ -525,7 +525,7 @@ router.patch("/planner/quest/:id/reschedule", async (req, res) => {
       return;
     }
 
-    const newDeadline = new Date(body.newDeadline + "T00:00:00");
+    const newDeadline = new Date(body.newDeadline + "T00:00:00.000Z");
     if (isNaN(newDeadline.getTime())) {
       res.status(400).json({ error: "Invalid date" });
       return;

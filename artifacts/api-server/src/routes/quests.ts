@@ -500,8 +500,8 @@ router.get("/quests", async (req, res) => {
     const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
 
     const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 365);
-    windowStart.setHours(0, 0, 0, 0);
+    windowStart.setUTCDate(windowStart.getUTCDate() - 365);
+    windowStart.setUTCHours(0, 0, 0, 0);
 
     const allQuests = await db
       .select()
@@ -699,16 +699,9 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const agilityGain = statField === "agility" ? statGain : 0;
     const disciplineTotal = (statField === "discipline" ? statGain : 0) + disciplineGain;
 
-    const { xp: newXp, level: newLevel } = processLevelUp(char.xp + xpAwarded, char.level);
-
-    const leveledUp = newLevel > char.level;
-
     const localMidnight = new Date(today + "T00:00:00.000Z");
 
-    const [updatedChar] = await db.transaction(async (tx) => {
-      // Lock the quest row first: if two concurrent requests race, only one
-      // will transition status from "active" → "completed". The loser gets 0
-      // rows back and throws, preventing double XP/gold.
+    const [updatedChar, newLevel, leveledUp] = await db.transaction(async (tx) => {
       const questResult = await tx.update(questsTable)
         .set({ status: "completed", completedAt: localMidnight })
         .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")))
@@ -718,10 +711,19 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         throw Object.assign(new Error("Quest already completed"), { code: "ALREADY_COMPLETED" });
       }
 
+      const [lockedChar] = await tx
+        .select({ xp: characterTable.xp, level: characterTable.level })
+        .from(characterTable)
+        .where(eq(characterTable.id, char.id))
+        .for("update");
+
+      const { xp: newXp, level: txNewLevel } = processLevelUp(lockedChar.xp + xpAwarded, lockedChar.level);
+      const txLeveledUp = txNewLevel > lockedChar.level;
+
       const [updated] = await tx.update(characterTable)
         .set({
           xp: newXp,
-          level: newLevel,
+          level: txNewLevel,
           gold: sql`${characterTable.gold} + ${goldAwarded}`,
           strength: sql`${characterTable.strength} + ${strengthGain}`,
           intellect: sql`${characterTable.intellect} + ${intellectGain}`,
@@ -735,7 +737,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         .where(eq(characterTable.id, char.id))
         .returning();
 
-      return [updated];
+      return [updated, txNewLevel, txLeveledUp] as const;
     });
     invalidateCharacterCache();
 
@@ -919,8 +921,8 @@ router.get("/quest-log", async (req, res) => {
     const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
 
     const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 365);
-    windowStart.setHours(0, 0, 0, 0);
+    windowStart.setUTCDate(windowStart.getUTCDate() - 365);
+    windowStart.setUTCHours(0, 0, 0, 0);
 
     const log = await db
       .select()

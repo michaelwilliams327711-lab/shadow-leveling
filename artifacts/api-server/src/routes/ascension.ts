@@ -38,7 +38,7 @@ router.post("/ascension/quick-log", async (req, res) => {
 
       await db
         .update(characterTable)
-        .set({ corruption: sql`${characterTable.corruption} + 2` })
+        .set({ corruption: sql`LEAST(100, ${characterTable.corruption} + 2)` })
         .where(eq(characterTable.id, char.id));
 
       const [row] = await db
@@ -67,7 +67,7 @@ router.post("/ascension/quick-log", async (req, res) => {
           await db
             .update(characterTable)
             .set({
-              corruption: sql`${characterTable.corruption} + ${GREAT_FALL_CORRUPTION}`,
+              corruption: sql`LEAST(100, ${characterTable.corruption} + ${GREAT_FALL_CORRUPTION})`,
               gold:       sql`FLOOR(${characterTable.gold} * 0.25)`,
               streak:     0,
               multiplier: 1.0,
@@ -96,7 +96,7 @@ router.post("/ascension/quick-log", async (req, res) => {
           await db
             .update(characterTable)
             .set({
-              corruption: sql`${characterTable.corruption} + ${VICE_OVERFLOW_CORRUPTION}`,
+              corruption: sql`LEAST(100, ${characterTable.corruption} + ${VICE_OVERFLOW_CORRUPTION})`,
               gold:       sql`FLOOR(${characterTable.gold} * 0.5)`,
               streak:     0,
               multiplier: 1.0,

@@ -63,7 +63,7 @@ router.post("/shop/rewards/:id/purchase", async (req, res) => {
         return;
       }
 
-      const [freshChar] = await tx.select().from(characterTable).where(eq(characterTable.id, char.id));
+      const [freshChar] = await tx.select().from(characterTable).where(eq(characterTable.id, char.id)).for("update");
       if (!freshChar || freshChar.gold < reward.goldCost) {
         insufficientGold = true;
         return;
