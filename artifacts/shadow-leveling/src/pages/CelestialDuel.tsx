@@ -174,7 +174,7 @@ export default function CelestialDuel() {
             animation: "bgDrift 12s ease-in-out infinite, sinGlow 4s ease-in-out infinite",
           }}
         >
-          <div className="absolute inset-0 bg-black/55" />
+          <div className="absolute inset-0 bg-black/30" />
           <div className="relative z-10 text-center select-none">
             <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
             <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg">
@@ -200,7 +200,7 @@ export default function CelestialDuel() {
             animation: "bgDrift 14s ease-in-out infinite reverse, virtueGlow 5s ease-in-out infinite",
           }}
         >
-          <div className="absolute inset-0 bg-black/55" />
+          <div className="absolute inset-0 bg-black/30" />
           <div className="relative z-10 text-center select-none">
             <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
             <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg">
