@@ -15,6 +15,7 @@ import {
 import { getOrCreateCharacter, upsertActivity, invalidateCharacterCache } from "./character.js";
 import { awardVocXp } from "./vocations.js";
 import { getActiveRngEvent } from "./rng.js";
+import { applyViceRetaliation } from "../lib/celestialPower.js";
 
 const router: IRouter = Router();
 
@@ -860,6 +861,12 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
       return [updated];
     });
     invalidateCharacterCache();
+
+    // Vice Retaliation (P-ascension): failing a quest with a virtueCategory
+    // increases the corresponding domain's viceScore by +10.
+    if (quest.virtueCategory) {
+      await applyViceRetaliation(char.id, quest.virtueCategory);
+    }
 
     await db.insert(questLogTable).values({
       questName: quest.name,

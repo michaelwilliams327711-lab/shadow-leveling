@@ -11,6 +11,7 @@ import dailyOrdersRouter from "./daily-orders.js";
 import badHabitsRouter from "./badHabits.js";
 import vocationsRouter from "./vocations.js";
 import plannerRouter from "./planner.js";
+import ascensionRouter from "./ascension.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(dailyOrdersRouter);
 router.use(badHabitsRouter);
 router.use(vocationsRouter);
 router.use(plannerRouter);
+router.use(ascensionRouter);
 
 export default router;

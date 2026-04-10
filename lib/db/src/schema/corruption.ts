@@ -10,6 +10,7 @@ export const badHabitsTable = pgTable("bad_habits", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   isActive: integer("is_active").notNull().default(1),
   deletedAt: timestamp("deleted_at"),
+  sinCategory: text("sin_category"),
 }, (table) => [
   index("bad_habits_deleted_at_idx").on(table.deletedAt),
 ]);

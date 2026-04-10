@@ -5,6 +5,7 @@ import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { processLevelUp } from "@workspace/shared";
 import { getActiveRngEvent } from "./rng.js";
+import { applyViceRetaliation } from "../lib/celestialPower.js";
 
 type CharacterRow = Awaited<ReturnType<typeof getOrCreateCharacter>>;
 
@@ -471,6 +472,14 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     });
 
     invalidateCharacterCache();
+
+    // Vice Retaliation (P-ascension): each expired order with a virtueCategory
+    // increases the corresponding domain's viceScore by +10.
+    for (const order of staleOrders) {
+      if (order.virtueCategory) {
+        await applyViceRetaliation(char.id, order.virtueCategory);
+      }
+    }
 
     const questLogEntries = staleOrders.map((order) => ({
       questName: `Daily Order: ${order.name}`,

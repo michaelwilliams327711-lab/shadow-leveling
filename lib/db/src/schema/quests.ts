@@ -22,6 +22,7 @@ export const questsTable = pgTable("quests", {
   recurrence: jsonb("recurrence"),
   vocationId: text("vocation_id").references(() => vocationsTable.id, { onDelete: "set null" }),
   deletedAt: timestamp("deleted_at"),
+  virtueCategory: text("virtue_category"),
 }, (table) => [
   index("quests_status_deleted_at_created_at_idx").on(table.status, table.deletedAt, table.createdAt),
 ]);
@@ -77,6 +78,7 @@ export const dailyOrdersTable = pgTable("daily_orders", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   date: text("date").notNull(),
   deletedAt: timestamp("deleted_at"),
+  virtueCategory: text("virtue_category"),
 }, (table) => [
   index("daily_orders_date_character_id_idx").on(table.date, table.characterId),
 ]);

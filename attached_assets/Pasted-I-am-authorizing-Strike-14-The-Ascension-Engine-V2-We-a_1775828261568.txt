@@ -1,0 +1,46 @@
+I am authorizing 'Strike 14: The Ascension Engine V2'. We are building an active 'Vices vs. Virtues' system where Virtues can Ascend, but Vices grow in power if Virtues are neglected. We are also adding a 'Quick-Log' subsystem. Execute the following:
+
+1. Schema Evolution (lib/db/src/schema):
+
+In quests.ts (for questsTable and dailyOrdersTable), add: virtueCategory: text("virtue_category").
+
+In corruption.ts (or badHabitsTable), add: sinCategory: text("sin_category").
+
+Create a new table: celestialPowerTable to track the tug-of-war. Columns: id (serial), characterId (integer, FK), domainPair (text, e.g., 'sloth_diligence'), viceScore (integer, default 0), virtueScore (integer, default 0), isAscended (boolean, default false).
+
+2. The Vice Retaliation (Backend Hooks):
+
+In artifacts/api-server/src/routes/quests.ts (/fail handler) and daily-orders.ts (/expire-stale handler): If the failed/expired item has a virtueCategory (e.g., 'diligence'), execute an UPDATE on celestialPowerTable. Increase the viceScore of the corresponding pair (e.g., 'sloth') by +10.
+
+Logic Rule: If viceScore exceeds 100, reset it to 0 and apply a massive penalty to the character (e.g., +20 Corruption, -500 XP) to represent the Vice overwhelming the user.
+
+3. The Quick-Log Subsystem (artifacts/api-server/src/routes/ascension.ts):
+
+Create this new route file.
+
+Build POST /api/ascension/quick-log. Body: { type: "vice" | "virtue", pair: string }.
+
+If type === 'vice', increase viceScore by +5 and add +2 Corruption.
+
+If type === 'virtue', increase virtueScore by +5 and add +10 XP.
+
+Logic Rule: If virtueScore hits 100, set isAscended = true, lock the pair, and grant a permanent +50 to all character stats (The Ascension).
+
+4. Zod & Integration:
+
+Update @workspace/api-zod to support the new optional virtueCategory and sinCategory fields.
+
+Create a new validation schema for the Quick-Log body.
+
+Mount the /ascension router in index.ts.
+
+SOVEREIGN REPORTING PROTOCOL:
+Upon completion, provide a report using the following rules:
+
+NO SUMMARIES: I need the raw, line-by-line source code for the schema changes and ascension.ts.
+
+MARKDOWN HEADERS: Use ### FILE: [Full/Path] for every file.
+
+THE CHUNK RULE: If the output exceeds 500 lines, stop and ask me to say 'CONTINUE'. Do not truncate.
+
+INVENTORY: Confirm the database is updated and the Vice Retaliation hooks are active."
