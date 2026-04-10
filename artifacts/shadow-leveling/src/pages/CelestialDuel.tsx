@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import sinsImg from "@assets/Gemini_Generated_Image_vf7zv9vf7zv9vf7z_(1)_1775831804955.png";
-import virtuesImg from "@assets/Gemini_Generated_Image_f4s7hhf4s7hhf4s7_(1)_1775833110664.png";
+import sinsImg from "@assets/Gemini_Generated_Image_vf7zv9vf7zv9vf7z_(1)_1775835523630.png";
+import virtuesImg from "@assets/Gemini_Generated_Image_f4s7hhf4s7hhf4s7_(1)_1775835495990.png";
 
 const ANIM_STYLES = `
 @keyframes sinGlow {
