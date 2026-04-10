@@ -3,3 +3,17 @@ import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// ── Service Worker Registration ──────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((registration) => {
+        console.info("[SW] Registered — scope:", registration.scope);
+      })
+      .catch((err) => {
+        console.warn("[SW] Registration failed:", err);
+      });
+  });
+}
