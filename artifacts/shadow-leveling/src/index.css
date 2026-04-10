@@ -167,6 +167,195 @@
   background: hsl(var(--muted-foreground));
 }
 
+/* ─────────────────────────────────────────────────────────────
+   CELESTIAL DUEL — Card Atmosphere Classes
+   ───────────────────────────────────────────────────────────── */
+
+/* ── .corruption-smoke ─────────────────────────────────────── */
+@keyframes smoke-drift {
+  0%   { transform: scale(1.0) translate(0%, 0%);   opacity: 0.85; }
+  25%  { transform: scale(1.1) translate(4%, -5%);  opacity: 1;    }
+  50%  { transform: scale(1.2) translate(-3%, -8%); opacity: 0.9;  }
+  75%  { transform: scale(1.1) translate(5%, -4%);  opacity: 1;    }
+  100% { transform: scale(1.0) translate(0%, 0%);   opacity: 0.85; }
+}
+
+@keyframes ember-float {
+  0% {
+    background-position:
+      15% 110%, 38% 115%, 62% 108%, 80% 112%, 28% 120%, 52% 107%, 72% 116%;
+    opacity: 0;
+  }
+  8%  { opacity: 1; }
+  88% { opacity: 0.55; }
+  100% {
+    background-position:
+      11% -30%, 42% -22%, 58% -38%, 76% -26%, 33% -32%, 56% -18%, 68% -28%;
+    opacity: 0;
+  }
+}
+
+.corruption-smoke {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.corruption-smoke::before {
+  content: "";
+  position: absolute;
+  inset: -30% -10%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse 120% 70% at 15% 110%, rgba(139,0,0,0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 80%  90% at 85% 120%, rgba(80,0,0,0.18) 0%,  transparent 60%),
+    radial-gradient(ellipse 60%  50% at 50% 110%, rgba(30,0,0,0.15) 0%,  transparent 50%),
+    radial-gradient(ellipse 100% 40% at 30% 100%, rgba(100,0,0,0.10) 0%, transparent 50%);
+  animation: smoke-drift 12s ease-in-out infinite;
+}
+
+.corruption-smoke::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.85) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,110,40,0.70) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(239,68,68,0.60) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,140,50,0.80) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.55) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(200,50,50,0.70) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,60,0,0.65)  0%, transparent 100%);
+  background-size:
+    14% 28%, 22% 32%, 18% 26%, 12% 22%, 26% 30%, 16% 24%, 20% 28%;
+  background-repeat: no-repeat;
+  animation: ember-float 7s ease-in-out infinite;
+}
+
+/* ── .arise-mana ───────────────────────────────────────────── */
+@keyframes mana-shimmer {
+  0%   { transform: translateY(0%)   rotate(0deg)   scale(1.0); opacity: 0.6; }
+  33%  { transform: translateY(-4%)  rotate(0.5deg) scale(1.05); opacity: 1;  }
+  66%  { transform: translateY(-2%)  rotate(-0.3deg) scale(1.08); opacity: 0.8; }
+  100% { transform: translateY(0%)   rotate(0deg)   scale(1.0); opacity: 0.6; }
+}
+
+@keyframes mana-particle-rise {
+  0% {
+    background-position:
+      20% 110%, 45% 115%, 68% 108%, 84% 112%, 32% 120%, 58% 105%, 76% 118%;
+    opacity: 0;
+  }
+  10%  { opacity: 1; }
+  85%  { opacity: 0.7; }
+  100% {
+    background-position:
+      18% -25%, 48% -20%, 65% -30%, 81% -22%, 35% -28%, 61% -18%, 73% -26%;
+    opacity: 0;
+  }
+}
+
+.arise-mana {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.arise-mana::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse 100% 80% at 20% 110%, rgba(30,60,160,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 80%  90% at 80% 110%, rgba(160,120,0,0.14)  0%, transparent 60%),
+    radial-gradient(ellipse 60%  60% at 50% 100%, rgba(0,80,180,0.12)   0%, transparent 50%),
+    radial-gradient(ellipse 40%  30% at 70%  80%, rgba(200,160,0,0.10)  0%, transparent 50%);
+  animation: mana-shimmer 10s ease-in-out infinite;
+}
+
+.arise-mana::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle 1.5px, rgba(96,165,250,0.90) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(251,191,36,0.80) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(99,102,241,0.70) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(251,191,36,0.90) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(96,165,250,0.60) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(167,139,250,0.75) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(251,191,36,0.65) 0%, transparent 100%);
+  background-size:
+    14% 28%, 20% 32%, 18% 26%, 12% 22%, 24% 30%, 16% 24%, 22% 28%;
+  background-repeat: no-repeat;
+  animation: mana-particle-rise 6s ease-in-out infinite;
+}
+
+/* ── .runic-siege ──────────────────────────────────────────── */
+@keyframes runic-scroll {
+  0%   { transform: translateY(0%)   translateX(0%); }
+  100% { transform: translateY(-22%) translateX(6%); }
+}
+
+@keyframes runic-pulse {
+  0%,100% { opacity: 0.55; }
+  50%     { opacity: 1;    }
+}
+
+.runic-siege {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.runic-siege::before {
+  content:
+    "ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ "
+    "ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᚠ ᚱ ᚲ ᛞ ᛟ ᚷ ᛗ ᚦ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ";
+  position: absolute;
+  top: -40%;
+  left: -5%;
+  width: 110%;
+  z-index: 0;
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 2.4;
+  letter-spacing: 0.55em;
+  word-spacing: 0.3em;
+  color: rgba(239,68,68,0.11);
+  text-shadow: 0 0 6px rgba(239,68,68,0.35);
+  font-family: serif;
+  overflow: hidden;
+  animation: runic-scroll 14s linear infinite;
+}
+
+.runic-siege::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(239,68,68,0.07) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(100,0,0,0.08) 0%, rgba(0,0,0,0) 60%);
+  animation: runic-pulse 3.5s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Corruption overlay tiers (existing)
+   ───────────────────────────────────────────────────────────── */
 /* Corruption overlay tiers */
 @keyframes corruption-pulse {
   0%, 100% { opacity: 0.18; }

@@ -19,9 +19,15 @@ const ANIM_STYLES = `
   0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); border-color:rgba(239,68,68,0.3); }
   50%     { box-shadow:0 0 18px 4px rgba(239,68,68,0.25); border-color:rgba(239,68,68,0.75); }
 }
-@keyframes fallFlash {
-  0%   { background:rgba(239,68,68,0.18); }
-  100% { background:transparent; }
+@keyframes domainDriftLeft {
+  0%,100% { transform: scale(1.05) translate(0%, 0%); }
+  33%     { transform: scale(1.08) translate(1.5%, -1.2%); }
+  66%     { transform: scale(1.06) translate(-1%, 1.5%); }
+}
+@keyframes domainDriftRight {
+  0%,100% { transform: scale(1.05) translate(0%, 0%); }
+  33%     { transform: scale(1.07) translate(-1.5%, 1%); }
+  66%     { transform: scale(1.09) translate(1%, -1.5%); }
 }
 `;
 
@@ -62,6 +68,13 @@ const DOMAIN_PAIRS = [
     sage:    "Humility is strength. The wise kneel to rise higher than the arrogant.",
     warning: "Pride storms the gates of Humility. A Fall now would be your ruin complete." },
 ] as const;
+
+function getDomainClass(power: CelestialPower): string {
+  if (power.isAscended && power.viceScore > 50) return "runic-siege";
+  if (power.viceScore > power.virtueScore) return "corruption-smoke";
+  if (power.virtueScore > power.viceScore) return "arise-mana";
+  return "";
+}
 
 function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: number }) {
   const total = viceScore + virtueScore;
@@ -158,205 +171,262 @@ export default function CelestialDuel() {
   }, [logging, queryClient]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen text-foreground overflow-hidden" style={{ background: "hsl(240 10% 4%)" }}>
       <style>{ANIM_STYLES}</style>
 
-      {/* ── Split-Screen Animated Banner ───────────────────────────── */}
-      <div className="relative flex h-72 md:h-96 overflow-hidden">
-        {/* SINS half */}
-        <div className="flex-1 relative overflow-hidden" style={{ animation: "sinGlow 4s ease-in-out infinite" }}>
+      {/* ── Domain Drift Background ──────────────────────────────────── */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Left 50% — Sins: dark-red desaturated blur with slow parallax drift */}
+        <div className="absolute top-0 left-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
           <img
-            src="/images/sins-bg.png"
-            alt="Seven Deadly Sins"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ animation: "bgDrift 12s ease-in-out infinite", objectPosition: "center" }}
+            src={`${BASE}/images/sins-bg.png`}
+            alt=""
+            style={{
+              position: "absolute",
+              width: "140%",
+              height: "140%",
+              top: "-20%",
+              left: "-20%",
+              objectFit: "cover",
+              filter: "blur(22px) saturate(0.22) brightness(0.18)",
+              animation: "domainDriftLeft 15s ease-in-out infinite",
+              willChange: "transform",
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/60" />
-          <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
-            <div className="text-center select-none drop-shadow-lg">
-              <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
-              <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-red-300"
-                style={{ textShadow: "0 0 30px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
-                SINS
-              </h2>
-            </div>
-          </div>
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to right, rgba(60,0,0,0.35) 0%, rgba(0,0,0,0.0) 100%)" }}
+          />
         </div>
-
-        {/* Center divider + scale */}
-        <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/25 z-20" />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/40 bg-black/90"
-            style={{ boxShadow: "0 0 24px rgba(255,255,255,0.2), 0 0 48px rgba(255,255,255,0.05)" }}>
-            <span className="text-white text-2xl">⚖</span>
-          </div>
-        </div>
-
-        {/* VIRTUES half */}
-        <div className="flex-1 relative overflow-hidden" style={{ animation: "virtueGlow 5s ease-in-out infinite" }}>
+        {/* Right 50% — Virtues: deep-blue and gold blur with slow parallax drift */}
+        <div className="absolute top-0 right-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
           <img
-            src="/images/virtues-bg.png"
-            alt="Seven Heavenly Virtues"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ animation: "bgDrift 14s ease-in-out infinite reverse", objectPosition: "center" }}
+            src={`${BASE}/images/virtues-bg.png`}
+            alt=""
+            style={{
+              position: "absolute",
+              width: "140%",
+              height: "140%",
+              top: "-20%",
+              right: "-20%",
+              objectFit: "cover",
+              filter: "blur(22px) saturate(0.35) brightness(0.16) hue-rotate(200deg)",
+              animation: "domainDriftRight 15s ease-in-out infinite",
+              willChange: "transform",
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-black/20 to-black/60" />
-          <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
-            <div className="text-center select-none drop-shadow-lg">
-              <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
-              <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-amber-200"
-                style={{ textShadow: "0 0 30px rgba(245,158,11,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
-                VIRTUES
-              </h2>
-            </div>
-          </div>
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to left, rgba(0,15,50,0.35) 0%, rgba(0,0,0,0.0) 100%)" }}
+          />
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 space-y-10">
-        {/* ── Domain Balance Bars ────────────────────────────────────── */}
-        <section>
-          <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-6 text-center">
-            Scale of Souls — Domain Balance
-          </h3>
+      {/* ── All page content sits above drift layer ───────────────────── */}
+      <div className="relative z-10">
 
-          {isLoading
-            ? <div className="text-center text-muted-foreground text-sm py-8">Consulting the Archive...</div>
-            : <div className="space-y-5">
-                {DOMAIN_PAIRS.map((dp) => {
-                  const power     = getPower(dp.pair);
-                  const underSiege = power.isAscended && power.viceScore > 50;
-                  const viceWins   = power.viceScore > power.virtueScore;
-
-                  let advice: { label: string; text: string; color: string };
-                  if (power.isAscended && viceWins) {
-                    advice = { label: "Void Warning", text: dp.warning, color: "text-orange-400" };
-                  } else if (viceWins) {
-                    advice = { label: "Shadow's Taunt", text: dp.taunt, color: "text-red-400" };
-                  } else {
-                    advice = { label: "Sage's Guidance", text: dp.sage, color: "text-amber-300" };
-                  }
-
-                  return (
-                    <div
-                      key={dp.pair}
-                      className="rounded-xl border bg-white/[0.02] p-4 transition-all duration-500"
-                      style={
-                        underSiege
-                          ? { animation: "siegePulse 2s ease-in-out infinite" }
-                          : { borderColor: "rgba(255,255,255,0.05)" }
-                      }
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-red-400">{dp.vice}</span>
-                          <span className="text-xs text-muted-foreground bg-white/5 rounded px-1.5 py-0.5">
-                            {power.viceScore}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {power.isAscended && (
-                            <span className="text-xs tracking-widest font-display"
-                              style={{ color: underSiege ? "#f97316" : "#fbbf24",
-                                textShadow: underSiege ? "0 0 8px rgba(249,115,22,0.6)" : "0 0 8px rgba(251,191,36,0.4)" }}>
-                              {underSiege ? "⚠ UNDER SIEGE" : "✦ ASCENDED"}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground bg-white/5 rounded px-1.5 py-0.5">
-                            {power.virtueScore}
-                          </span>
-                          <span className="text-sm font-semibold text-amber-300">{dp.virtue}</span>
-                        </div>
-                      </div>
-
-                      <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
-
-                      <p className="mt-3 text-xs leading-relaxed italic">
-                        <span className={`font-semibold ${advice.color}`}>{advice.label}: </span>
-                        <span className={`${advice.color}/80`}>{advice.text}</span>
-                      </p>
-                    </div>
-                  );
-                })}
+        {/* ── Split-Screen Animated Banner ───────────────────────────── */}
+        <div className="relative flex h-72 md:h-96 overflow-hidden">
+          {/* SINS half */}
+          <div className="flex-1 relative overflow-hidden" style={{ animation: "sinGlow 4s ease-in-out infinite" }}>
+            <img
+              src={`${BASE}/images/sins-bg.png`}
+              alt="Seven Deadly Sins"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ animation: "bgDrift 12s ease-in-out infinite", objectPosition: "center" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/60" />
+            <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
+              <div className="text-center select-none drop-shadow-lg">
+                <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
+                <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-red-300"
+                  style={{ textShadow: "0 0 30px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
+                  SINS
+                </h2>
               </div>
-          }
-        </section>
-
-        {/* ── Quick-Log Panel ────────────────────────────────────────── */}
-        <section>
-          <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-6 text-center">
-            Quick-Log — Manifest Your Will
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {DOMAIN_PAIRS.map((dp) => {
-              const power      = getPower(dp.pair);
-              const viceKey    = `vice:${dp.pair}`;
-              const virtueKey  = `virtue:${dp.pair}`;
-              const showTransmute = power.virtueScore >= 100 && !power.isAscended;
-              const underSiege = power.isAscended && power.viceScore > 50;
-
-              return (
-                <div key={dp.pair}
-                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-3 transition-all duration-300"
-                  style={underSiege ? { borderColor: "rgba(239,68,68,0.4)", background: "rgba(127,29,29,0.06)" } : {}}>
-                  <p className="text-xs tracking-widest text-muted-foreground uppercase font-display text-center">
-                    {dp.vice} <span className="text-white/20">vs</span> {dp.virtue}
-                    {power.isAscended && <span className="ml-2 text-amber-500">✦</span>}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      disabled={logging === viceKey}
-                      onClick={() => handleLog("vice", dp.pair)}
-                      className="flex-1 rounded-lg border border-red-900/40 bg-red-950/30 py-2 text-xs font-semibold text-red-400 transition-all hover:bg-red-900/40 hover:text-red-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {logging === viceKey ? "..." : `+${dp.vice}`}
-                    </button>
-                    <button
-                      disabled={logging === virtueKey}
-                      onClick={() => handleLog("virtue", dp.pair)}
-                      className="flex-1 rounded-lg border border-amber-900/40 bg-amber-950/20 py-2 text-xs font-semibold text-amber-400 transition-all hover:bg-amber-900/30 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {logging === virtueKey ? "..." : `+${dp.virtue}`}
-                    </button>
-                  </div>
-                  {showTransmute && (
-                    <button
-                      disabled={logging === virtueKey}
-                      onClick={() => handleLog("virtue", dp.pair)}
-                      className="w-full rounded-lg border py-2 text-xs font-black tracking-widest uppercase transition-all active:scale-95 disabled:opacity-50 animate-pulse"
-                      style={{
-                        borderColor: "rgba(245,158,11,0.6)",
-                        background: "linear-gradient(to right,rgba(120,53,15,0.4),rgba(113,63,18,0.3))",
-                        color: "#fcd34d",
-                        boxShadow: "0 0 14px rgba(245,158,11,0.2)",
-                      }}>
-                      ✦ Transmute — Ascend Now
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            </div>
           </div>
-        </section>
 
-        {/* ── Lore Panels ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section className="rounded-xl border border-red-900/30 bg-red-950/10 p-5">
-            <h4 className="font-display text-xs tracking-[0.4em] uppercase text-red-400 mb-2">Momentum Penalty</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Vice overflow past <span className="text-red-400 font-semibold">100</span>: Gold halved, streak reset,
-              multiplier returned to 1.0, +20 Corruption.
-            </p>
-          </section>
-          <section className="rounded-xl border border-orange-900/30 bg-orange-950/10 p-5">
-            <h4 className="font-display text-xs tracking-[0.4em] uppercase text-orange-400 mb-2">The Great Fall</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              If Vice overflows while a domain is <span className="text-amber-400 font-semibold">Ascended</span>:
-              Ascension lost, all stats −50, 75% of gold seized, +40 Corruption, streak reset.
-              Ascended domains resist with <span className="text-amber-400 font-semibold">+5 vice/failure</span> instead of +10.
-            </p>
-          </section>
+          {/* Center divider + scale */}
+          <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/25 z-20" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/40 bg-black/90"
+              style={{ boxShadow: "0 0 24px rgba(255,255,255,0.2), 0 0 48px rgba(255,255,255,0.05)" }}>
+              <span className="text-white text-2xl">⚖</span>
+            </div>
+          </div>
+
+          {/* VIRTUES half */}
+          <div className="flex-1 relative overflow-hidden" style={{ animation: "virtueGlow 5s ease-in-out infinite" }}>
+            <img
+              src={`${BASE}/images/virtues-bg.png`}
+              alt="Seven Heavenly Virtues"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ animation: "bgDrift 14s ease-in-out infinite reverse", objectPosition: "center" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-black/20 to-black/60" />
+            <div className="absolute inset-0 flex items-end pb-6 justify-center z-10">
+              <div className="text-center select-none drop-shadow-lg">
+                <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
+                <h2 className="font-display text-4xl md:text-5xl font-black tracking-widest text-amber-200"
+                  style={{ textShadow: "0 0 30px rgba(245,158,11,0.6), 0 2px 8px rgba(0,0,0,0.8)" }}>
+                  VIRTUES
+                </h2>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div className="mx-auto max-w-4xl px-4 py-8 space-y-10">
+          {/* ── Domain Balance Bars ────────────────────────────────────── */}
+          <section>
+            <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-6 text-center">
+              Scale of Souls — Domain Balance
+            </h3>
+
+            {isLoading
+              ? <div className="text-center text-muted-foreground text-sm py-8">Consulting the Archive...</div>
+              : <div className="space-y-5">
+                  {DOMAIN_PAIRS.map((dp) => {
+                    const power      = getPower(dp.pair);
+                    const underSiege = power.isAscended && power.viceScore > 50;
+                    const viceWins   = power.viceScore > power.virtueScore;
+                    const domainClass = getDomainClass(power);
+
+                    let advice: { label: string; text: string; color: string };
+                    if (power.isAscended && viceWins) {
+                      advice = { label: "Void Warning", text: dp.warning, color: "text-orange-400" };
+                    } else if (viceWins) {
+                      advice = { label: "Shadow's Taunt", text: dp.taunt, color: "text-red-400" };
+                    } else {
+                      advice = { label: "Sage's Guidance", text: dp.sage, color: "text-amber-300" };
+                    }
+
+                    return (
+                      <div
+                        key={dp.pair}
+                        className={`rounded-xl border bg-white/[0.02] p-4 transition-all duration-500 ${domainClass}`}
+                        style={
+                          underSiege
+                            ? { animation: "siegePulse 2s ease-in-out infinite" }
+                            : { borderColor: "rgba(255,255,255,0.05)" }
+                        }
+                      >
+                        <div className="relative z-10 flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-red-400">{dp.vice}</span>
+                            <span className="text-xs text-muted-foreground bg-white/5 rounded px-1.5 py-0.5">
+                              {power.viceScore}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {power.isAscended && (
+                              <span className="text-xs tracking-widest font-display"
+                                style={{ color: underSiege ? "#f97316" : "#fbbf24",
+                                  textShadow: underSiege ? "0 0 8px rgba(249,115,22,0.6)" : "0 0 8px rgba(251,191,36,0.4)" }}>
+                                {underSiege ? "⚠ UNDER SIEGE" : "✦ ASCENDED"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground bg-white/5 rounded px-1.5 py-0.5">
+                              {power.virtueScore}
+                            </span>
+                            <span className="text-sm font-semibold text-amber-300">{dp.virtue}</span>
+                          </div>
+                        </div>
+
+                        <div className="relative z-10">
+                          <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
+                        </div>
+
+                        <p className="relative z-10 mt-3 text-xs leading-relaxed italic">
+                          <span className={`font-semibold ${advice.color}`}>{advice.label}: </span>
+                          <span className={advice.color} style={{ opacity: 0.8 }}>{advice.text}</span>
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+            }
+          </section>
+
+          {/* ── Quick-Log Panel ────────────────────────────────────────── */}
+          <section>
+            <h3 className="font-display text-xs tracking-[0.4em] uppercase text-muted-foreground mb-6 text-center">
+              Quick-Log — Manifest Your Will
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {DOMAIN_PAIRS.map((dp) => {
+                const power        = getPower(dp.pair);
+                const viceKey      = `vice:${dp.pair}`;
+                const virtueKey    = `virtue:${dp.pair}`;
+                const showTransmute = power.virtueScore >= 100 && !power.isAscended;
+                const underSiege   = power.isAscended && power.viceScore > 50;
+                const domainClass  = getDomainClass(power);
+
+                return (
+                  <div key={dp.pair}
+                    className={`rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-3 transition-all duration-300 ${domainClass}`}
+                    style={underSiege ? { borderColor: "rgba(239,68,68,0.4)", background: "rgba(127,29,29,0.06)" } : {}}>
+                    <p className="relative z-10 text-xs tracking-widest text-muted-foreground uppercase font-display text-center">
+                      {dp.vice} <span className="text-white/20">vs</span> {dp.virtue}
+                      {power.isAscended && <span className="ml-2 text-amber-500">✦</span>}
+                    </p>
+                    <div className="relative z-10 flex gap-2">
+                      <button
+                        disabled={logging === viceKey}
+                        onClick={() => handleLog("vice", dp.pair)}
+                        className="flex-1 rounded-lg border border-red-900/40 bg-red-950/30 py-2 text-xs font-semibold text-red-400 transition-all hover:bg-red-900/40 hover:text-red-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {logging === viceKey ? "..." : `+${dp.vice}`}
+                      </button>
+                      <button
+                        disabled={logging === virtueKey}
+                        onClick={() => handleLog("virtue", dp.pair)}
+                        className="flex-1 rounded-lg border border-amber-900/40 bg-amber-950/20 py-2 text-xs font-semibold text-amber-400 transition-all hover:bg-amber-900/30 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {logging === virtueKey ? "..." : `+${dp.virtue}`}
+                      </button>
+                    </div>
+                    {showTransmute && (
+                      <button
+                        disabled={logging === virtueKey}
+                        onClick={() => handleLog("virtue", dp.pair)}
+                        className="relative z-10 w-full rounded-lg border py-2 text-xs font-black tracking-widest uppercase transition-all active:scale-95 disabled:opacity-50 animate-pulse"
+                        style={{
+                          borderColor: "rgba(245,158,11,0.6)",
+                          background: "linear-gradient(to right,rgba(120,53,15,0.4),rgba(113,63,18,0.3))",
+                          color: "#fcd34d",
+                          boxShadow: "0 0 14px rgba(245,158,11,0.2)",
+                        }}>
+                        ✦ Transmute — Ascend Now
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ── Lore Panels ───────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section className="rounded-xl border border-red-900/30 bg-red-950/10 p-5">
+              <h4 className="font-display text-xs tracking-[0.4em] uppercase text-red-400 mb-2">Momentum Penalty</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Vice overflow past <span className="text-red-400 font-semibold">100</span>: Gold halved, streak reset,
+                multiplier returned to 1.0, +20 Corruption.
+              </p>
+            </section>
+            <section className="rounded-xl border border-orange-900/30 bg-orange-950/10 p-5">
+              <h4 className="font-display text-xs tracking-[0.4em] uppercase text-orange-400 mb-2">The Great Fall</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If Vice overflows while a domain is <span className="text-amber-400 font-semibold">Ascended</span>:
+                Ascension lost, all stats −50, 75% of gold seized, +40 Corruption, streak reset.
+                Ascended domains resist with <span className="text-amber-400 font-semibold">+5 vice/failure</span> instead of +10.
+              </p>
+            </section>
+          </div>
+        </div>
+
       </div>
     </div>
   );
