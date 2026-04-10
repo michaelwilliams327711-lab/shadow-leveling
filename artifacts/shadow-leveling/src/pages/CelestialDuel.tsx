@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
@@ -12,6 +12,13 @@ interface CelestialPower {
   viceScore: number;
   virtueScore: number;
   isAscended: boolean;
+}
+
+interface BattlefieldProps {
+  powers: CelestialPower[];
+  glitching: boolean;
+  shimmering: boolean;
+  flaring: boolean;
 }
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -47,7 +54,7 @@ const DOMAIN_PAIRS = [
     warning: "Pride storms the gates of Humility. A Fall now would be your ruin complete." },
 ] as const;
 
-// TugBar: center=50%; virtue score pushes right; vice score pushes left
+// ── TugBar ─────────────────────────────────────────────────────────────────────
 function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: number }) {
   const total = viceScore + virtueScore;
   const raw = total === 0 ? 50 : 50 + ((virtueScore - viceScore) / Math.max(total, 1)) * 50;
@@ -76,8 +83,8 @@ function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: nu
   );
 }
 
-// Global Battlefield Clash Component
-function GlobalBattlefield({ powers }: { powers: CelestialPower[] }) {
+// ── GlobalBattlefield ─────────────────────────────────────────────────────────
+function GlobalBattlefield({ powers, glitching, shimmering, flaring }: BattlefieldProps) {
   const totals = useMemo(() => powers.reduce((acc, p) => ({
     vice: acc.vice + p.viceScore,
     virtue: acc.virtue + p.virtueScore
@@ -85,6 +92,12 @@ function GlobalBattlefield({ powers }: { powers: CelestialPower[] }) {
 
   const totalPoints = totals.vice + totals.virtue;
   const virtueGloballyWinning = totals.virtue > totals.vice;
+
+  // Glitch key — remounting ::before/::after pseudo-elements on each trigger
+  const [glitchKey, setGlitchKey] = useState(0);
+  useEffect(() => {
+    if (glitching) setGlitchKey(k => k + 1);
+  }, [glitching]);
 
   if (totalPoints === 0) {
     return (
@@ -96,7 +109,9 @@ function GlobalBattlefield({ powers }: { powers: CelestialPower[] }) {
         <div className="absolute inset-0 z-10 bg-black/60" />
         <div className="relative z-20 w-full flex flex-col items-center justify-center gap-2">
           <LucideScale className="h-8 w-8 text-white/40" />
-          <h2 className="font-display text-2xl font-black tracking-widest text-muted-foreground uppercase">Tide is Still</h2>
+          <h2 className="font-display text-2xl font-black tracking-widest text-muted-foreground uppercase">
+            Tide is Still
+          </h2>
           <p className="text-xs text-muted-foreground/60 tracking-widest">Log a vice or virtue to begin the clash</p>
         </div>
       </div>
@@ -105,50 +120,89 @@ function GlobalBattlefield({ powers }: { powers: CelestialPower[] }) {
 
   return (
     <div className="relative flex h-56 md:h-72 overflow-hidden border-b border-white/10 bg-black">
-      {/* Virtue Side */}
+
+      {/* ── Virtue Side ── */}
       <div
-        className={`absolute inset-y-0 right-0 z-10 flex items-center justify-center overflow-hidden transition-all duration-1000 ease-out ${virtueGloballyWinning ? 'winner-virtue' : 'loser-virtue'}`}
+        className={[
+          "absolute inset-y-0 right-0 z-10 flex items-center justify-center overflow-hidden",
+          "transition-all duration-1000 ease-out",
+          virtueGloballyWinning ? "winner-virtue" : "loser-virtue",
+          shimmering ? "shimmer-sweep" : "",
+        ].join(" ")}
         style={{
           background: `url(${virtuesImg}) center/cover, linear-gradient(135deg,#a16207 0%,#065f46 100%)`,
-          animation: virtueGloballyWinning ? 'clash-virtue-win 1.5s forwards ease-out' : 'clash-virtue-retreat 1.5s forwards ease-in'
+          animation: virtueGloballyWinning
+            ? "clash-virtue-win 1.5s forwards ease-out"
+            : "clash-virtue-retreat 1.5s forwards ease-in",
         }}
       >
-        <div className="absolute inset-0 bg-black/40" style={{ animation: virtueGloballyWinning ? 'virtueGlow 5s infinite' : 'none' }} />
-        {virtueGloballyWinning && (
-          <div className="absolute inset-0 z-10 arise-mana" />
-        )}
+        <div
+          className="absolute inset-0 bg-black/40"
+          style={{ animation: virtueGloballyWinning ? "virtueGlow 5s infinite" : "none" }}
+        />
+        {virtueGloballyWinning && <div className="absolute inset-0 z-10 arise-mana" />}
         <div className="relative z-20 text-center px-4">
           <p className="text-xs tracking-[0.5em] text-amber-400 uppercase font-display mb-1">The Seven</p>
-          <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg">VIRTUES</h2>
-          {virtueGloballyWinning && <span className="text-[10px] tracking-widest text-white/70 uppercase">→ DRIVING THE TIDE ←</span>}
+          <h2
+            className="font-display text-3xl md:text-4xl font-black tracking-widest text-amber-200 drop-shadow-lg"
+            data-text="VIRTUES"
+          >
+            VIRTUES
+          </h2>
+          {virtueGloballyWinning && (
+            <span className="text-[10px] tracking-widest text-white/70 uppercase">→ DRIVING THE TIDE ←</span>
+          )}
           <p className="text-xs text-amber-400/60 font-stat mt-1">{totals.virtue} pts</p>
         </div>
       </div>
 
-      {/* Central Separator + Scale */}
+      {/* ── Central Separator + Scale (flare origin) ── */}
       <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/20 z-20" />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+        <div
+          className={["flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.15)]", flaring ? "flare-burst" : ""].join(" ")}
+        >
           <LucideScale className="h-6 w-6 text-white" />
         </div>
       </div>
 
-      {/* Sin Side */}
+      {/* ── Sin Side ── */}
       <div
-        className={`absolute inset-y-0 left-0 z-10 flex items-center justify-center overflow-hidden transition-all duration-1000 ease-out ${!virtueGloballyWinning ? 'winner-sin' : 'loser-sin'}`}
+        className={[
+          "absolute inset-y-0 left-0 z-10 flex items-center justify-center overflow-hidden",
+          "transition-all duration-1000 ease-out",
+          !virtueGloballyWinning ? "winner-sin" : "loser-sin",
+        ].join(" ")}
         style={{
           background: `url(${sinsImg}) center/cover, linear-gradient(135deg,#3b0764 0%,#7f1d1d 100%)`,
-          animation: !virtueGloballyWinning ? 'clash-sin-win 1.5s forwards ease-out' : 'clash-sin-retreat 1.5s forwards ease-in'
+          animation: !virtueGloballyWinning
+            ? "clash-sin-win 1.5s forwards ease-out"
+            : "clash-sin-retreat 1.5s forwards ease-in",
         }}
       >
-        <div className="absolute inset-0 bg-black/40" style={{ animation: !virtueGloballyWinning ? 'sinGlow 5s infinite' : 'none' }} />
+        <div
+          className="absolute inset-0 bg-black/40"
+          style={{ animation: !virtueGloballyWinning ? "sinGlow 5s infinite" : "none" }}
+        />
         {virtueGloballyWinning && (
           <div className="absolute inset-0 z-10 corruption-smoke" style={{ opacity: 0.3 }} />
         )}
         <div className="relative z-20 text-center px-4">
           <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
-          <h2 className="font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg">SINS</h2>
-          {!virtueGloballyWinning && <span className="text-[10px] tracking-widest text-white/70 uppercase">← DRIVING THE TIDE →</span>}
+          {/* Glitch target: data-text drives the ::before/::after pseudo-elements */}
+          <h2
+            key={glitchKey}
+            className={[
+              "font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg",
+              glitching ? "glitch-active glitch-burst" : "",
+            ].join(" ")}
+            data-text="SINS"
+          >
+            SINS
+          </h2>
+          {!virtueGloballyWinning && (
+            <span className="text-[10px] tracking-widest text-white/70 uppercase">← DRIVING THE TIDE →</span>
+          )}
           <p className="text-xs text-red-400/60 font-stat mt-1">{totals.vice} pts</p>
         </div>
       </div>
@@ -156,10 +210,53 @@ function GlobalBattlefield({ powers }: { powers: CelestialPower[] }) {
   );
 }
 
+// ── CelestialDuel Page ────────────────────────────────────────────────────────
 export default function CelestialDuel() {
   const queryClient = useQueryClient();
-  const [logging, setLogging] = useState<string | null>(null);
+  const [logging, setLogging]     = useState<string | null>(null);
+  const [glitching, setGlitching] = useState(false);
+  const [shimmering, setShimmering] = useState(false);
+  const [flaring, setFlaring]     = useState(false);
 
+  const glitchTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shimmerTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flareTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevVirtueWinRef = useRef<boolean | null>(null);
+
+  // ── Effect trigger helpers ──────────────────────────────────────────────────
+  const triggerGlitch = useCallback(() => {
+    if (glitchTimer.current) clearTimeout(glitchTimer.current);
+    setGlitching(true);
+    glitchTimer.current = setTimeout(() => setGlitching(false), 600);
+  }, []);
+
+  const triggerShimmer = useCallback(() => {
+    if (shimmerTimer.current) clearTimeout(shimmerTimer.current);
+    setShimmering(false);
+    // One-frame gap forces CSS animation restart on remount
+    requestAnimationFrame(() => {
+      setShimmering(true);
+      shimmerTimer.current = setTimeout(() => setShimmering(false), 2500);
+    });
+  }, []);
+
+  const triggerFlare = useCallback(() => {
+    if (flareTimer.current) clearTimeout(flareTimer.current);
+    setFlaring(false);
+    requestAnimationFrame(() => {
+      setFlaring(true);
+      flareTimer.current = setTimeout(() => setFlaring(false), 900);
+    });
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    if (glitchTimer.current) clearTimeout(glitchTimer.current);
+    if (shimmerTimer.current) clearTimeout(shimmerTimer.current);
+    if (flareTimer.current) clearTimeout(flareTimer.current);
+  }, []);
+
+  // ── Data ───────────────────────────────────────────────────────────────────
   const { data: powers = [], isLoading } = useQuery<CelestialPower[]>({
     queryKey: ["ascension", "powers"],
     queryFn: async () => {
@@ -170,6 +267,21 @@ export default function CelestialDuel() {
     staleTime: 1000 * 30,
   });
 
+  // ── Tide-change detector: flare fires when dominant side flips ─────────────
+  const totals = useMemo(() => powers.reduce((acc, p) => ({
+    vice: acc.vice + p.viceScore,
+    virtue: acc.virtue + p.virtueScore
+  }), { vice: 0, virtue: 0 }), [powers]);
+
+  useEffect(() => {
+    const virtueWinning = totals.virtue > totals.vice;
+    if (prevVirtueWinRef.current !== null && prevVirtueWinRef.current !== virtueWinning) {
+      triggerFlare();
+    }
+    prevVirtueWinRef.current = virtueWinning;
+  }, [totals, triggerFlare]);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const getPower = useCallback((pair: string): CelestialPower =>
     powers.find(p => p.domainPair === pair) ?? {
       id: 0, characterId: 0, domainPair: pair,
@@ -193,14 +305,21 @@ export default function CelestialDuel() {
       queryClient.invalidateQueries({ queryKey: ["getCharacter"] });
 
       if (result.greatFall) {
+        triggerGlitch();
+        setTimeout(triggerGlitch, 300); // double-hit for catastrophic event
         toast({ title: "[THE GREAT FALL] Domain Corrupted", description: "Ascension lost. All stats −50. 75% of gold seized. The Shadow devours your legacy.", variant: "destructive", duration: 10000 });
       } else if (result.overflowTriggered) {
+        triggerGlitch();
         toast({ title: "[SYSTEM] Momentum Halved", description: "Vice overflowed. Gold halved. Streak reset. The Shadow claims its due.", variant: "destructive", duration: 6000 });
       } else if (result.ascensionTriggered) {
+        triggerFlare();
+        triggerShimmer();
         toast({ title: "[ASCENSION] Domain Transcended", description: `You have reached the peak of ${pair}. All stats +50 permanently. Virtue Relic unlocked.`, duration: 8000 });
       } else if (type === "virtue") {
+        triggerShimmer();
         toast({ title: "Virtue logged", description: "+10 XP granted.", duration: 2500 });
       } else {
+        triggerGlitch();
         toast({ title: "Vice logged", description: "+2 Corruption added. Hold the line.", duration: 2500 });
       }
     } catch (error) {
@@ -209,7 +328,7 @@ export default function CelestialDuel() {
     } finally {
       setLogging(null);
     }
-  }, [logging, queryClient]);
+  }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare]);
 
   const getDomainClass = useCallback((power: CelestialPower): string => {
     if (power.isAscended && power.viceScore > 50) return "runic-siege under-siege border-red-900/40";
@@ -218,6 +337,7 @@ export default function CelestialDuel() {
     return "border-white/5";
   }, []);
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background text-foreground relative">
 
@@ -225,18 +345,18 @@ export default function CelestialDuel() {
       <div className="absolute inset-0 z-0 flex overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="flex-1 relative" style={{
           background: `url(${sinsImg}) center/cover fixed, #3b0764`,
-          transform: 'scale(1.1)',
-          filter: 'blur(22px) saturate(0.22) brightness(0.18)',
-          animation: 'domainDriftLeft 15s ease-in-out infinite'
+          transform: "scale(1.1)",
+          filter: "blur(22px) saturate(0.22) brightness(0.18)",
+          animation: "domainDriftLeft 15s ease-in-out infinite",
         }}>
           <div className="absolute inset-0 bg-red-950/20" />
         </div>
         <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-32 bg-gradient-to-r from-black via-black to-black opacity-90 blur-xl" />
         <div className="flex-1 relative" style={{
           background: `url(${virtuesImg}) center/cover fixed, #a16207`,
-          transform: 'scale(1.1)',
-          filter: 'blur(22px) saturate(0.35) brightness(0.16) hue-rotate(200deg)',
-          animation: 'domainDriftRight 15s ease-in-out infinite'
+          transform: "scale(1.1)",
+          filter: "blur(22px) saturate(0.35) brightness(0.16) hue-rotate(200deg)",
+          animation: "domainDriftRight 15s ease-in-out infinite",
         }}>
           <div className="absolute inset-0 bg-blue-950/20" />
         </div>
@@ -244,7 +364,12 @@ export default function CelestialDuel() {
 
       {/* Main Content Layer */}
       <div className="relative z-10 flex flex-col">
-        <GlobalBattlefield powers={powers} />
+        <GlobalBattlefield
+          powers={powers}
+          glitching={glitching}
+          shimmering={shimmering}
+          flaring={flaring}
+        />
 
         <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-12">
 
@@ -258,42 +383,38 @@ export default function CelestialDuel() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {DOMAIN_PAIRS.map(dp => {
-                  const power = getPower(dp.pair);
+                  const power      = getPower(dp.pair);
                   const underSiege = power.isAscended && power.viceScore > 50;
-                  const viceWins = power.viceScore > power.virtueScore;
+                  const viceWins   = power.viceScore > power.virtueScore;
                   const atmosphereClass = getDomainClass(power);
-
-                  let advice: { label: string; text: string };
-                  if (underSiege) {
-                    advice = { label: "Void Warning", text: dp.warning };
-                  } else if (viceWins) {
-                    advice = { label: "Shadow's Taunt", text: dp.taunt };
-                  } else {
-                    advice = { label: "Sage's Guidance", text: dp.sage };
-                  }
+                  const advice = underSiege
+                    ? { label: "Void Warning",    text: dp.warning }
+                    : viceWins
+                    ? { label: "Shadow's Taunt",  text: dp.taunt }
+                    : { label: "Sage's Guidance", text: dp.sage };
 
                   return (
                     <div key={dp.pair} className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
                       <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2.5">
-                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? 'text-red-400' : 'text-muted-foreground'}`}>{dp.vice}</span>
+                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "text-red-400" : "text-muted-foreground"}`}>{dp.vice}</span>
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.viceScore}</span>
                         </div>
                         {power.isAscended && (
-                          <div className={`flex items-center gap-1.5 text-xs tracking-widest font-display ${underSiege ? 'text-red-400' : 'text-amber-400'}`}>
+                          <div className={`flex items-center gap-1.5 text-xs tracking-widest font-display ${underSiege ? "text-red-400" : "text-amber-400"}`}>
                             {underSiege
                               ? <LucideAlertTriangle className="h-4 w-4 animate-pulse" />
                               : <LucideShieldCheck className="h-4 w-4" />}
-                            <span className="uppercase">{underSiege ? 'Siege' : 'Ascended'}</span>
+                            <span className="uppercase">{underSiege ? "Siege" : "Ascended"}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2.5">
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.virtueScore}</span>
-                          <span className={`text-sm md:text-base font-bold tracking-tight ${!viceWins ? 'text-amber-300' : 'text-muted-foreground'}`}>{dp.virtue}</span>
+                          <span className={`text-sm md:text-base font-bold tracking-tight ${!viceWins ? "text-amber-300" : "text-muted-foreground"}`}>{dp.virtue}</span>
                         </div>
                       </div>
                       <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
-                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? 'text-orange-400/90 font-semibold' : viceWins ? 'text-red-400/80' : 'text-amber-300/80'}`}>
+                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "text-red-400/80" : "text-amber-300/80"}`}>
                         <span className="font-semibold not-italic">{advice.label}: </span>
                         {advice.text}
                       </p>
