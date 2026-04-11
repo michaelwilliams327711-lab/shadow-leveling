@@ -183,24 +183,14 @@
 @keyframes ember-float {
   0% {
     background-position:
-      15% 110%, 38% 115%, 62% 108%, 80% 112%, 28% 120%, 52% 107%, 72% 116%,
-      10% 118%, 45% 122%, 67% 111%, 88% 108%, 22% 114%, 58% 119%, 77% 113%,
-      35% 117%, 50% 125%, 20% 109%, 65% 120%, 83% 115%, 42% 118%,
-       7% 113%, 31% 121%, 53% 116%, 74% 110%, 91% 119%, 17% 108%, 43% 123%,
-      60% 112%, 82% 117%, 26% 110%, 48% 124%, 69% 108%, 37% 119%, 55% 111%,
-      13% 116%, 70% 122%, 86% 109%, 24% 118%, 46% 115%, 79% 121%, 93% 112%;
+      15% 110%, 38% 115%, 62% 108%, 80% 112%, 28% 120%, 52% 107%, 72% 116%;
     opacity: 0;
   }
   8%  { opacity: 1; }
-  88% { opacity: 0.6; }
+  88% { opacity: 0.55; }
   100% {
     background-position:
-      11% -30%, 42% -22%, 58% -38%, 76% -26%, 33% -32%, 56% -18%, 68% -28%,
-       6% -25%, 49% -40%, 71% -20%, 84% -35%, 18% -28%, 54% -42%, 73% -22%,
-      30% -30%, 47% -15%, 16% -38%, 63% -25%, 79% -18%, 39% -32%,
-       3% -20%, 27% -35%, 51% -28%, 70% -40%, 87% -22%, 13% -33%, 41% -18%,
-      57% -38%, 78% -25%, 22% -30%, 44% -42%, 66% -20%, 34% -35%, 52% -15%,
-       9% -28%, 68% -32%, 82% -38%, 20% -22%, 43% -30%, 75% -18%, 90% -40%;
+      11% -30%, 42% -22%, 58% -38%, 76% -26%, 33% -32%, 56% -18%, 68% -28%;
     opacity: 0;
   }
 }
@@ -226,21 +216,25 @@
   animation: smoke-drift 12s ease-in-out infinite;
 }
 
-@keyframes single-ember-rise {
-  0%    { transform: translateY(0px) translateX(0px); opacity: 0; }
-  3%    { opacity: 1; }
-  16%   { transform: translateY(-110px) translateX(var(--drift, 4px)); opacity: 0; }
-  16.1% { transform: translateY(0px) translateX(0px); opacity: 0; }
-  100%  { transform: translateY(0px) translateX(0px); opacity: 0; }
-}
-
-.ember-particle {
+.corruption-smoke::after {
+  content: "";
   position: absolute;
-  bottom: 2px;
-  border-radius: 50%;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
-  z-index: 1;
-  animation: single-ember-rise var(--dur, 16s) linear var(--delay, 0s) infinite;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.85) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,110,40,0.70) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(239,68,68,0.60) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,140,50,0.80) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.55) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(200,50,50,0.70) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,60,0,0.65)  0%, transparent 100%);
+  background-size:
+    14% 28%, 22% 32%, 18% 26%, 12% 22%, 26% 30%, 16% 24%, 20% 28%;
+  background-repeat: no-repeat;
+  animation: ember-float 7s ease-in-out infinite;
 }
 
 /* ── .arise-mana ───────────────────────────────────────────── */

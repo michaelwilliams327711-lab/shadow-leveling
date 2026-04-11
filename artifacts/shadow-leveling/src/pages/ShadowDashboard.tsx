@@ -21,56 +21,6 @@ import {
 } from "recharts";
 import { useGetCorruptionHistory, customFetch } from "@workspace/api-client-react";
 
-const EMBER_COLORS = {
-  red: [
-    "rgba(239,68,68,0.9)", "rgba(255,110,40,0.8)", "rgba(220,30,30,0.85)",
-    "rgba(255,140,50,0.75)", "rgba(200,50,50,0.9)", "rgba(255,60,0,0.8)",
-    "rgba(255,80,20,0.7)", "rgba(180,20,20,0.85)", "rgba(255,100,30,0.8)",
-  ],
-  crimson: [
-    "rgba(180,10,10,0.9)", "rgba(200,20,20,0.85)", "rgba(160,0,0,0.9)",
-    "rgba(220,30,30,0.8)", "rgba(140,0,0,0.85)", "rgba(190,15,15,0.9)",
-    "rgba(210,25,25,0.75)", "rgba(150,5,5,0.9)", "rgba(170,10,10,0.85)",
-  ],
-  orange: [
-    "rgba(251,146,60,0.9)", "rgba(234,88,12,0.85)", "rgba(249,115,22,0.8)",
-    "rgba(253,186,116,0.75)", "rgba(194,65,12,0.9)", "rgba(252,165,80,0.8)",
-    "rgba(245,100,20,0.85)", "rgba(255,130,40,0.75)", "rgba(230,80,15,0.9)",
-  ],
-};
-
-function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeof EMBER_COLORS; count?: number }) {
-  const colors = EMBER_COLORS[palette];
-  return (
-    <>
-      {Array.from({ length: count }, (_, i) => {
-        const size = [1.5, 2, 2.5, 1, 3, 1.5, 2, 1, 2.5][i % 9];
-        const left = (i * 61.803398875) % 100;
-        const step = 0.4;
-        const dur = count * step;
-        const delay = i * step;
-        const drift = (i % 2 === 0 ? 1 : -1) * (4 + (i % 8) * 1.5);
-        const color = colors[i % colors.length];
-        return (
-          <span
-            key={i}
-            className="ember-particle"
-            style={{
-              left: `${left}%`,
-              width: `${size}px`,
-              height: `${size}px`,
-              background: color,
-              "--delay": `${delay}s`,
-              "--dur": `${dur}s`,
-              "--drift": `${drift}px`,
-            } as React.CSSProperties}
-          />
-        );
-      })}
-    </>
-  );
-}
-
 interface GraveyardEntry {
   date: string;
   xp_change: number;
@@ -256,7 +206,6 @@ export default function ShadowDashboard() {
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
             <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="red" />
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
@@ -279,8 +228,7 @@ export default function ShadowDashboard() {
             fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
           >
-            <Card className="glass-panel border border-red-800/40 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="crimson" />
+            <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
                   <Skull className="w-7 h-7 text-red-700" />
@@ -303,8 +251,7 @@ export default function ShadowDashboard() {
             fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
           >
-            <Card className="glass-panel border border-orange-700/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="orange" />
+            <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
                   <AlertTriangle className="w-7 h-7 text-orange-500" />
@@ -323,8 +270,7 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="glass-panel border border-red-900/30 corruption-smoke">
-          <EmberParticles palette="red" />
+        <Card className="glass-panel border border-red-900/30">
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="XP Bleed — your daily XP losses over the past 30 days."
@@ -388,8 +334,7 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
-            <EmberParticles palette="red" />
+          <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Time Sink — your failures broken down by quest category."
@@ -464,8 +409,7 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
-            <EmberParticles palette="crimson" />
+          <Card className="glass-panel border border-red-900/30 h-full">
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Graveyard — a log of your most recent failures."
@@ -520,8 +464,7 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="glass-panel border border-red-900/30 corruption-smoke">
-          <EmberParticles palette="crimson" count={60} />
+        <Card className="glass-panel border border-red-900/30">
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="Corruption History — your corruption score over time."
@@ -568,8 +511,7 @@ export default function ShadowDashboard() {
 
       {relapseEvents.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="glass-panel border border-red-900/30 corruption-smoke">
-            <EmberParticles palette="crimson" />
+          <Card className="glass-panel border border-red-900/30">
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Relapse Log — every relapse event recorded."
