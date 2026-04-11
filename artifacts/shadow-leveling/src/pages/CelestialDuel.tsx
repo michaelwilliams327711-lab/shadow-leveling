@@ -3,6 +3,8 @@ import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
+import { ShadowIntel } from "@/components/ShadowIntel";
+import { SYSTEM_INTEL } from "@/lib/systemLore";
 import sinsImg from "@assets/images/sins-bg.png";
 import virtuesImg from "@assets/images/virtues-bg.png";
 
@@ -445,7 +447,12 @@ export default function CelestialDuel() {
 
                   return (
                     <div key={dp.pair} className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
-                      <div className="flex items-center justify-between mb-3.5">
+                      <ShadowIntel
+                        title="Shadow Intel"
+                        intel={SYSTEM_INTEL.AMBUSH_THRESHOLD}
+                        detail="Vice scores near 80 indicate imminent Archive instability. Ascended domains suffer the Great Fall on overflow."
+                      >
+                        <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2.5">
                           <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "ct-text" : "text-muted-foreground"}`}>{dp.vice}</span>
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.viceScore}</span>
@@ -462,7 +469,8 @@ export default function CelestialDuel() {
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.virtueScore}</span>
                           <span className={`text-sm md:text-base font-bold tracking-tight ${!viceWins ? "ct-text" : "text-muted-foreground"}`}>{dp.virtue}</span>
                         </div>
-                      </div>
+                        </div>
+                      </ShadowIntel>
                       <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
                       <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "ct-text-muted" : "ct-text"}`}>
                         <span className="font-semibold not-italic">{advice.label}: </span>
@@ -533,7 +541,10 @@ export default function CelestialDuel() {
               <div className="relative z-10 flex items-start gap-4">
                 <LucideAlertTriangle className="ct-text h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
-                  <h4 className="ct-text font-display text-sm tracking-widest uppercase">Momentum Overload</h4>
+                  <h4 className="ct-text font-display text-sm tracking-widest uppercase flex items-center gap-2">
+                    Momentum Overload
+                    <ShadowIntel title="System Info" intel={SYSTEM_INTEL.AMBUSH_THRESHOLD} detail="Any vice exceeding 80 can call a high-rank ambush without spending Gate Fragments." />
+                  </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Vice overflow past <span className="ct-text font-bold font-stat">100</span>: Gold halved, streak &amp; multiplier reset to Day 1, +20 Corruption.
                   </p>
@@ -544,7 +555,10 @@ export default function CelestialDuel() {
               <div className="relative z-10 flex items-start gap-4">
                 <LucideAlertTriangle className="ct-text-muted h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
-                  <h4 className="ct-text-muted font-display text-sm tracking-widest uppercase">The Great Fall</h4>
+                  <h4 className="ct-text-muted font-display text-sm tracking-widest uppercase flex items-center gap-2">
+                    The Great Fall
+                    <ShadowIntel title="System Info" intel={SYSTEM_INTEL.AMBUSH_THRESHOLD} detail="Overflowing an ascended vice domain converts warning into punishment: ascension lost, stats damaged, gold seized." />
+                  </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Vice overflow while <span className="ct-text font-bold">Ascended</span>: Ascension lost, all stats −50, 75% gold seized, +40 Corruption.
                   </p>

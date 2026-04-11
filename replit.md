@@ -45,6 +45,7 @@ artifacts-monorepo/
 7. **Rewards Shop** - Spend Gold on custom guilt-free rewards
 8. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
 9. **The Awakening** - Vision/Anti-Vision journaling page
+10. **Archive of Shadows Intel** - Centralized System lore strings power Shadow Intel tooltips on boss HP/enrage logic, locked boss gate fragments, quest fragment drops, Celestial vice thresholds, and Arise extraction authority.
 
 ## API Routes
 

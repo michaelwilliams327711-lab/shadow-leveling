@@ -74,7 +74,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { Quest } from "@workspace/api-client-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { ShadowIntel } from "@/components/ShadowIntel";
 import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
+import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
@@ -546,7 +548,11 @@ function PlannerQuestCard({ quest, compact = false }: { quest: Quest; compact?: 
         </div>
         {!compact && (
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-violet-400" />{Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP</span>
+            <span className="flex items-center gap-1">
+              <Zap className="h-3 w-3 text-violet-400" />
+              {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP
+              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Clear this quest for a 20% Archive roll toward Gate Fragment acquisition." />
+            </span>
             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{quest.durationMinutes}m</span>
           </div>
         )}
@@ -2103,13 +2109,11 @@ export default function Quests() {
                           )}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
                             <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {quest.durationMinutes}m</span>
-                            <InfoTooltip
-                              what="XP Reward — experience points awarded on completion."
-                              fn="XP accumulates toward your next level. Higher rank quests award more XP."
-                              usage="Complete quests to earn XP. Failing a quest deducts XP instead."
-                            >
-                              <span className="flex items-center gap-1.5 text-primary"><Trophy className="w-4 h-4" /> {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP</span>
-                            </InfoTooltip>
+                            <span className="flex items-center gap-1.5 text-primary">
+                              <Trophy className="w-4 h-4" />
+                              {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP
+                              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Successful quest completion triggers a 20% fragment roll. 3 fragments forge the Gate Key for a new Boss." />
+                            </span>
                             <InfoTooltip
                               what="Gold Reward — currency awarded on completion."
                               fn="Gold is spent in the System Shop to purchase real-life rewards."

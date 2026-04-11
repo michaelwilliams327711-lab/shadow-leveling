@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { X } from "lucide-react";
+import { ShadowIntel } from "@/components/ShadowIntel";
+import { SYSTEM_INTEL } from "@/lib/systemLore";
 
 interface AriseRitualProps {
   bossId: number;
@@ -135,6 +137,13 @@ export function AriseRitual({ bossId, bossName, onClose, onSuccess }: AriseRitua
         {!isSuccess && (
           <>
             <div className="w-full z-10">
+              <div className="mb-3 flex justify-center">
+                <ShadowIntel
+                  title="Shadow Intel"
+                  intel={SYSTEM_INTEL.EXTRACTION_AUTHORITY}
+                  detail="Raise Intellect before attempting elite extractions to bend the success threshold in your favor."
+                />
+              </div>
               <input
                 ref={inputRef}
                 value={command}

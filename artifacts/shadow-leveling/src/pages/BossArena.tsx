@@ -26,6 +26,8 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { BossVictoryScreen } from "@/components/BossVictoryScreen";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { AriseRitual } from "@/components/AriseRitual";
+import { ShadowIntel } from "@/components/ShadowIntel";
+import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { motion, AnimatePresence } from "framer-motion";
 
 const bossArenaImg = "/images/boss-arena.png";
@@ -267,17 +269,18 @@ export default function BossArena() {
             return (
               <Card key={boss.id} className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
                 {!boss.isUnlocked && (
-                  <InfoTooltip
-                    what="Locked — this boss is not yet accessible."
-                    fn={`You must accumulate ${boss.xpThreshold.toLocaleString()} total XP to unlock this boss.`}
-                    usage="Keep completing quests to earn XP. Once you reach the threshold, the boss unlocks automatically."
+                  <ShadowIntel
+                    title="Shadow Intel"
+                    intel={SYSTEM_INTEL.GATE_FRAGMENTS}
+                    detail={`Locked archive seal: reach ${boss.xpThreshold.toLocaleString()} total XP and forge a Gate Key from 3 Gate Fragments to breach this Boss gate.`}
+                    side="bottom"
                   >
                     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border border-white/5">
                       <Lock className="w-12 h-12 text-muted-foreground mb-4" />
                       <p className="font-display tracking-widest text-lg text-white font-bold">LOCKED</p>
                       <p className="text-sm text-muted-foreground mt-2">Requires {boss.xpThreshold.toLocaleString()} total XP</p>
                     </div>
-                  </InfoTooltip>
+                  </ShadowIntel>
                 )}
 
                 {bossImage && (
@@ -354,10 +357,16 @@ export default function BossArena() {
 
                   {(boss.maxHp > 0) && (
                     <div className="mb-6">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1 tracking-widest uppercase font-bold">
-                        <span>Boss HP</span>
-                        <span>{boss.isExtracted ? "Extracted" : `${boss.currentHp.toLocaleString()} / ${boss.maxHp.toLocaleString()}`}</span>
-                      </div>
+                      <ShadowIntel
+                        title="Shadow Intel"
+                        intel={SYSTEM_INTEL.ENRAGE_TIMER}
+                        detail="Keep pressure on active bosses. The Archive treats long silence as retreat."
+                      >
+                        <div className="flex justify-between text-xs text-muted-foreground mb-1 tracking-widest uppercase font-bold">
+                          <span>Boss HP</span>
+                          <span>{boss.isExtracted ? "Extracted" : `${boss.currentHp.toLocaleString()} / ${boss.maxHp.toLocaleString()}`}</span>
+                        </div>
+                      </ShadowIntel>
                       <div className="w-full h-2 rounded-full bg-zinc-800/60 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-700 ${
