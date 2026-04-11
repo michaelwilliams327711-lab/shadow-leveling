@@ -239,7 +239,7 @@ export default function ShadowDashboard() {
                   } as CSSProperties}
                 />
               ))}
-              <CardContent className="p-5 flex items-center gap-4 relative z-10">
+              <CardContent className="p-5 flex items-center gap-4 relative z-10 corruption-smoke">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
                 </div>
@@ -262,7 +262,7 @@ export default function ShadowDashboard() {
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
           >
             <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <CardContent className="p-5 flex items-center gap-4">
+              <CardContent className="p-5 flex items-center gap-4 corruption-smoke">
                 <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
                   <Skull className="w-7 h-7 text-red-700" />
                 </div>
@@ -285,7 +285,7 @@ export default function ShadowDashboard() {
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
           >
             <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <CardContent className="p-5 flex items-center gap-4">
+              <CardContent className="p-5 flex items-center gap-4 corruption-smoke">
                 <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
                   <AlertTriangle className="w-7 h-7 text-orange-500" />
                 </div>
@@ -315,7 +315,7 @@ export default function ShadowDashboard() {
               </CardTitle>
             </InfoTooltip>
           </CardHeader>
-          <CardContent>
+          <CardContent className="corruption-smoke">
             {xpByDate.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-10">No XP losses recorded in the last 30 days.</p>
             ) : (
@@ -379,7 +379,7 @@ export default function ShadowDashboard() {
                 </CardTitle>
               </InfoTooltip>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
+            <CardContent className="flex flex-col items-center gap-4 corruption-smoke">
               {failuresByCategory.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. For now.</p>
               ) : (
@@ -454,7 +454,7 @@ export default function ShadowDashboard() {
                 </CardTitle>
               </InfoTooltip>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">
+            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2 corruption-smoke">
               {entries.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. Stay weak.</p>
               ) : (
@@ -510,7 +510,7 @@ export default function ShadowDashboard() {
               </CardTitle>
             </InfoTooltip>
           </CardHeader>
-          <CardContent>
+          <CardContent className="corruption-smoke">
             {corruptionChartData.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-10">No corruption events recorded yet.</p>
             ) : (
@@ -557,7 +557,7 @@ export default function ShadowDashboard() {
                 </CardTitle>
               </InfoTooltip>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2">
+            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2 corruption-smoke">
               {relapseEvents.map((event, i) => (
                 <div
                   key={`${event.occurredAt}-${i}`}
