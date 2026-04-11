@@ -42,7 +42,7 @@ const EMBER_COLORS = {
 function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeof EMBER_COLORS; count?: number }) {
   const colors = EMBER_COLORS[palette];
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none", overflow: "hidden" }}>
+    <>
       {Array.from({ length: count }, (_, i) => {
         const size = [1.5, 2, 2.5, 1, 3, 1.5, 2, 1, 2.5][i % 9];
         const left = ((i * 2.47 + 3) % 92) + 4;
@@ -66,7 +66,7 @@ function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeo
           />
         );
       })}
-    </div>
+    </>
   );
 }
 
