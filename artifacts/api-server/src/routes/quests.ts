@@ -918,7 +918,11 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
         lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
       },
     });
-    fireCelestialVice(char.id, quest.statBoost || "discipline");
+    // Only fire stat-based vice if virtueCategory did not already handle it above.
+    // Prevents double vice increment on quests that have both fields set.
+    if (!quest.virtueCategory) {
+      fireCelestialVice(char.id, quest.statBoost || "discipline");
+    }
     res.json(data);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ALREADY_FAILED") {
