@@ -749,6 +749,8 @@
 .celestial-void-context {
   --amber-glow: hsl(45 100% 60%);
   --amber-dark: hsl(35 100% 50%);
+  --amber-glow-shadow: hsl(45 100% 60% / 0.75);
+  --amber-dark-shadow: hsl(35 100% 50% / 0.9);
   --amber-glow-size: 15px;
   --amber-flicker-duration: 0.3s;
   --amber-opacity-max: 0.9;
@@ -756,12 +758,12 @@
 
 @keyframes amberCorruptionFlicker {
   0%, 100% {
-    background-color: var(--amber-glow, hsl(45 100% 60%));
-    box-shadow: 0 0 var(--amber-glow-size, 15px) 3px hsl(45 100% 60% / 0.75);
+    background-color: var(--amber-glow);
+    box-shadow: 0 0 var(--amber-glow-size, 15px) 3px var(--amber-glow-shadow);
   }
   50% {
-    background-color: var(--amber-dark, hsl(35 100% 50%));
-    box-shadow: 0 0 var(--amber-glow-size, 15px) 5px hsl(35 100% 50% / 0.9);
+    background-color: var(--amber-dark);
+    box-shadow: 0 0 var(--amber-glow-size, 15px) 5px var(--amber-dark-shadow);
   }
 }
 
