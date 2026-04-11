@@ -17,6 +17,17 @@ import { awardVocXp } from "./vocations.js";
 import { getActiveRngEvent } from "./rng.js";
 import { applyViceRetaliation } from "../lib/celestialPower.js";
 
+const STAT_TO_VIRTUE: Record<string, string> = {
+  discipline: "diligence", intellect:  "humility", strength:   "patience",
+  endurance:  "temperance", agility:    "kindness",
+};
+
+function fireCelestialVice(characterId: number, statField: string): void {
+  const virtueCategory = STAT_TO_VIRTUE[statField];
+  if (!virtueCategory) return;
+  applyViceRetaliation(characterId, virtueCategory).catch(() => {});
+}
+
 const router: IRouter = Router();
 
 // Per-rank XP ceiling: the total XP a quest can award is capped at the next rank's base XP.
@@ -168,7 +179,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   const penalties: PenaltyDetail[] = [];
   const failedQuestsSerialized: object[] = [];
 
-  const { updatedChar, recurringReset, penaltiesApplied } = await db.transaction(async (tx) => {
+  const { updatedChar, recurringReset, penaltiesApplied, processedOverdue } = await db.transaction(async (tx) => {
     const allActiveQuests = await tx
       .select()
       .from(questsTable)
@@ -208,7 +219,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       : (await tx.insert(characterTable).values({ name: "Hunter" }).returning())[0];
 
     if (overdueQuests.length === 0) {
-      return { updatedChar: char, recurringReset: recurringToReset.length, penaltiesApplied: 0 };
+      return { updatedChar: char, recurringReset: recurringToReset.length, penaltiesApplied: 0, processedOverdue: overdueQuests };
     }
 
     let totalXpDeducted = 0;
@@ -324,10 +335,14 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       .where(eq(characterTable.id, char.id))
       .returning();
 
-    return { updatedChar: updated, recurringReset: recurringToReset.length, penaltiesApplied: overdueQuests.length };
+    return { updatedChar: updated, recurringReset: recurringToReset.length, penaltiesApplied: overdueQuests.length, processedOverdue: overdueQuests };
   });
 
   invalidateCharacterCache();
+
+  for (const q of processedOverdue) {
+    fireCelestialVice(updatedChar.id, q.statBoost || "discipline");
+  }
 
   return {
     recurringReset,
@@ -903,6 +918,7 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
         lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
       },
     });
+    fireCelestialVice(char.id, quest.statBoost || "discipline");
     res.json(data);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ALREADY_FAILED") {

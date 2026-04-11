@@ -1,3 +1,9 @@
+"I am authorizing Strike 2: The Ascension Gates. We are creating the API endpoints for the Scale of Souls and wiring them into the quest engine. Execute exactly as specified:
+
+1. Ascension API (artifacts/api-server/src/routes/ascension.ts):
+Create this file:
+
+TypeScript
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { celestialPowerTable } from "@workspace/db";
@@ -45,7 +51,7 @@ router.post("/ascension/quick-log", async (req, res) => {
       if (type === "virtue") {
         const newScore = Math.min(200, existing.virtueScore + points);
         const ascends = newScore >= VIRTUE_SCORE_ASCENSION_THRESHOLD && !existing.isAscended;
-
+        
         await tx.update(celestialPowerTable)
           .set({ virtueScore: newScore, isAscended: ascends ? true : existing.isAscended })
           .where(eq(celestialPowerTable.id, existing.id));
@@ -62,3 +68,45 @@ router.post("/ascension/quick-log", async (req, res) => {
 });
 
 export default router;
+2. Router Index (artifacts/api-server/src/routes/index.ts):
+
+Import the new router: import ascensionRouter from "./ascension.js";
+
+Mount it at the bottom: router.use(ascensionRouter);
+
+3. Quest Engine Updates (artifacts/api-server/src/routes/quests.ts):
+
+Import the Vice function at the top: import { applyViceRetaliation } from "../lib/celestialPower.js";
+
+Add this helper function below the imports:
+
+TypeScript
+const STAT_TO_VIRTUE: Record<string, string> = {
+  discipline: "diligence", intellect:  "humility", strength:   "patience",
+  endurance:  "temperance", agility:    "kindness",
+};
+
+function fireCelestialVice(characterId: number, statField: string): void {
+  const virtueCategory = STAT_TO_VIRTUE[statField];
+  if (!virtueCategory) return;
+  applyViceRetaliation(characterId, virtueCategory).catch(() => {});
+}
+In processOverdueQuestsLogic(), immediately after invalidateCharacterCache(); (around line 192), add:
+
+TypeScript
+for (const q of overdueQuests) {
+  fireCelestialVice(char.id, q.statBoost || "discipline");
+}
+In router.post("/quests/:id/fail"), just before res.json({ success: true });, add:
+
+TypeScript
+fireCelestialVice(char.id, quest.statBoost || "discipline");
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw, line-by-line source code of the modified handlers in quests.ts.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming /ascension/powers returns a 200 OK.
