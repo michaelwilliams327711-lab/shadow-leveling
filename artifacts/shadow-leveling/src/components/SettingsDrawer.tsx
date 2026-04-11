@@ -59,7 +59,7 @@ function ParticlePreview({
   return (
     <div
       ref={containerRef}
-      className={`celestial-void-context theme-${corruptionTheme} relative overflow-hidden rounded-lg border border-amber-900/40 bg-black/70`}
+      className={`celestial-void-context theme-${corruptionTheme} ct-border relative overflow-hidden rounded-lg border bg-black/70`}
       style={{
         height: "88px",
         "--amber-glow-size": `${amberGlow}px`,

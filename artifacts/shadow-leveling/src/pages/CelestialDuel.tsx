@@ -87,9 +87,7 @@ function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: nu
         className="absolute inset-y-0 left-0 rounded-full tug-bounce"
         style={{
           width: `${pct}%`,
-          background: pct >= 50
-            ? "linear-gradient(to right, #7f1d1d, #a16207)"
-            : "linear-gradient(90deg, hsl(35 80% 20%), hsl(45 100% 50%))",
+          background: `linear-gradient(90deg, var(--ct-sin-grad-start), var(--ct-sin-grad-end))`,
         }}
       />
       <div className="absolute inset-0 flex items-center justify-between px-2 text-[8px] font-black tracking-widest text-white/40 uppercase pointer-events-none">
@@ -394,8 +392,7 @@ export default function CelestialDuel() {
           transform: "scale(1.1)",
           filter: "blur(22px) saturate(0.3) brightness(0.2)",
         }}>
-          {/* Amber overlay replaces the old red/purple tint */}
-          <div className="absolute inset-0" style={{ background: "hsl(35 90% 20% / 0.22)" }} />
+          <div className="absolute inset-0" style={{ background: "var(--ct-bg-overlay)" }} />
         </div>
         <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-32 bg-gradient-to-r from-black via-black to-black opacity-90 blur-xl" />
         <div className="flex-1 relative animate-domain-drift" style={{
@@ -450,11 +447,11 @@ export default function CelestialDuel() {
                     <div key={dp.pair} className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
                       <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2.5">
-                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "text-amber-500" : "text-muted-foreground"}`}>{dp.vice}</span>
+                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "ct-text" : "text-muted-foreground"}`}>{dp.vice}</span>
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.viceScore}</span>
                         </div>
                         {power.isAscended && (
-                          <div className={`flex items-center gap-1.5 text-xs tracking-widest font-display ${underSiege ? "text-red-400" : "text-amber-400"}`}>
+                          <div className={`flex items-center gap-1.5 text-xs tracking-widest font-display ${underSiege ? "text-red-400" : "ct-text-muted"}`}>
                             {underSiege
                               ? <LucideAlertTriangle className="h-4 w-4 animate-pulse" />
                               : <LucideShieldCheck className="h-4 w-4" />}
@@ -463,11 +460,11 @@ export default function CelestialDuel() {
                         )}
                         <div className="flex items-center gap-2.5">
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.virtueScore}</span>
-                          <span className={`text-sm md:text-base font-bold tracking-tight ${!viceWins ? "text-amber-300" : "text-muted-foreground"}`}>{dp.virtue}</span>
+                          <span className={`text-sm md:text-base font-bold tracking-tight ${!viceWins ? "ct-text" : "text-muted-foreground"}`}>{dp.virtue}</span>
                         </div>
                       </div>
                       <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
-                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "text-amber-600/80" : "text-amber-300/80"}`}>
+                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "ct-text-muted" : "ct-text"}`}>
                         <span className="font-semibold not-italic">{advice.label}: </span>
                         {advice.text}
                       </p>
@@ -497,21 +494,20 @@ export default function CelestialDuel() {
                   >
                     <p className="text-xs tracking-widest text-muted-foreground uppercase font-display text-center truncate">
                       {dp.vice} <span className="text-white/20">vs</span> {dp.virtue}
-                      {power.isAscended && <span className="ml-1.5 text-amber-500">✦</span>}
+                      {power.isAscended && <span className="ml-1.5 ct-text">✦</span>}
                     </p>
                     <div className="flex gap-2.5">
-                      {/* Vice button — Amber Corruption identity */}
                       <button
                         disabled={logging === `vice:${dp.pair}`}
                         onClick={() => handleLog("vice", dp.pair)}
-                        className="flex-1 min-h-[44px] rounded-xl border border-amber-500/40 bg-amber-950/30 py-2.5 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-900/50 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="ct-btn-vice flex-1 min-h-[44px] rounded-xl border py-2.5 text-sm font-semibold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {logging === `vice:${dp.pair}` ? "..." : `+${dp.vice}`}
                       </button>
                       <button
                         disabled={logging === `virtue:${dp.pair}`}
                         onClick={() => handleLog("virtue", dp.pair)}
-                        className="flex-1 min-h-[44px] rounded-xl border border-amber-900/40 bg-amber-950/20 py-2.5 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-900/30 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="ct-btn-virtue flex-1 min-h-[44px] rounded-xl border py-2.5 text-sm font-semibold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {logging === `virtue:${dp.pair}` ? "..." : `+${dp.virtue}`}
                       </button>
@@ -520,7 +516,7 @@ export default function CelestialDuel() {
                       <button
                         disabled={logging === `virtue:${dp.pair}`}
                         onClick={() => handleLog("virtue", dp.pair)}
-                        className="w-full min-h-[44px] rounded-xl border border-amber-400/60 bg-gradient-to-r from-amber-900/40 to-yellow-900/30 py-2.5 text-sm font-black tracking-widest text-amber-300 uppercase transition-all hover:from-amber-800/50 hover:to-yellow-800/40 shadow-[0_0_12px_rgba(245,158,11,0.2)] animate-pulse active:scale-95"
+                        className="ct-ascend-btn w-full min-h-[44px] rounded-xl border py-2.5 text-sm font-black tracking-widest uppercase animate-pulse active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         ✦ Transmute — Ascend Now
                       </button>
@@ -533,24 +529,24 @@ export default function CelestialDuel() {
 
           {/* Info Panels */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 corruption-smoke">
-            <section className="rounded-2xl border border-amber-900/30 bg-amber-950/10 p-6 shadow-inner corruption-smoke">
+            <section className="ct-panel rounded-2xl border p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
-                <LucideAlertTriangle className="h-8 w-8 text-amber-500 flex-shrink-0 mt-0.5" />
+                <LucideAlertTriangle className="ct-text h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
-                  <h4 className="font-display text-sm tracking-widest uppercase text-amber-400">Momentum Overload</h4>
+                  <h4 className="ct-text font-display text-sm tracking-widest uppercase">Momentum Overload</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Vice overflow past <span className="text-amber-400 font-bold font-stat">100</span>: Gold halved, streak &amp; multiplier reset to Day 1, +20 Corruption.
+                    Vice overflow past <span className="ct-text font-bold font-stat">100</span>: Gold halved, streak &amp; multiplier reset to Day 1, +20 Corruption.
                   </p>
                 </div>
               </div>
             </section>
-            <section className="rounded-2xl border border-orange-900/30 bg-orange-950/10 p-6 shadow-inner corruption-smoke">
+            <section className="ct-panel rounded-2xl border p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
-                <LucideAlertTriangle className="h-8 w-8 text-orange-500 flex-shrink-0 mt-0.5" />
+                <LucideAlertTriangle className="ct-text-muted h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
-                  <h4 className="font-display text-sm tracking-widest uppercase text-orange-400">The Great Fall</h4>
+                  <h4 className="ct-text-muted font-display text-sm tracking-widest uppercase">The Great Fall</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Vice overflow while <span className="text-amber-400 font-bold">Ascended</span>: Ascension lost, all stats −50, 75% gold seized, +40 Corruption.
+                    Vice overflow while <span className="ct-text font-bold">Ascended</span>: Ascension lost, all stats −50, 75% gold seized, +40 Corruption.
                   </p>
                 </div>
               </div>

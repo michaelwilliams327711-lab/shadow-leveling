@@ -747,33 +747,124 @@
 
 /* --- AMBER CORRUPTION: SCOPED TO CELESTIAL VOID --- */
 .celestial-void-context {
-  --amber-glow: hsl(45 100% 60%);
-  --amber-dark: hsl(35 100% 50%);
-  --amber-glow-shadow: hsl(45 100% 60% / 0.75);
-  --amber-dark-shadow: hsl(35 100% 50% / 0.9);
-  --amber-glow-size: 15px;
+  /* Particle / glow vars */
+  --amber-glow:         hsl(45 100% 60%);
+  --amber-dark:         hsl(35 100% 50%);
+  --amber-glow-shadow:  hsl(45 100% 60% / 0.75);
+  --amber-dark-shadow:  hsl(35 100% 50% / 0.9);
+  --amber-glow-size:    15px;
   --amber-flicker-duration: 0.3s;
-  --amber-opacity-max: 0.9;
+  --amber-opacity-max:  0.9;
+  /* Semantic UI vars — used by .ct-* utility classes */
+  --ct-primary:         hsl(45 100% 60%);
+  --ct-secondary:       hsl(35 100% 50%);
+  --ct-primary-faint:   hsl(45 100% 60% / 0.15);
+  --ct-border:          hsl(35 80% 35% / 0.35);
+  --ct-border-strong:   hsl(45 100% 60% / 0.45);
+  --ct-text:            hsl(45 100% 70%);
+  --ct-text-muted:      hsl(35 80% 50% / 0.75);
+  --ct-panel-bg:        hsl(35 90% 12% / 0.12);
+  --ct-sin-grad-start:  hsl(35 80% 20%);
+  --ct-sin-grad-end:    hsl(45 100% 50%);
+  --ct-bg-overlay:      hsl(35 90% 20% / 0.22);
 }
 
 /* --- CORRUPTION THEME OVERRIDES --- */
 .celestial-void-context.theme-blood {
-  --amber-glow: hsl(0 85% 55%);
-  --amber-dark: hsl(350 90% 40%);
-  --amber-glow-shadow: hsl(0 85% 55% / 0.75);
-  --amber-dark-shadow: hsl(350 90% 40% / 0.9);
+  --amber-glow:         hsl(0 85% 55%);
+  --amber-dark:         hsl(350 90% 40%);
+  --amber-glow-shadow:  hsl(0 85% 55% / 0.75);
+  --amber-dark-shadow:  hsl(350 90% 40% / 0.9);
+  --ct-primary:         hsl(0 85% 60%);
+  --ct-secondary:       hsl(350 90% 45%);
+  --ct-primary-faint:   hsl(0 85% 55% / 0.15);
+  --ct-border:          hsl(0 70% 30% / 0.35);
+  --ct-border-strong:   hsl(0 85% 55% / 0.45);
+  --ct-text:            hsl(0 85% 75%);
+  --ct-text-muted:      hsl(350 70% 55% / 0.75);
+  --ct-panel-bg:        hsl(0 80% 10% / 0.12);
+  --ct-sin-grad-start:  hsl(0 70% 18%);
+  --ct-sin-grad-end:    hsl(0 85% 52%);
+  --ct-bg-overlay:      hsl(0 80% 20% / 0.20);
 }
 .celestial-void-context.theme-toxic {
-  --amber-glow: hsl(110 80% 45%);
-  --amber-dark: hsl(90 90% 35%);
-  --amber-glow-shadow: hsl(110 80% 45% / 0.75);
-  --amber-dark-shadow: hsl(90 90% 35% / 0.9);
+  --amber-glow:         hsl(110 80% 45%);
+  --amber-dark:         hsl(90 90% 35%);
+  --amber-glow-shadow:  hsl(110 80% 45% / 0.75);
+  --amber-dark-shadow:  hsl(90 90% 35% / 0.9);
+  --ct-primary:         hsl(110 75% 50%);
+  --ct-secondary:       hsl(90 85% 38%);
+  --ct-primary-faint:   hsl(110 75% 45% / 0.15);
+  --ct-border:          hsl(100 60% 25% / 0.35);
+  --ct-border-strong:   hsl(110 75% 45% / 0.45);
+  --ct-text:            hsl(110 80% 70%);
+  --ct-text-muted:      hsl(90 70% 45% / 0.75);
+  --ct-panel-bg:        hsl(110 60% 10% / 0.12);
+  --ct-sin-grad-start:  hsl(100 60% 15%);
+  --ct-sin-grad-end:    hsl(110 75% 42%);
+  --ct-bg-overlay:      hsl(100 70% 15% / 0.20);
 }
 .celestial-void-context.theme-void {
-  --amber-glow: hsl(270 70% 60%);
-  --amber-dark: hsl(280 80% 50%);
-  --amber-glow-shadow: hsl(270 70% 60% / 0.75);
-  --amber-dark-shadow: hsl(280 80% 50% / 0.9);
+  --amber-glow:         hsl(270 70% 60%);
+  --amber-dark:         hsl(280 80% 50%);
+  --amber-glow-shadow:  hsl(270 70% 60% / 0.75);
+  --amber-dark-shadow:  hsl(280 80% 50% / 0.9);
+  --ct-primary:         hsl(270 65% 65%);
+  --ct-secondary:       hsl(280 75% 55%);
+  --ct-primary-faint:   hsl(270 65% 60% / 0.15);
+  --ct-border:          hsl(270 55% 35% / 0.35);
+  --ct-border-strong:   hsl(270 65% 60% / 0.45);
+  --ct-text:            hsl(270 70% 80%);
+  --ct-text-muted:      hsl(280 60% 60% / 0.75);
+  --ct-panel-bg:        hsl(270 50% 12% / 0.12);
+  --ct-sin-grad-start:  hsl(270 50% 18%);
+  --ct-sin-grad-end:    hsl(270 65% 58%);
+  --ct-bg-overlay:      hsl(270 60% 20% / 0.20);
+}
+
+/* --- CORRUPTION THEME UTILITY CLASSES --- */
+.celestial-void-context .ct-text          { color: var(--ct-text); }
+.celestial-void-context .ct-text-muted    { color: var(--ct-text-muted); }
+.celestial-void-context .ct-border        { border-color: var(--ct-border); }
+.celestial-void-context .ct-border-strong { border-color: var(--ct-border-strong); }
+.celestial-void-context .ct-panel-bg     { background-color: var(--ct-panel-bg); }
+
+.celestial-void-context .ct-btn-vice {
+  border-color: var(--ct-border-strong);
+  background-color: var(--ct-primary-faint);
+  color: var(--ct-text);
+  transition: background-color 0.2s, color 0.2s;
+}
+.celestial-void-context .ct-btn-vice:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--ct-primary) 22%, transparent);
+  color: var(--ct-text);
+}
+
+.celestial-void-context .ct-btn-virtue {
+  border-color: var(--ct-border);
+  background-color: color-mix(in srgb, var(--ct-secondary) 8%, transparent);
+  color: var(--ct-text-muted);
+  transition: background-color 0.2s, color 0.2s;
+}
+.celestial-void-context .ct-btn-virtue:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--ct-secondary) 18%, transparent);
+  color: var(--ct-text);
+}
+
+.celestial-void-context .ct-panel {
+  border-color: var(--ct-border);
+  background-color: var(--ct-panel-bg);
+}
+
+.celestial-void-context .ct-ascend-btn {
+  border-color: var(--ct-border-strong);
+  background: linear-gradient(to right, var(--ct-primary-faint), color-mix(in srgb, var(--ct-secondary) 15%, transparent));
+  color: var(--ct-text);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ct-primary) 20%, transparent);
+  transition: background 0.2s, color 0.2s;
+}
+.celestial-void-context .ct-ascend-btn:hover:not(:disabled) {
+  background: linear-gradient(to right, color-mix(in srgb, var(--ct-primary) 28%, transparent), color-mix(in srgb, var(--ct-secondary) 25%, transparent));
 }
 
 @keyframes amberCorruptionFlicker {
