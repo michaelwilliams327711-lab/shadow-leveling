@@ -57,12 +57,12 @@ const DOMAIN_PAIRS = [
 ] as const;
 
 // ── AmberParticle spawner ──────────────────────────────────────────────────────
-function spawnAmberParticles(container: HTMLDivElement, density: number = 1.0) {
+function spawnAmberParticles(container: HTMLDivElement, density: number = 1.0, sizeScale: number = 1.0) {
   const count = Math.max(1, Math.round(7 * density));
   for (let i = 0; i < count; i++) {
     const p = document.createElement("div");
     p.className = "amber-corruption-particle";
-    const size = 4 + Math.random() * 6;
+    const size = (4 + Math.random() * 6) * sizeScale;
     p.style.cssText = `
       width: ${size}px;
       height: ${size}px;
@@ -251,7 +251,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
 // ── CelestialDuel Page ────────────────────────────────────────────────────────
 export default function CelestialDuel() {
   const queryClient = useQueryClient();
-  const { amberDensity } = useVisualSettings();
+  const { amberDensity, amberSize } = useVisualSettings();
   const [logging, setLogging]       = useState<string | null>(null);
   const [glitching, setGlitching]   = useState(false);
   const [shimmering, setShimmering] = useState(false);
@@ -347,7 +347,7 @@ export default function CelestialDuel() {
 
       // ── Spawn amber particles on vice log ──────────────────────────────────
       if (type === "vice" && particleContainerRef.current) {
-        spawnAmberParticles(particleContainerRef.current, amberDensity);
+        spawnAmberParticles(particleContainerRef.current, amberDensity, amberSize);
       }
 
       if (result.greatFall) {
@@ -374,7 +374,7 @@ export default function CelestialDuel() {
     } finally {
       setLogging(null);
     }
-  }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare, amberDensity]);
+  }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare, amberDensity, amberSize]);
 
   const getDomainClass = useCallback((power: CelestialPower): string => {
     if (power.isAscended && power.viceScore > 50) return "runic-siege under-siege border-red-900/40 animate-siege-pulse";

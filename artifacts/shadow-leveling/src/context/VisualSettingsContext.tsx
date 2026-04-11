@@ -4,27 +4,30 @@ interface VisualSettings {
   amberGlow: number;
   amberDensity: number;
   amberFlicker: number;
+  amberSize: number;
   isSettingsOpen: boolean;
   setAmberGlow: (v: number) => void;
   setAmberDensity: (v: number) => void;
   setAmberFlicker: (v: number) => void;
+  setAmberSize: (v: number) => void;
   setIsSettingsOpen: (v: boolean) => void;
 }
 
 const LS_KEY = "sl-visual-settings";
 
-function loadFromStorage(): { amberGlow: number; amberDensity: number; amberFlicker: number } {
+function loadFromStorage(): { amberGlow: number; amberDensity: number; amberFlicker: number; amberSize: number } {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { amberGlow: 15, amberDensity: 1.0, amberFlicker: 0.3 };
+    if (!raw) return { amberGlow: 15, amberDensity: 1.0, amberFlicker: 0.3, amberSize: 1.0 };
     const parsed = JSON.parse(raw);
     return {
       amberGlow: typeof parsed.amberGlow === "number" ? parsed.amberGlow : 15,
       amberDensity: typeof parsed.amberDensity === "number" ? parsed.amberDensity : 1.0,
       amberFlicker: typeof parsed.amberFlicker === "number" ? parsed.amberFlicker : 0.3,
+      amberSize: typeof parsed.amberSize === "number" ? parsed.amberSize : 1.0,
     };
   } catch {
-    return { amberGlow: 15, amberDensity: 1.0, amberFlicker: 0.3 };
+    return { amberGlow: 15, amberDensity: 1.0, amberFlicker: 0.3, amberSize: 1.0 };
   }
 }
 
@@ -35,21 +38,23 @@ export function VisualSettingsProvider({ children }: { children: ReactNode }) {
   const [amberGlow, setAmberGlowRaw] = useState(stored.amberGlow);
   const [amberDensity, setAmberDensityRaw] = useState(stored.amberDensity);
   const [amberFlicker, setAmberFlickerRaw] = useState(stored.amberFlicker);
+  const [amberSize, setAmberSizeRaw] = useState(stored.amberSize);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ amberGlow, amberDensity, amberFlicker }));
+      localStorage.setItem(LS_KEY, JSON.stringify({ amberGlow, amberDensity, amberFlicker, amberSize }));
     } catch {}
-  }, [amberGlow, amberDensity, amberFlicker]);
+  }, [amberGlow, amberDensity, amberFlicker, amberSize]);
 
   const setAmberGlow = useCallback((v: number) => setAmberGlowRaw(v), []);
   const setAmberDensity = useCallback((v: number) => setAmberDensityRaw(v), []);
   const setAmberFlicker = useCallback((v: number) => setAmberFlickerRaw(v), []);
+  const setAmberSize = useCallback((v: number) => setAmberSizeRaw(v), []);
 
   return (
     <VisualSettingsContext.Provider
-      value={{ amberGlow, amberDensity, amberFlicker, isSettingsOpen, setAmberGlow, setAmberDensity, setAmberFlicker, setIsSettingsOpen }}
+      value={{ amberGlow, amberDensity, amberFlicker, amberSize, isSettingsOpen, setAmberGlow, setAmberDensity, setAmberFlicker, setAmberSize, setIsSettingsOpen }}
     >
       {children}
     </VisualSettingsContext.Provider>

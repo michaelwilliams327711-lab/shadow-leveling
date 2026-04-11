@@ -9,10 +9,12 @@ function ParticlePreview({
   amberGlow,
   amberDensity,
   amberFlicker,
+  amberSize,
 }: {
   amberGlow: number;
   amberDensity: number;
   amberFlicker: number;
+  amberSize: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -25,10 +27,10 @@ function ParticlePreview({
       for (let i = 0; i < count; i++) {
         const p = document.createElement("div");
         p.className = "amber-corruption-particle";
-        const size = 3 + Math.random() * 5;
+        const base = (3 + Math.random() * 5) * amberSize;
         p.style.cssText = `
-          width: ${size}px;
-          height: ${size}px;
+          width: ${base}px;
+          height: ${base}px;
           left: ${8 + Math.random() * 84}%;
           bottom: ${4 + Math.random() * 35}%;
           animation-delay: ${(Math.random() * 0.4).toFixed(2)}s;
@@ -41,7 +43,7 @@ function ParticlePreview({
     spawnBurst();
     const id = setInterval(spawnBurst, 700);
     return () => clearInterval(id);
-  }, [amberDensity]);
+  }, [amberDensity, amberSize]);
 
   return (
     <div
@@ -67,10 +69,12 @@ export function SettingsDrawer() {
     amberGlow,
     amberDensity,
     amberFlicker,
+    amberSize,
     isSettingsOpen,
     setAmberGlow,
     setAmberDensity,
     setAmberFlicker,
+    setAmberSize,
     setIsSettingsOpen,
   } = useVisualSettings();
 
@@ -102,6 +106,7 @@ export function SettingsDrawer() {
             amberGlow={amberGlow}
             amberDensity={amberDensity}
             amberFlicker={amberFlicker}
+            amberSize={amberSize}
           />
 
           <div className="space-y-4">
@@ -185,6 +190,34 @@ export function SettingsDrawer() {
               Sets the flicker animation cycle. Lower = faster and more frantic.
             </p>
           </div>
+
+          <div className="w-full h-px bg-amber-900/20" />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="font-display text-xs tracking-[0.35em] uppercase text-amber-300">
+                Ember Size
+              </label>
+              <span className="font-stat text-sm text-amber-400 tabular-nums">
+                {amberSize.toFixed(1)}×
+              </span>
+            </div>
+            <Slider
+              min={0.4}
+              max={3.0}
+              step={0.1}
+              value={[amberSize]}
+              onValueChange={([v]) => setAmberSize(v)}
+              className="[&_.bg-primary]:bg-amber-500 [&_.bg-primary\/20]:bg-amber-900/40 [&_.border-primary\/50]:border-amber-500/50"
+            />
+            <div className="flex justify-between text-[10px] text-amber-800/60 font-stat tracking-widest">
+              <span>0.4×</span>
+              <span>3.0×</span>
+            </div>
+            <p className="text-xs text-muted-foreground/50 leading-relaxed">
+              Scales the diameter of each amber ember. Bigger embers drift more visibly.
+            </p>
+          </div>
         </div>
 
         <div className="px-6 py-5 border-t border-amber-900/30 space-y-3">
@@ -193,6 +226,7 @@ export function SettingsDrawer() {
               setAmberDensity(1.0);
               setAmberGlow(15);
               setAmberFlicker(0.3);
+              setAmberSize(1.0);
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-2.5 text-xs font-display tracking-[0.25em] uppercase text-amber-600 hover:bg-amber-900/30 hover:text-amber-400 hover:border-amber-700/60 transition-all duration-200"
           >
