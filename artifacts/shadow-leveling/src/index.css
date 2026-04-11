@@ -309,7 +309,7 @@
   border-radius: 9999px;
   pointer-events: none;
   background: var(--ember-color);
-  box-shadow: 0 0 8px var(--ember-color);
+  box-shadow: 0 0 18px 5px var(--ember-color), 0 0 6px 1px var(--ember-color);
   animation: ember-particle-rise var(--ember-duration) ease-in-out infinite;
   animation-delay: var(--ember-delay);
 }

@@ -78,7 +78,7 @@ const DOUGHNUT_COLORS = [
   "hsl(var(--destructive) / 0.4)",
 ];
 
-const EMBER_PARTICLES = Array.from({ length: 40 }, (_, i) => ({
+const EMBER_PARTICLES = Array.from({ length: 60 }, (_, i) => ({
   id: i,
   left: `${6 + ((i * 23) % 88)}%`,
   bottom: `${-8 - ((i * 7) % 18)}%`,
