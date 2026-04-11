@@ -45,14 +45,23 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-white/5 bg-sidebar/95 backdrop-blur-xl">
       <SidebarHeader className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20 border border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-            <Sword className="h-6 w-6 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20 border border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+              <Sword className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-display text-xl font-bold tracking-widest text-white">SHADOW</h1>
+              <h2 className="font-display text-xs tracking-[0.3em] text-primary">LEVELING</h2>
+            </div>
           </div>
-          <div>
-            <h1 className="font-display text-xl font-bold tracking-widest text-white">SHADOW</h1>
-            <h2 className="font-display text-xs tracking-[0.3em] text-primary">LEVELING</h2>
-          </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            title="Command Center"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/60 bg-amber-900/40 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.25)] hover:bg-amber-800/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(245,158,11,0.45)] hover:border-amber-400/80 transition-all duration-200"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
         </div>
       </SidebarHeader>
       
