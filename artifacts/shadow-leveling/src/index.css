@@ -768,20 +768,3 @@
     amberCorruptionFlicker 0.3s ease-in-out infinite,
     corruptionSmoke 1.2s ease-out forwards;
 }
-
-/* --- PRIMAL AMBER OVERDRIVE --- */
-.celestial-void-context .primal-glow {
-  filter: drop-shadow(0 0 15px hsl(45 100% 60% / 0.8));
-  border-color: hsl(45 100% 70% / 0.6) !important;
-  z-index: 50;
-}
-
-.celestial-void-context .primal-glow .tug-bounce {
-  animation: siegePulse 0.8s ease-in-out infinite !important;
-  filter: brightness(1.5) contrast(1.2);
-}
-
-.celestial-void-context .primal-text {
-  text-shadow: 0 0 20px hsl(45 100% 60% / 1);
-  letter-spacing: 0.4em;
-}
