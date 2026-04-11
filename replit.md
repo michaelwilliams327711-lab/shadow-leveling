@@ -88,6 +88,12 @@ All at `/api`:
 |----------|----------|-------------|
 | `VITE_API_KEY` | Prod only | Must match `API_SECRET_KEY`. Injected as `X-Api-Key` header on every API call. Omit in local dev. |
 
+## Replit Migration Notes
+
+- Replit workflows start the API server on port 8080 and the React frontend on port 3000 with `BASE_PATH=/`.
+- The development PostgreSQL schema has been applied with `pnpm --filter @workspace/db run push`.
+- The post-merge setup script installs dependencies with the frozen lockfile and reapplies the Drizzle schema push so future merged work keeps the database schema in sync.
+
 ## Database Tables
 
 - `character` - Single row, all player stats
