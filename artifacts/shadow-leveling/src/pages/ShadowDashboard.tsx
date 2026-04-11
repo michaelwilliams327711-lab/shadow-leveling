@@ -518,7 +518,8 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="glass-panel border border-red-900/30">
+        <Card className="glass-panel border border-red-900/30 corruption-smoke">
+          <EmberParticles palette="crimson" />
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="Corruption History — your corruption score over time."
@@ -565,7 +566,8 @@ export default function ShadowDashboard() {
 
       {relapseEvents.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="glass-panel border border-red-900/30">
+          <Card className="glass-panel border border-red-900/30 corruption-smoke">
+            <EmberParticles palette="crimson" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Relapse Log — every relapse event recorded."
