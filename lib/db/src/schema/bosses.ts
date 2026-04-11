@@ -17,8 +17,11 @@ export const bossesTable = pgTable("bosses", {
   currentHp: integer("current_hp").notNull().default(1000),
   isDefeated: boolean("is_defeated").notNull().default(false),
   isExtracted: boolean("is_extracted").notNull().default(false),
+  gateUnlocked: boolean("gate_unlocked").notNull().default(false),
   defeatRecordedAt: timestamp("defeat_recorded_at"),
   failureRecordedAt: timestamp("failure_recorded_at"),
+  lastDamageAt: timestamp("last_damage_at"),
+  lastRetaliationAt: timestamp("last_retaliation_at"),
 });
 
 export const bossDamageLogTable = pgTable("boss_damage_log", {

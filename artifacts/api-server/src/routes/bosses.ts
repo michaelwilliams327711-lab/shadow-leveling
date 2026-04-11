@@ -6,6 +6,11 @@ import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
 import { getActiveRngEvent } from "./rng.js";
+import { runBossRetaliationChecks } from "../lib/bossRetaliation.js";
+
+const MIN_INTELLECT_BY_RANK: Record<string, number> = {
+  F: 0, E: 0, D: 0, C: 20, B: 35, A: 50, S: 70, SS: 90, SSS: 110,
+};
 
 const router: IRouter = Router();
 
@@ -13,18 +18,37 @@ router.get("/bosses", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
     const bosses = await db.select().from(bossesTable).orderBy(bossesTable.xpThreshold);
+    const totalXp = totalXpEarned(char.xp, char.level);
+
+    // Enrage Timer — fire-and-forget, isolated so boss list never fails on penalty error
+    runBossRetaliationChecks(char.id).catch((retErr) =>
+      req.log.warn({ err: retErr }, "Boss retaliation check failed")
+    );
+
     const mapped = bosses.map((b) => {
-      const rankRewards = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
+      const rankRewards  = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
+      const minIntellect = MIN_INTELLECT_BY_RANK[b.rank] ?? 0;
+      const isUnlocked   = totalXp >= b.xpThreshold || b.gateUnlocked;
+
+      // Stat-gate: boss is hidden if the character lacks the intellect requirement
+      // AND hasn't already been unlocked via XP or Gate Fragments
+      const isHidden = !isUnlocked && char.intellect < minIntellect;
+
       return {
         ...b,
-        xpReward: rankRewards.xp,
-        goldReward: rankRewards.gold,
-        xpPenalty: Math.floor(rankRewards.xp * 0.6),
-        isUnlocked: totalXpEarned(char.xp, char.level) >= b.xpThreshold,
-        defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
-        failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
+        xpReward:            rankRewards.xp,
+        goldReward:          rankRewards.gold,
+        xpPenalty:           Math.floor(rankRewards.xp * 0.6),
+        isUnlocked,
+        isHidden,
+        minIntellect,
+        defeatRecordedAt:    b.defeatRecordedAt?.toISOString()    ?? null,
+        failureRecordedAt:   b.failureRecordedAt?.toISOString()   ?? null,
+        lastDamageAt:        b.lastDamageAt?.toISOString()        ?? null,
+        lastRetaliationAt:   b.lastRetaliationAt?.toISOString()   ?? null,
       };
     });
+
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error listing bosses");

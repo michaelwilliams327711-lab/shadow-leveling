@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable } from "@workspace/db";
-import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc } from "drizzle-orm";
+import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc, gt } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
 import {
@@ -795,12 +795,60 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         await db.update(bossesTable)
           .set({
             currentHp: newHp,
+            lastDamageAt: new Date(),
             ...(bossDefeated ? { isDefeated: true, defeatRecordedAt: new Date() } : {}),
           })
           .where(eq(bossesTable.id, activeBoss.id));
       }
     } catch (bossErr) {
       req.log.warn({ err: bossErr }, "Boss damage bridge failed; quest completion still succeeds");
+    }
+
+    // Gate Fragment Drop — 20% chance per quest completion
+    let gateFragmentDropped = false;
+    let gateBossUnlocked: string | null = null;
+    try {
+      if (Math.random() < 0.20) {
+        gateFragmentDropped = true;
+        const [fragChar] = await db
+          .update(characterTable)
+          .set({ gateFragments: sql`${characterTable.gateFragments} + 1` })
+          .where(eq(characterTable.id, char.id))
+          .returning({ gateFragments: characterTable.gateFragments });
+        invalidateCharacterCache();
+
+        if (fragChar && fragChar.gateFragments >= 3) {
+          const totalXp = (updatedChar.xp ?? 0) + (updatedChar.level ?? 1) * 100;
+          const [nextLockedBoss] = await db
+            .select()
+            .from(bossesTable)
+            .where(
+              and(
+                eq(bossesTable.isDefeated, false),
+                eq(bossesTable.gateUnlocked, false),
+                gt(bossesTable.xpThreshold, totalXp)
+              )
+            )
+            .orderBy(asc(bossesTable.xpThreshold))
+            .limit(1);
+
+          if (nextLockedBoss) {
+            await db
+              .update(bossesTable)
+              .set({ gateUnlocked: true })
+              .where(eq(bossesTable.id, nextLockedBoss.id));
+            gateBossUnlocked = nextLockedBoss.name;
+          }
+
+          await db
+            .update(characterTable)
+            .set({ gateFragments: 0 })
+            .where(eq(characterTable.id, char.id));
+          invalidateCharacterCache();
+        }
+      }
+    } catch (fragErr) {
+      req.log.warn({ err: fragErr }, "Gate fragment drop failed; quest completion still succeeds");
     }
 
     let vocResult: { gateTriggered: boolean; gateBlocked: boolean; xpAwarded: number; newLevel: number; newXp: number } | null = null;
@@ -840,6 +888,10 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       responseData.vocGateTriggered = vocResult.gateTriggered;
       responseData.vocGateBlocked = vocResult.gateBlocked;
       responseData.vocXpAwarded = vocResult.xpAwarded;
+    }
+    if (gateFragmentDropped) {
+      responseData.gateFragmentDropped = true;
+      if (gateBossUnlocked) responseData.gateBossUnlocked = gateBossUnlocked;
     }
     res.json(responseData);
   } catch (err) {
