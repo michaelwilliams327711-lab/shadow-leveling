@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { bossesTable, characterTable, questLogTable } from "@workspace/db";
+import { bossesTable, bossDamageLogTable, characterTable, questLogTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 import { processLevelUp, totalXpEarned, XP_PER_LEVEL, RANK_BASE_REWARDS, getStreakStatMultiplier, getSystemDateFromReq } from "@workspace/shared";
@@ -194,6 +194,40 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       return res.status(400).json({ success: false, victory: false, message: "Boss was already defeated.", xpChange: 0, goldChange: 0 });
     }
     req.log.error({ err }, "Error challenging boss");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/bosses/:id/damage-log", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid boss ID" });
+    const log = await db
+      .select()
+      .from(bossDamageLogTable)
+      .where(eq(bossDamageLogTable.bossId, id))
+      .orderBy(bossDamageLogTable.timestamp);
+    res.json(log);
+  } catch (err) {
+    req.log.error({ err }, "Error fetching boss damage log");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/bosses/:id/damage-log", strictLimiter, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid boss ID" });
+    const { damageAmount, sourceDesc } = req.body as { damageAmount: number; sourceDesc: string };
+    if (!damageAmount || !sourceDesc) return res.status(400).json({ error: "damageAmount and sourceDesc are required" });
+    const char = await getOrCreateCharacter();
+    const [entry] = await db
+      .insert(bossDamageLogTable)
+      .values({ bossId: id, characterId: char.id, damageAmount, sourceDesc })
+      .returning();
+    res.status(201).json(entry);
+  } catch (err) {
+    req.log.error({ err }, "Error logging boss damage");
     res.status(500).json({ error: "Internal server error" });
   }
 });

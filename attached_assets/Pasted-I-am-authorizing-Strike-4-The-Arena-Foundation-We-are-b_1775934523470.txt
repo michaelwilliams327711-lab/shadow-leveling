@@ -1,0 +1,79 @@
+I am authorizing Strike 4: The Arena Foundation. We are building the backend infrastructure for multi-day Boss Raids. Execute exactly as specified:
+
+1. Database Schema (lib/db/src/schema/bosses.ts):
+Create this file to track Boss state and damage logs:
+
+TypeScript
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { characterTable } from "./character";
+
+export const bossesTable = pgTable("bosses", {
+  id: serial("id").primaryKey(),
+  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  maxHp: integer("max_hp").notNull(),
+  currentHp: integer("current_hp").notNull(),
+  weakness: text("weakness").notNull(), // e.g., 'discipline', 'intellect'
+  status: text("status").notNull().default("locked"), // locked, active, defeated, failed
+  unlockedAt: timestamp("unlocked_at"),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const bossDamageLogTable = pgTable("boss_damage_log", {
+  id: serial("id").primaryKey(),
+  bossId: integer("boss_id").notNull().references(() => bossesTable.id),
+  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  damageAmount: integer("damage_amount").notNull(),
+  sourceDesc: text("source_desc").notNull(), // e.g., '1 Hour C++ Coding'
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export type Boss = typeof bossesTable.$inferSelect;
+2. Schema Index (lib/db/src/schema/index.ts):
+Append these exports to the bottom of the file:
+
+TypeScript
+export * from "./bosses";
+3. Database Push:
+Run pnpm db:push in the shell to instantiate the new Arena tables.
+
+4. Arena API (artifacts/api-server/src/routes/bosses.ts):
+Create this file to handle Raid logic:
+
+TypeScript
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { bossesTable, bossDamageLogTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { getOrCreateCharacter } from "./character.js";
+
+const router = Router();
+
+// Get all bosses for the character
+router.get("/bosses", async (req, res) => {
+  try {
+    const char = await getOrCreateCharacter();
+    const bosses = await db.select().from(bossesTable).where(eq(bossesTable.characterId, char.id));
+    res.json(bosses);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;
+5. Root Router Integration (artifacts/api-server/src/routes/index.ts):
+
+Import the router: import bossesRouter from "./bosses.js";
+
+Mount it at the bottom: router.use(bossesRouter);
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw, line-by-line source code of bosses.ts (API route).
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the DB push was successful and the bosses and boss_damage_log tables are live.
