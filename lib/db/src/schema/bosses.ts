@@ -16,6 +16,7 @@ export const bossesTable = pgTable("bosses", {
   maxHp: integer("max_hp").notNull().default(1000),
   currentHp: integer("current_hp").notNull().default(1000),
   isDefeated: boolean("is_defeated").notNull().default(false),
+  isExtracted: boolean("is_extracted").notNull().default(false),
   defeatRecordedAt: timestamp("defeat_recorded_at"),
   failureRecordedAt: timestamp("failure_recorded_at"),
 });

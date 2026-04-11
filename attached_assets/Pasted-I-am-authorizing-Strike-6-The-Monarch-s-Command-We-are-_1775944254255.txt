@@ -1,0 +1,49 @@
+I am authorizing Strike 6: The Monarch's Command. We are building the 'Arise' extraction ritual and the Shadow Army infrastructure. Execute exactly as specified:
+
+1. Database Schema (lib/db/src/schema/shadows.ts):
+Create this table to store the Monarch's army:
+
+TypeScript
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { characterTable } from "./character";
+
+export const shadowArmyTable = pgTable("shadow_army", {
+  id: serial("id").primaryKey(),
+  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  name: text("name").notNull(),
+  rank: text("rank").notNull(), // D, C, B, A, S
+  specialAbility: text("special_ability").notNull(),
+  assignedTaskId: integer("assigned_task_id"), // Null if unassigned
+  extractedAt: timestamp("extracted_at").defaultNow(),
+});
+Note: Export this in lib/db/src/schema/index.ts and run pnpm db:push.
+
+2. Extraction API (artifacts/api-server/src/routes/shadows.ts):
+Create an endpoint /api/shadows/extract that:
+
+Accepts a bossId and a command string.
+
+If command === 'ARISE', it calculates a success chance (Base 40% + Intellect bonus).
+
+If successful, it moves the Boss data into the shadow_army table and marks the boss as 'Extracted'.
+
+3. The Extraction Ritual UI (artifacts/shadow-leveling/src/components/AriseRitual.tsx):
+Create a full-screen overlay that triggers when a Boss hits 0 HP:
+
+Background: Dark-tinted blur with animate-domain-drift.
+
+Input: A stylized, high-glow text field.
+
+Feedback: If extraction fails, trigger a screen shake and show text: "The shadow resists your command..."
+
+Success: A massive eruption of blue particles (using the arise-mana CSS) and a notification: "The Shadow Porter has joined the Army."
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the full source code for shadows.ts (API) and AriseRitual.tsx.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the shadow_army table is live and the extraction modal is ready for testing."

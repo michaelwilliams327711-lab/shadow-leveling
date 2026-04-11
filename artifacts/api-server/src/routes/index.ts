@@ -12,6 +12,7 @@ import badHabitsRouter from "./badHabits.js";
 import vocationsRouter from "./vocations.js";
 import plannerRouter from "./planner.js";
 import ascensionRouter from "./ascension.js";
+import shadowsRouter from "./shadows.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(badHabitsRouter);
 router.use(vocationsRouter);
 router.use(plannerRouter);
 router.use(ascensionRouter);
+router.use(shadowsRouter);
 
 export default router;

@@ -886,3 +886,54 @@
     amberCorruptionFlicker var(--amber-flicker-duration, 0.3s) ease-in-out infinite,
     corruptionSmoke 1.2s ease-out forwards;
 }
+
+/* ── AriseRitual Animations ──────────────────────────────────── */
+@keyframes ariseShake {
+  0%,100% { transform: translateX(0) rotate(0deg); }
+  10%     { transform: translateX(-8px) rotate(-1deg); }
+  20%     { transform: translateX(8px)  rotate(1deg); }
+  30%     { transform: translateX(-6px) rotate(-0.5deg); }
+  40%     { transform: translateX(6px)  rotate(0.5deg); }
+  50%     { transform: translateX(-4px) rotate(-0.3deg); }
+  60%     { transform: translateX(4px)  rotate(0.3deg); }
+  70%     { transform: translateX(-2px); }
+  80%     { transform: translateX(2px); }
+  90%     { transform: translateX(-1px); }
+}
+
+.arise-shake {
+  animation: ariseShake 0.5s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+@keyframes ariseSuccessGlow {
+  0%   { box-shadow: 0 0 40px 8px rgba(30,58,138,0.4); }
+  50%  { box-shadow: 0 0 100px 30px rgba(96,165,250,0.55), 0 0 200px 60px rgba(99,102,241,0.3); }
+  100% { box-shadow: 0 0 80px 20px rgba(96,165,250,0.45), 0 0 160px 40px rgba(99,102,241,0.25); }
+}
+
+.arise-success-glow {
+  animation: ariseSuccessGlow 1s ease-out forwards;
+}
+
+@keyframes ariseBurst {
+  0%   { transform: scale(0.2); opacity: 0; }
+  40%  { transform: scale(1.3); opacity: 1; }
+  70%  { transform: scale(0.9); opacity: 0.9; }
+  100% { transform: scale(1.0); opacity: 0; }
+}
+
+.arise-burst {
+  position: absolute;
+  inset: -40%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(96,165,250,0.55) 0%,
+    rgba(99,102,241,0.35) 30%,
+    rgba(139,92,246,0.15) 60%,
+    transparent 80%
+  );
+  animation: ariseBurst 1.2s ease-out forwards;
+  z-index: 0;
+}
