@@ -10,11 +10,13 @@ function ParticlePreview({
   amberDensity,
   amberFlicker,
   amberSize,
+  amberOpacity,
 }: {
   amberGlow: number;
   amberDensity: number;
   amberFlicker: number;
   amberSize: number;
+  amberOpacity: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,6 +55,7 @@ function ParticlePreview({
         height: "88px",
         "--amber-glow-size": `${amberGlow}px`,
         "--amber-flicker-duration": `${amberFlicker}s`,
+        "--amber-opacity-max": `${amberOpacity}`,
       } as CSSProperties}
     >
       <div className="absolute inset-0 flex items-end justify-center pb-2 pointer-events-none">
@@ -70,11 +73,13 @@ export function SettingsDrawer() {
     amberDensity,
     amberFlicker,
     amberSize,
+    amberOpacity,
     isSettingsOpen,
     setAmberGlow,
     setAmberDensity,
     setAmberFlicker,
     setAmberSize,
+    setAmberOpacity,
     setIsSettingsOpen,
   } = useVisualSettings();
 
@@ -83,7 +88,8 @@ export function SettingsDrawer() {
     if (!el) return;
     el.style.setProperty("--amber-glow-size", `${amberGlow}px`);
     el.style.setProperty("--amber-flicker-duration", `${amberFlicker}s`);
-  }, [amberGlow, amberFlicker]);
+    el.style.setProperty("--amber-opacity-max", `${amberOpacity}`);
+  }, [amberGlow, amberFlicker, amberOpacity]);
 
   return (
     <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
@@ -107,6 +113,7 @@ export function SettingsDrawer() {
             amberDensity={amberDensity}
             amberFlicker={amberFlicker}
             amberSize={amberSize}
+            amberOpacity={amberOpacity}
           />
 
           <div className="space-y-4">
@@ -218,6 +225,34 @@ export function SettingsDrawer() {
               Scales the diameter of each amber ember. Bigger embers drift more visibly.
             </p>
           </div>
+
+          <div className="w-full h-px bg-amber-900/20" />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="font-display text-xs tracking-[0.35em] uppercase text-amber-300">
+                Ember Opacity
+              </label>
+              <span className="font-stat text-sm text-amber-400 tabular-nums">
+                {Math.round(amberOpacity * 100)}%
+              </span>
+            </div>
+            <Slider
+              min={0.1}
+              max={1.0}
+              step={0.05}
+              value={[amberOpacity]}
+              onValueChange={([v]) => setAmberOpacity(v)}
+              className="[&_.bg-primary]:bg-amber-500 [&_.bg-primary\/20]:bg-amber-900/40 [&_.border-primary\/50]:border-amber-500/50"
+            />
+            <div className="flex justify-between text-[10px] text-amber-800/60 font-stat tracking-widest">
+              <span>10%</span>
+              <span>100%</span>
+            </div>
+            <p className="text-xs text-muted-foreground/50 leading-relaxed">
+              Peak brightness of each ember as it rises. Lower = ghostly and subtle.
+            </p>
+          </div>
         </div>
 
         <div className="px-6 py-5 border-t border-amber-900/30 space-y-3">
@@ -227,6 +262,7 @@ export function SettingsDrawer() {
               setAmberGlow(15);
               setAmberFlicker(0.3);
               setAmberSize(1.0);
+              setAmberOpacity(0.9);
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-2.5 text-xs font-display tracking-[0.25em] uppercase text-amber-600 hover:bg-amber-900/30 hover:text-amber-400 hover:border-amber-700/60 transition-all duration-200"
           >
