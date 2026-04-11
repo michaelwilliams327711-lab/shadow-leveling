@@ -227,11 +227,11 @@
 }
 
 @keyframes single-ember-rise {
-  0%   { transform: translateY(0px) translateX(0px); opacity: 0; }
-  8%   { opacity: 1; }
-  50%  { transform: translateY(-55px) translateX(var(--drift, 4px)); opacity: 0.8; }
-  88%  { opacity: 0.4; }
-  100% { transform: translateY(-110px) translateX(calc(var(--drift, 4px) * 1.5)); opacity: 0; }
+  0%    { transform: translateY(0px) translateX(0px); opacity: 0; }
+  3%    { opacity: 1; }
+  16%   { transform: translateY(-110px) translateX(var(--drift, 4px)); opacity: 0; }
+  16.1% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  100%  { transform: translateY(0px) translateX(0px); opacity: 0; }
 }
 
 .ember-particle {
@@ -240,7 +240,7 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
-  animation: single-ember-rise var(--dur, 6s) ease-in-out var(--delay, 0s) infinite;
+  animation: single-ember-rise var(--dur, 16s) linear var(--delay, 0s) infinite;
 }
 
 /* ── .arise-mana ───────────────────────────────────────────── */
