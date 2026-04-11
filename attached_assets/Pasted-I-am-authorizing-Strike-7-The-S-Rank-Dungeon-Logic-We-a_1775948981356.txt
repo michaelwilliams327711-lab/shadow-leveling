@@ -1,0 +1,38 @@
+I am authorizing Strike 7: The S-Rank Dungeon Logic. We are implementing the Summoning, Retaliation, and Ambush mechanics safely. Execute exactly as specified:
+
+1. Database Expansion (lib/db/src/schema/character.ts & bosses.ts):
+
+Character: Ensure an intellect integer column exists (default 1). Add a gate_fragments integer column (default 0).
+
+Bosses: Add last_retaliation_at (timestamp, default now) and intellect_requirement (integer, default 0).
+
+Note: Run pnpm db:push to apply these columns to the live database.
+
+2. The Enrage Timer (artifacts/api-server/src/lib/bossRetaliation.ts):
+Create this utility module to handle boss counter-attacks:
+
+Logic: Export processBossRetaliation(characterId). Fetch the active, undefeated Boss.
+
+The Timer: Check the bossDamageLogTable for the most recent strike. If the last strike was > 24 hours ago, check last_retaliation_at.
+
+The Penalty: If last_retaliation_at is also > 24 hours ago, the boss 'attacks'. Deduct 100 Gold, increase sloth_diligence Vice Score by 5, and update last_retaliation_at to Date.now() to prevent loop-draining.
+
+3. The Gate Key & Stat Logic (artifacts/api-server/src/routes/quests.ts & bosses.ts):
+
+The Drop (quests.ts): Every completed quest has a 20% chance to grant 1 gate_fragment. If it hits 3, set fragments to 0 and change the next 'Hidden' boss to 'Locked' or 'Active'.
+
+The Gate (bosses.ts): In GET /bosses, filter the response. Only show bosses where the character's intellect >= the boss's intellect_requirement.
+
+4. Ambush Logic (Celestial Trigger):
+
+In artifacts/api-server/src/lib/celestialPower.ts, inside the applyViceRetaliation function: Add a check. If newScore >= 80 in ANY domain, automatically set a new 'Ambush Boss' (Rank C or B) to 'Active' in the Arena, completely bypassing the Gate Key requirement.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw source code for the new bossRetaliation.ts.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the DB push was successful and the Ambush/Enrage logic is active.
