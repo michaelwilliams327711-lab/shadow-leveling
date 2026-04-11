@@ -225,7 +225,7 @@
 }
 
 .corruption-smoke::after {
-  content: "";
+  content: none;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -280,6 +280,38 @@
     14% 25%, 23% 29%, 17% 24%, 22% 32%, 15% 23%, 19% 28%, 25% 30%, 13% 26%;
   background-repeat: no-repeat;
   animation: ember-float 7s ease-in-out infinite;
+}
+
+@keyframes ember-particle-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.65);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  58% {
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(var(--ember-drift), -150px, 0) scale(0.15);
+    opacity: 0;
+  }
+}
+
+.ember-particle {
+  position: absolute;
+  left: var(--ember-left);
+  bottom: var(--ember-bottom);
+  z-index: 1;
+  width: var(--ember-size);
+  height: var(--ember-size);
+  border-radius: 9999px;
+  pointer-events: none;
+  background: var(--ember-color);
+  box-shadow: 0 0 8px var(--ember-color);
+  animation: ember-particle-rise var(--ember-duration) ease-in-out infinite;
+  animation-delay: var(--ember-delay);
 }
 
 /* ── .arise-mana ───────────────────────────────────────────── */

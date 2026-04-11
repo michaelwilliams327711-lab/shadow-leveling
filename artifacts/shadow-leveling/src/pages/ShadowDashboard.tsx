@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import type { CSSProperties } from "react";
 import { TrendingDown, Skull, AlertTriangle, ShieldAlert, Zap, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,6 +77,22 @@ const DOUGHNUT_COLORS = [
   "hsl(var(--destructive) / 0.55)",
   "hsl(var(--destructive) / 0.4)",
 ];
+
+const EMBER_PARTICLES = Array.from({ length: 40 }, (_, i) => ({
+  id: i,
+  left: `${6 + ((i * 23) % 88)}%`,
+  bottom: `${-8 - ((i * 7) % 18)}%`,
+  drift: `${((i * 17) % 46) - 23}px`,
+  size: `${2 + (i % 4)}px`,
+  duration: `${5.8 + (i % 7) * 0.45}s`,
+  delay: `${-((i * 0.19) % 7.2).toFixed(2)}s`,
+  color: [
+    "rgba(239,68,68,0.85)",
+    "rgba(255,110,40,0.78)",
+    "rgba(255,180,80,0.72)",
+    "rgba(200,50,50,0.76)",
+  ][i % 4],
+}));
 
 function ShadowTooltip({
   active,
@@ -206,7 +223,23 @@ export default function ShadowDashboard() {
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
             <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <CardContent className="p-5 flex items-center gap-4">
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+              <CardContent className="p-5 flex items-center gap-4 relative z-10">
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                   <TrendingDown className="w-7 h-7 text-red-500" />
                 </div>
