@@ -249,27 +249,35 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <InfoTooltip variant="shadow"
-            what="Total XP Bled — XP lost to failures in the last 30 days."
-            fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
-            usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
-          >
-            <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="red" />
-              <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                  <TrendingDown className="w-7 h-7 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
-                  <p className="text-3xl font-stat font-bold text-red-400">
-                    {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">last 30 days</p>
-                </div>
-              </CardContent>
-            </Card>
-          </InfoTooltip>
+          <div className="void-panel-wrap">
+            <InfoTooltip variant="shadow"
+              what="Total XP Bled — XP lost to failures in the last 30 days."
+              fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
+              usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
+            >
+              <Card className="glass-panel border border-red-500/30 corruption-smoke void-panel">
+                <EmberParticles palette="red" />
+                <span className="void-corner void-corner-tl" />
+                <span className="void-corner void-corner-tr" />
+                <span className="void-corner void-corner-bl" />
+                <span className="void-corner void-corner-br" />
+                <div className="void-h-bar void-h-bar-top" />
+                <div className="void-h-bar void-h-bar-bottom" />
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="p-3 rounded-sm bg-red-500/10 border border-red-500/30">
+                    <TrendingDown className="w-7 h-7 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
+                    <p className="text-3xl font-stat font-bold text-red-400">
+                      {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">last 30 days</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </InfoTooltip>
+          </div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

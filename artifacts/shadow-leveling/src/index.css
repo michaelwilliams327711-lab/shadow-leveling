@@ -243,6 +243,72 @@
   animation: single-ember-rise var(--dur, 6s) ease-in-out var(--delay, 0s) infinite;
 }
 
+/* ── .void-panel — Solo Leveling notification panel ────────── */
+.void-panel-wrap {
+  position: relative;
+  padding: 0 10px;
+}
+
+.void-panel-wrap::before,
+.void-panel-wrap::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 6px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(239,68,68,0.8) 12%,
+    rgba(239,68,68,0.6) 42%,
+    rgba(239,68,68,0.1) 46%,
+    rgba(239,68,68,0.1) 54%,
+    rgba(239,68,68,0.6) 58%,
+    rgba(239,68,68,0.8) 88%,
+    transparent 100%
+  );
+  box-shadow: 0 0 8px rgba(239,68,68,0.45);
+  border-radius: 1px;
+}
+
+.void-panel-wrap::before { left: 0; }
+.void-panel-wrap::after  { right: 0; }
+
+.void-panel {
+  border-radius: 2px !important;
+  border-color: rgba(239,68,68,0.65) !important;
+  box-shadow:
+    0 0 0 1px rgba(239,68,68,0.15),
+    0 0 12px rgba(239,68,68,0.4),
+    0 0 28px rgba(200,20,20,0.2),
+    inset 0 0 28px rgba(50,0,0,0.5) !important;
+}
+
+.void-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+.void-corner-tl { top: 4px;    left: 4px;  border-top:    2px solid rgba(239,68,68,0.95); border-left:   2px solid rgba(239,68,68,0.95); }
+.void-corner-tr { top: 4px;    right: 4px; border-top:    2px solid rgba(239,68,68,0.95); border-right:  2px solid rgba(239,68,68,0.95); }
+.void-corner-bl { bottom: 4px; left: 4px;  border-bottom: 2px solid rgba(239,68,68,0.95); border-left:   2px solid rgba(239,68,68,0.95); }
+.void-corner-br { bottom: 4px; right: 4px; border-bottom: 2px solid rgba(239,68,68,0.95); border-right:  2px solid rgba(239,68,68,0.95); }
+
+.void-h-bar {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: rgba(239,68,68,0.7);
+  box-shadow: 0 0 5px rgba(239,68,68,0.5);
+  z-index: 2;
+  pointer-events: none;
+}
+.void-h-bar-top    { top: 0; }
+.void-h-bar-bottom { bottom: 0; }
+
 /* ── .arise-mana ───────────────────────────────────────────── */
 @keyframes mana-shimmer {
   0%   { transform: translateY(0%)   rotate(0deg)   scale(1.0); opacity: 0.6; }
