@@ -251,7 +251,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
 // ── CelestialDuel Page ────────────────────────────────────────────────────────
 export default function CelestialDuel() {
   const queryClient = useQueryClient();
-  const { amberDensity, amberSize } = useVisualSettings();
+  const { amberDensity, amberSize, corruptionTheme } = useVisualSettings();
   const [logging, setLogging]       = useState<string | null>(null);
   const [glitching, setGlitching]   = useState(false);
   const [shimmering, setShimmering] = useState(false);
@@ -385,7 +385,7 @@ export default function CelestialDuel() {
 
   // ── Render — wrapped in celestial-void-context for scoped CSS isolation ────
   return (
-    <div className="celestial-void-context min-h-screen bg-background text-foreground relative">
+    <div className={`celestial-void-context theme-${corruptionTheme} min-h-screen bg-background text-foreground relative`}>
 
       {/* Domain Drift Background Layer — Amber-tinted void */}
       <div className="absolute inset-0 z-0 flex overflow-hidden pointer-events-none" aria-hidden="true">
