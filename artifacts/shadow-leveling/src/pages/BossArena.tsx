@@ -6,8 +6,8 @@ import {
   getListBossesQueryKey,
   getGetCharacterQueryKey
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Skull, Lock, Swords, ShieldAlert, AlertCircle } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Skull, Lock, Swords, ShieldAlert, AlertCircle, Zap, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

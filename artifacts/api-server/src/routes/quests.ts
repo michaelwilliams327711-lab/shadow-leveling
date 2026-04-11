@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable } from "@workspace/db";
-import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql } from "drizzle-orm";
+import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable } from "@workspace/db";
+import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
 import {
@@ -769,6 +769,39 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     });
 
     await upsertActivity(today);
+
+    // Boss Damage Bridge — deal damage to the first active (non-defeated) boss
+    try {
+      const [activeBoss] = await db
+        .select()
+        .from(bossesTable)
+        .where(eq(bossesTable.isDefeated, false))
+        .orderBy(asc(bossesTable.id))
+        .limit(1);
+
+      if (activeBoss) {
+        const enduranceMultiplier = statField === "endurance" ? 1.5 : 1.0;
+        const damageAmount = Math.floor(xpAwarded * enduranceMultiplier);
+        const newHp = Math.max(0, activeBoss.currentHp - damageAmount);
+        const bossDefeated = newHp <= 0;
+
+        await db.insert(bossDamageLogTable).values({
+          bossId: activeBoss.id,
+          characterId: char.id,
+          damageAmount,
+          sourceDesc: `Quest Complete: ${quest.name} (+${damageAmount} DMG)`,
+        });
+
+        await db.update(bossesTable)
+          .set({
+            currentHp: newHp,
+            ...(bossDefeated ? { isDefeated: true, defeatRecordedAt: new Date() } : {}),
+          })
+          .where(eq(bossesTable.id, activeBoss.id));
+      }
+    } catch (bossErr) {
+      req.log.warn({ err: bossErr }, "Boss damage bridge failed; quest completion still succeeds");
+    }
 
     let vocResult: { gateTriggered: boolean; gateBlocked: boolean; xpAwarded: number; newLevel: number; newXp: number } | null = null;
     if (quest.vocationId) {

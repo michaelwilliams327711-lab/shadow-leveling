@@ -13,6 +13,8 @@ export const bossesTable = pgTable("bosses", {
   goldReward: integer("gold_reward").notNull().default(1000),
   xpPenalty: integer("xp_penalty").notNull().default(300),
   challenge: text("challenge").notNull(),
+  maxHp: integer("max_hp").notNull().default(1000),
+  currentHp: integer("current_hp").notNull().default(1000),
   isDefeated: boolean("is_defeated").notNull().default(false),
   defeatRecordedAt: timestamp("defeat_recorded_at"),
   failureRecordedAt: timestamp("failure_recorded_at"),

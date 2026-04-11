@@ -1,0 +1,62 @@
+I am authorizing Strike 5: The Raid Execution. We are bringing the Boss Raid system online. Execute exactly as specified:
+
+1. Schema Correction (lib/db/src/schema/bosses.ts):
+Add max_hp and current_hp to the bossesTable.
+
+TypeScript
+// Add these columns to the existing bossesTable definition:
+maxHp: integer("max_hp").notNull().default(1000),
+currentHp: integer("current_hp").notNull().default(1000),
+Note: Run pnpm db:push immediately after editing to update the live table.
+
+2. Boss Seeding Script (artifacts/api-server/src/seedBoss.ts):
+Create this script to spawn your first opponent:
+
+TypeScript
+import { db, bossesTable } from "@workspace/db";
+
+async function seed() {
+  await db.insert(bossesTable).values({
+    name: "The Shifting Pallet",
+    description: "A Rank-D logistical nightmare. An unstable mountain of inventory that regenerates as fast as you scan it.",
+    rank: "D",
+    maxHp: 1000,
+    currentHp: 1000,
+    challenge: "Complete tasks to deal damage. Endurance stats provide a 1.5x damage multiplier.",
+  }).onConflictDoNothing();
+  console.log("Boss Seeded: The Shifting Pallet is waiting in the Arena.");
+}
+seed();
+Note: Run node artifacts/api-server/src/seedBoss.js to execute.
+
+3. The Arena Page (artifacts/shadow-leveling/src/pages/Arena.tsx):
+Create a high-intensity UI for the Boss fight:
+
+Visuals: Use the animate-siege-pulse CSS we defined earlier for the HP bar.
+
+HP Bar: A massive, glowing bar that displays currentHp / maxHp.
+
+Damage Feed: List the last 5 entries from the boss_damage_log (e.g., 'Quest Complete: +150 DMG').
+
+The Boss: Display a stylized 'Rank D' icon and the boss name in the font-display (Cinzel) style.
+
+4. Damage Bridge (artifacts/api-server/src/routes/quests.ts):
+Modify the quest completion handler. When a quest is completed:
+
+Check for the first active boss (status: 'locked' or just the first entry).
+
+If found, insert a record into boss_damage_log with damageAmount equal to the Quest's xpReward.
+
+Update bossesTable to decrement current_hp by the damage amount.
+
+If current_hp <= 0, set is_defeated: true and status: 'defeated'.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the full source code for Arena.tsx and the updated quests.ts handler.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the Shifting Pallet's HP is visible in the Arena UI."
