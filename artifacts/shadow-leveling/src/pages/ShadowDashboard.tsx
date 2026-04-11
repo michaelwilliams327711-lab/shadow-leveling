@@ -335,8 +335,24 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="glass-panel border border-red-900/30">
-          <CardHeader>
+        <Card className="glass-panel border border-red-900/30 corruption-smoke">
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+          <CardHeader className="relative z-10">
             <InfoTooltip variant="shadow"
               what="XP Bleed — your daily XP losses over the past 30 days."
               fn="Each point shows how much XP was lost on that day due to failed quests or missed days. The area fills downward, representing loss."
@@ -347,7 +363,7 @@ export default function ShadowDashboard() {
               </CardTitle>
             </InfoTooltip>
           </CardHeader>
-          <CardContent className="corruption-smoke">
+          <CardContent className="corruption-smoke relative z-10">
             {xpByDate.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-10">No XP losses recorded in the last 30 days.</p>
             ) : (
