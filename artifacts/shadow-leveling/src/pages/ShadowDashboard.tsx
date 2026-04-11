@@ -261,8 +261,24 @@ export default function ShadowDashboard() {
             fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
           >
-            <Card className="glass-panel border border-red-800/40" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <CardContent className="p-5 flex items-center gap-4 corruption-smoke">
+            <Card className="glass-panel border border-red-800/40 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+              <CardContent className="p-5 flex items-center gap-4 relative z-10 corruption-smoke">
                 <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
                   <Skull className="w-7 h-7 text-red-700" />
                 </div>
