@@ -322,8 +322,7 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="glass-panel border border-red-900/30 corruption-smoke">
-          <EmberParticles palette="red" />
+        <Card className="glass-panel border border-red-900/30">
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="XP Bleed — your daily XP losses over the past 30 days."
