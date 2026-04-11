@@ -168,64 +168,6 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   SOLO LEVELING — System Screen Panel
-   ───────────────────────────────────────────────────────────── */
-
-@keyframes sl-scan {
-  0%   { top: -1px; opacity: 0; }
-  3%   { opacity: 1; }
-  97%  { opacity: 0.5; }
-  100% { top: 100%; opacity: 0; }
-}
-
-@keyframes sl-border-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(0,180,255,0.18), inset 0 0 12px rgba(0,80,200,0.05); }
-  50%       { box-shadow: 0 0 24px rgba(0,200,255,0.32), inset 0 0 20px rgba(0,100,255,0.08); }
-}
-
-.sl-panel {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  background: rgba(0, 4, 20, 0.90) !important;
-  border-color: rgba(0, 170, 255, 0.38) !important;
-  animation: sl-border-pulse 4s ease-in-out infinite;
-}
-
-.sl-panel::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 200, 255, 0.6) 20%,
-    rgba(140, 240, 255, 1) 50%,
-    rgba(0, 200, 255, 0.6) 80%,
-    transparent 100%
-  );
-  z-index: 1;
-  pointer-events: none;
-  animation: sl-scan 7s linear infinite;
-}
-
-.sl-corner {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: rgba(0, 210, 255, 0.95);
-  border-style: solid;
-  z-index: 3;
-  pointer-events: none;
-}
-.sl-corner.tl { top: -1px;  left: -1px;  border-width: 2px 0 0 2px; }
-.sl-corner.tr { top: -1px;  right: -1px; border-width: 2px 2px 0 0; }
-.sl-corner.bl { bottom: -1px; left: -1px;  border-width: 0 0 2px 2px; }
-.sl-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-
-/* ─────────────────────────────────────────────────────────────
    CELESTIAL DUEL — Card Atmosphere Classes
    ───────────────────────────────────────────────────────────── */
 
