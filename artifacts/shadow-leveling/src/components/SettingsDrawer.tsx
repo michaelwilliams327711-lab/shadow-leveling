@@ -1,8 +1,66 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import { Settings, RotateCcw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
+
+function ParticlePreview({
+  amberGlow,
+  amberDensity,
+  amberFlicker,
+}: {
+  amberGlow: number;
+  amberDensity: number;
+  amberFlicker: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const spawnBurst = () => {
+      const count = Math.max(1, Math.round(3 * amberDensity));
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement("div");
+        p.className = "amber-corruption-particle";
+        const size = 3 + Math.random() * 5;
+        p.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          left: ${8 + Math.random() * 84}%;
+          bottom: ${4 + Math.random() * 35}%;
+          animation-delay: ${(Math.random() * 0.4).toFixed(2)}s;
+        `;
+        container.appendChild(p);
+        setTimeout(() => p.remove(), 1600);
+      }
+    };
+
+    spawnBurst();
+    const id = setInterval(spawnBurst, 700);
+    return () => clearInterval(id);
+  }, [amberDensity]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="celestial-void-context relative overflow-hidden rounded-lg border border-amber-900/40 bg-black/70"
+      style={{
+        height: "88px",
+        "--amber-glow-size": `${amberGlow}px`,
+        "--amber-flicker-duration": `${amberFlicker}s`,
+      } as CSSProperties}
+    >
+      <div className="absolute inset-0 flex items-end justify-center pb-2 pointer-events-none">
+        <span className="text-[9px] tracking-[0.4em] text-amber-900/40 uppercase font-display">
+          Live Preview
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsDrawer() {
   const {
@@ -39,7 +97,13 @@ export function SettingsDrawer() {
           </p>
         </SheetHeader>
 
-        <div className="flex-1 px-6 py-8 space-y-10">
+        <div className="flex-1 px-6 py-6 space-y-8 overflow-y-auto">
+          <ParticlePreview
+            amberGlow={amberGlow}
+            amberDensity={amberDensity}
+            amberFlicker={amberFlicker}
+          />
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="font-display text-xs tracking-[0.35em] uppercase text-amber-300">
