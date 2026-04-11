@@ -300,8 +300,24 @@ export default function ShadowDashboard() {
             fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
           >
-            <Card className="glass-panel border border-orange-700/30" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <CardContent className="p-5 flex items-center gap-4 corruption-smoke">
+            <Card className="glass-panel border border-orange-700/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+              <CardContent className="p-5 flex items-center gap-4 relative z-10 corruption-smoke">
                 <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
                   <AlertTriangle className="w-7 h-7 text-orange-500" />
                 </div>
