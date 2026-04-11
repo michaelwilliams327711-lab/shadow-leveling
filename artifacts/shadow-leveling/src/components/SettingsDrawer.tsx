@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Settings } from "lucide-react";
+import { Settings, RotateCcw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
@@ -123,8 +123,19 @@ export function SettingsDrawer() {
           </div>
         </div>
 
-        <div className="px-6 py-5 border-t border-amber-900/30">
-          <p className="text-[10px] tracking-[0.3em] text-amber-900/50 uppercase font-display text-center">
+        <div className="px-6 py-5 border-t border-amber-900/30 space-y-3">
+          <button
+            onClick={() => {
+              setAmberDensity(1.0);
+              setAmberGlow(15);
+              setAmberFlicker(0.3);
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-2.5 text-xs font-display tracking-[0.25em] uppercase text-amber-600 hover:bg-amber-900/30 hover:text-amber-400 hover:border-amber-700/60 transition-all duration-200"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset to Defaults
+          </button>
+          <p className="text-[10px] tracking-[0.3em] text-amber-900/40 uppercase font-display text-center">
             Settings persist across sessions
           </p>
         </div>
