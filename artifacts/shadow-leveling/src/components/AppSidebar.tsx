@@ -10,10 +10,13 @@ import {
   ShieldAlert,
   Layers,
   Scale,
+  Settings,
 } from "lucide-react";
+import { useVisualSettings } from "@/context/VisualSettingsContext";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -37,6 +40,7 @@ const navItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { setIsSettingsOpen } = useVisualSettings();
 
   return (
     <Sidebar className="border-r border-white/5 bg-sidebar/95 backdrop-blur-xl">
@@ -111,6 +115,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="px-4 pb-4">
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground hover:bg-amber-900/20 hover:text-amber-300 transition-all duration-200 group"
+        >
+          <Settings className="h-5 w-5 text-amber-800 group-hover:text-amber-400 transition-colors" />
+          <span className="font-semibold text-base tracking-wide">Settings</span>
+        </button>
+      </SidebarFooter>
     </Sidebar>
   );
 }

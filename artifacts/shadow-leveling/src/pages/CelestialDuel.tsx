@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
@@ -56,8 +57,8 @@ const DOMAIN_PAIRS = [
 ] as const;
 
 // ── AmberParticle spawner ──────────────────────────────────────────────────────
-function spawnAmberParticles(container: HTMLDivElement) {
-  const count = 7;
+function spawnAmberParticles(container: HTMLDivElement, density: number = 1.0) {
+  const count = Math.max(1, Math.round(7 * density));
   for (let i = 0; i < count; i++) {
     const p = document.createElement("div");
     p.className = "amber-corruption-particle";
@@ -250,6 +251,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
 // ── CelestialDuel Page ────────────────────────────────────────────────────────
 export default function CelestialDuel() {
   const queryClient = useQueryClient();
+  const { amberDensity } = useVisualSettings();
   const [logging, setLogging]       = useState<string | null>(null);
   const [glitching, setGlitching]   = useState(false);
   const [shimmering, setShimmering] = useState(false);
@@ -345,7 +347,7 @@ export default function CelestialDuel() {
 
       // ── Spawn amber particles on vice log ──────────────────────────────────
       if (type === "vice" && particleContainerRef.current) {
-        spawnAmberParticles(particleContainerRef.current);
+        spawnAmberParticles(particleContainerRef.current, amberDensity);
       }
 
       if (result.greatFall) {
@@ -372,7 +374,7 @@ export default function CelestialDuel() {
     } finally {
       setLogging(null);
     }
-  }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare]);
+  }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare, amberDensity]);
 
   const getDomainClass = useCallback((power: CelestialPower): string => {
     if (power.isAscended && power.viceScore > 50) return "runic-siege under-siege border-red-900/40 animate-siege-pulse";

@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { SettingsDrawer } from "@/components/SettingsDrawer";
+import { VisualSettingsProvider } from "@/context/VisualSettingsContext";
 import { PenaltyModal } from "@/components/PenaltyModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
@@ -150,6 +152,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <VisualSettingsProvider>
       <TooltipProvider>
         <div className="dark min-h-screen bg-background text-foreground selection:bg-primary/30">
           <div
@@ -184,7 +187,9 @@ function App() {
             />
           )}
         </div>
+        <SettingsDrawer />
       </TooltipProvider>
+      </VisualSettingsProvider>
     </QueryClientProvider>
   );
 }

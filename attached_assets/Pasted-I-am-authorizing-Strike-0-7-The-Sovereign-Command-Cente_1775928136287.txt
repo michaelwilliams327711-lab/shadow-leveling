@@ -1,0 +1,43 @@
+I am authorizing Strike 0.7: The Sovereign Command Center. We are implementing a 'Gear' settings interface to control the intensity and density of the Amber Corruption, strictly localized to the Scale of Souls. Execute exactly as specified:
+
+1. Visual State Management (artifacts/shadow-leveling/src/context/VisualSettingsContext.tsx):
+Create a React Context to store and persist these values to localStorage:
+
+amberGlow: (Default 15px)
+
+amberDensity: (Default 1.0 multiplier)
+
+amberFlicker: (Default 0.3s)
+
+2. Scoped CSS Variables (artifacts/shadow-leveling/src/index.css):
+Add this scoped block at the bottom to ensure the 'Void' aesthetic doesn't leak:
+
+3. The Command Center (artifacts/shadow-leveling/src/components/SettingsDrawer.tsx):
+Create a slide-out drawer (using Radix UI or a custom transition) triggered by a Gear Icon in the sidebar.
+
+Header: 'COMMAND CENTER' in font-display (Cinzel).
+
+Slider 1 (Density): Controls --amber-density. As this increases, the number of particles spawned in CelestialDuel.tsx must multiply (e.g., baseParticles * density).
+
+Slider 2 (Glow): Controls --amber-glow from 5px to 40px.
+
+Implementation: Use useEffect to update the CSS variables on the .celestial-void-context wrapper element in real-time.
+
+4. Component Integration (artifacts/shadow-leveling/src/pages/CelestialDuel.tsx):
+
+Wrap the main container in the celestial-void-context class.
+
+Update the emitParticles logic:
+
+5. Sidebar Update (artifacts/shadow-leveling/src/components/AppSidebar.tsx):
+Add a dedicated 'Settings' nav item at the bottom with a Settings (Gear) icon.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the full source code for VisualSettingsContext.tsx, SettingsDrawer.tsx, and the updated CelestialDuel.tsx.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the sliders live-update the Amber counts and glow magnitude.
