@@ -39,11 +39,11 @@ const EMBER_COLORS = {
   ],
 };
 
-function EmberParticles({ palette = "red" }: { palette?: keyof typeof EMBER_COLORS }) {
+function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeof EMBER_COLORS; count?: number }) {
   const colors = EMBER_COLORS[palette];
   return (
     <>
-      {Array.from({ length: 40 }, (_, i) => {
+      {Array.from({ length: count }, (_, i) => {
         const size = [1.5, 2, 2.5, 1, 3, 1.5, 2, 1, 2.5][i % 9];
         const left = ((i * 2.47 + 3) % 92) + 4;
         const delay = (i * 0.18) % 7;
@@ -519,7 +519,7 @@ export default function ShadowDashboard() {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Card className="glass-panel border border-red-900/30 corruption-smoke">
-          <EmberParticles palette="crimson" />
+          <EmberParticles palette="crimson" count={60} />
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="Corruption History — your corruption score over time."
