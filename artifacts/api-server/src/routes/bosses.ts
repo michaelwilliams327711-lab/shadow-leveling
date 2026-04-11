@@ -27,7 +27,8 @@ router.get("/bosses", async (req, res) => {
 
     const mapped = bosses.map((b) => {
       const rankRewards  = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
-      const minIntellect = MIN_INTELLECT_BY_RANK[b.rank] ?? 0;
+      // DB column takes precedence; rank-based floor ensures hidden bosses degrade correctly
+      const minIntellect = Math.max(b.intellectRequirement, MIN_INTELLECT_BY_RANK[b.rank] ?? 0);
       const isUnlocked   = totalXp >= b.xpThreshold || b.gateUnlocked;
 
       // Stat-gate: boss is hidden if the character lacks the intellect requirement

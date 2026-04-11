@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { celestialPowerTable, characterTable, penaltyLogTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { celestialPowerTable, characterTable, penaltyLogTable, bossesTable } from "@workspace/db";
+import { eq, and, sql, asc, inArray } from "drizzle-orm";
 
 export const VIRTUE_DOMAIN_MAP: Record<string, string> = {
   diligence:  "sloth_diligence",
@@ -15,10 +15,14 @@ export const VIRTUE_DOMAIN_MAP: Record<string, string> = {
 export const VICE_OVERFLOW_THRESHOLD   = 100;
 export const VICE_OVERFLOW_CORRUPTION  = 20;
 export const GREAT_FALL_CORRUPTION     = 40;
+export const AMBUSH_VICE_THRESHOLD     = 80;
+
+const AMBUSH_ELIGIBLE_RANKS = ["C", "B"] as const;
 
 export type ViceRetaliationResult = {
   overflowTriggered: boolean;
   greatFall: boolean;
+  ambushBossName?: string;
 };
 
 export async function applyViceRetaliation(
@@ -36,7 +40,9 @@ export async function applyViceRetaliation(
       eq(celestialPowerTable.domainPair, domainPair)
     ));
 
+  const prevScore = existing?.viceScore ?? 0;
   const increment = existing?.isAscended ? 5 : 10;
+  const newScore  = prevScore + increment;
 
   await db
     .insert(celestialPowerTable)
@@ -54,7 +60,39 @@ export async function applyViceRetaliation(
       eq(celestialPowerTable.domainPair, domainPair)
     ));
 
-  if (!row || row.viceScore <= VICE_OVERFLOW_THRESHOLD) return { overflowTriggered: false, greatFall: false };
+  // ── AMBUSH TRIGGER ────────────────────────────────────────────────────────
+  // When any domain vice score crosses 80, a Rank C or B boss gate-crashes the
+  // Arena, completely bypassing the Gate Key requirement.
+  let ambushBossName: string | undefined;
+  if (prevScore < AMBUSH_VICE_THRESHOLD && newScore >= AMBUSH_VICE_THRESHOLD) {
+    try {
+      const [ambushCandidate] = await db
+        .select()
+        .from(bossesTable)
+        .where(and(
+          eq(bossesTable.isDefeated,   false),
+          eq(bossesTable.gateUnlocked, false),
+          inArray(bossesTable.rank, [...AMBUSH_ELIGIBLE_RANKS])
+        ))
+        .orderBy(asc(bossesTable.xpThreshold))
+        .limit(1);
+
+      if (ambushCandidate) {
+        await db
+          .update(bossesTable)
+          .set({ gateUnlocked: true })
+          .where(eq(bossesTable.id, ambushCandidate.id));
+        ambushBossName = ambushCandidate.name;
+      }
+    } catch {
+      // Ambush failure is non-fatal — vice retaliation still resolves
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (!row || row.viceScore <= VICE_OVERFLOW_THRESHOLD) {
+    return { overflowTriggered: false, greatFall: false, ambushBossName };
+  }
 
   if (row.isAscended) {
     await db.update(celestialPowerTable)
@@ -81,7 +119,7 @@ export async function applyViceRetaliation(
       xpDeducted: 0,
       goldDeducted: 0,
     });
-    return { overflowTriggered: true, greatFall: true };
+    return { overflowTriggered: true, greatFall: true, ambushBossName };
   }
 
   await db.update(celestialPowerTable).set({ viceScore: 0 }).where(eq(celestialPowerTable.id, row.id));
@@ -94,5 +132,5 @@ export async function applyViceRetaliation(
     })
     .where(eq(characterTable.id, characterId));
 
-  return { overflowTriggered: true, greatFall: false };
+  return { overflowTriggered: true, greatFall: false, ambushBossName };
 }
