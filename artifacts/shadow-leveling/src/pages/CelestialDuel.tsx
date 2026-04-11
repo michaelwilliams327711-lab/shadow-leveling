@@ -55,6 +55,25 @@ const DOMAIN_PAIRS = [
     warning: "Pride storms the gates of Humility. A Fall now would be your ruin complete." },
 ] as const;
 
+// ── AmberParticle spawner ──────────────────────────────────────────────────────
+function spawnAmberParticles(container: HTMLDivElement) {
+  const count = 7;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("div");
+    p.className = "amber-corruption-particle";
+    const size = 4 + Math.random() * 6;
+    p.style.cssText = `
+      width: ${size}px;
+      height: ${size}px;
+      left: ${10 + Math.random() * 80}%;
+      bottom: ${10 + Math.random() * 40}%;
+      animation-delay: ${Math.random() * 0.3}s;
+    `;
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
+  }
+}
+
 // ── TugBar ─────────────────────────────────────────────────────────────────────
 function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: number }) {
   const total = viceScore + virtueScore;
@@ -69,7 +88,7 @@ function TugBar({ viceScore, virtueScore }: { viceScore: number; virtueScore: nu
           width: `${pct}%`,
           background: pct >= 50
             ? "linear-gradient(to right, #7f1d1d, #a16207)"
-            : "linear-gradient(to right, #7f1d1d, #6b21a8)"
+            : "linear-gradient(90deg, hsl(35 80% 20%), hsl(45 100% 50%))",
         }}
       />
       <div className="absolute inset-0 flex items-center justify-between px-2 text-[8px] font-black tracking-widest text-white/40 uppercase pointer-events-none">
@@ -95,18 +114,13 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
   const virtueGloballyWinning = totals.virtue > totals.vice;
   const tied = totals.virtue === totals.vice;
 
-  // ── Weight Engine ──────────────────────────────────────────────────────────
-  // virtueWeight: 0–100, drives both width and filter intensity
   const virtueWeight  = totalPoints === 0 ? 50 : (totals.virtue / totalPoints) * 100;
-  // Clamp so labels never fully vanish from layout (opacity handles the "invisible" part)
   const virtueW = Math.min(92, Math.max(8, virtueWeight));
   const viceW   = 100 - virtueW;
 
-  // Losing T: 0 when tied/winning, ramps to 1 when completely dominated
   const sinLosingT    = virtueGloballyWinning ? Math.max(0, (virtueWeight - 50) / 50) : 0;
   const virtueLosingT = (!virtueGloballyWinning && !tied) ? Math.max(0, ((100 - virtueWeight) - 50) / 50) : 0;
 
-  // ── Erasure Filters ────────────────────────────────────────────────────────
   const SIDE_TRANSITION = "width 1.5s cubic-bezier(0.4,0,0.2,1), filter 1.2s ease-out, transform 0.3s ease-out";
 
   const virtueFilter = tied
@@ -118,14 +132,12 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
   const sinFilter = tied
     ? "brightness(1)"
     : !virtueGloballyWinning
-      ? "brightness(1.3) contrast(1.2) drop-shadow(0 0 28px rgba(167,139,250,0.7))"
+      ? "brightness(1.3) contrast(1.2) drop-shadow(0 0 28px rgba(245,158,11,0.6))"
       : `grayscale(${sinLosingT.toFixed(2)}) blur(${(sinLosingT * 12).toFixed(1)}px) opacity(${Math.max(0.15, 1 - sinLosingT * 0.85).toFixed(2)})`;
 
-  // ── Clash Impact scale ─────────────────────────────────────────────────────
   const virtueTransform = clashSide === "virtue" ? "scale(1.05)" : "scale(1)";
   const sinTransform    = clashSide === "sin"    ? "scale(1.05)" : "scale(1)";
 
-  // Glitch key — remounting ::before/::after pseudo-elements on each trigger
   const [glitchKey, setGlitchKey] = useState(0);
   useEffect(() => {
     if (glitching) setGlitchKey(k => k + 1);
@@ -153,7 +165,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
   return (
     <div className="relative flex h-56 md:h-72 overflow-hidden border-b border-white/10 bg-black">
 
-      {/* ── Virtue Side — weighted width, erasure filter, clash scale ── */}
+      {/* ── Virtue Side ── */}
       <div
         className={["absolute inset-y-0 right-0 z-10 flex items-center justify-center overflow-hidden", shimmering ? "shimmer-sweep" : ""].join(" ")}
         style={{
@@ -182,7 +194,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
         </div>
       </div>
 
-      {/* ── Central Separator + Scale (flare origin) ── */}
+      {/* ── Central Separator + Scale ── */}
       <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px bg-white/20 z-20" />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
         <div
@@ -192,31 +204,33 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
         </div>
       </div>
 
-      {/* ── Sin Side — weighted width, erasure filter, clash scale ── */}
+      {/* ── Sin Side — Amber Corruption active ── */}
       <div
         className="absolute inset-y-0 left-0 z-10 flex items-center justify-center overflow-hidden"
         style={{
           width: `${viceW}%`,
-          background: `url(${sinsImg}) center/cover, linear-gradient(135deg,#3b0764 0%,#7f1d1d 100%)`,
+          background: `url(${sinsImg}) center/cover, linear-gradient(135deg, hsl(35 80% 8%) 0%, hsl(25 70% 14%) 100%)`,
           filter: sinFilter,
           transform: sinTransform,
           transformOrigin: "left center",
           transition: SIDE_TRANSITION,
         }}
       >
+        {/* Amber tinted overlay — replaces the old purple overlay */}
         <div
           className="absolute inset-0 bg-black/30"
           style={{ animation: !virtueGloballyWinning ? "sinGlow 5s infinite" : "none" }}
         />
+        <div className="absolute inset-0 z-[1]" style={{ background: "hsl(35 80% 12% / 0.35)", mixBlendMode: "multiply" }} />
         {virtueGloballyWinning && (
           <div className="absolute inset-0 z-10 corruption-smoke" style={{ opacity: 0.4 }} />
         )}
         <div className="relative z-20 text-center px-4">
-          <p className="text-xs tracking-[0.5em] text-red-400 uppercase font-display mb-1">The Seven</p>
+          <p className="text-xs tracking-[0.5em] text-amber-600/80 uppercase font-display mb-1">The Seven</p>
           <h2
             key={glitchKey}
             className={[
-              "font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg",
+              "font-display text-3xl md:text-4xl font-black tracking-widest text-amber-700/90 drop-shadow-lg",
               glitching ? "animate-glitch-high" : "",
             ].join(" ")}
             data-text="SINS"
@@ -226,7 +240,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
           {!virtueGloballyWinning && !tied && (
             <span className="text-[10px] tracking-widest text-white/70 uppercase">← DRIVING THE TIDE →</span>
           )}
-          <p className="text-xs text-red-400/60 font-stat mt-1">{totals.vice} pts</p>
+          <p className="text-xs text-amber-600/60 font-stat mt-1">{totals.vice} pts</p>
         </div>
       </div>
     </div>
@@ -247,8 +261,8 @@ export default function CelestialDuel() {
   const flareTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clashTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevVirtueWinRef = useRef<boolean | null>(null);
+  const particleContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // ── Effect trigger helpers ──────────────────────────────────────────────────
   const triggerGlitch = useCallback(() => {
     if (glitchTimer.current) clearTimeout(glitchTimer.current);
     setGlitching(true);
@@ -258,7 +272,6 @@ export default function CelestialDuel() {
   const triggerShimmer = useCallback(() => {
     if (shimmerTimer.current) clearTimeout(shimmerTimer.current);
     setShimmering(false);
-    // One-frame gap forces CSS animation restart on remount
     requestAnimationFrame(() => {
       setShimmering(true);
       shimmerTimer.current = setTimeout(() => setShimmering(false), 2500);
@@ -274,7 +287,6 @@ export default function CelestialDuel() {
     });
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => () => {
     if (glitchTimer.current) clearTimeout(glitchTimer.current);
     if (shimmerTimer.current) clearTimeout(shimmerTimer.current);
@@ -282,7 +294,6 @@ export default function CelestialDuel() {
     if (clashTimer.current) clearTimeout(clashTimer.current);
   }, []);
 
-  // ── Data ───────────────────────────────────────────────────────────────────
   const { data: powers = [], isLoading } = useQuery<CelestialPower[]>({
     queryKey: ["ascension", "powers"],
     queryFn: async () => {
@@ -293,7 +304,6 @@ export default function CelestialDuel() {
     staleTime: 1000 * 30,
   });
 
-  // ── Tide-change detector: flare fires when dominant side flips ─────────────
   const totals = useMemo(() => powers.reduce((acc, p) => ({
     vice: acc.vice + p.viceScore,
     virtue: acc.virtue + p.virtueScore
@@ -307,7 +317,6 @@ export default function CelestialDuel() {
     prevVirtueWinRef.current = virtueWinning;
   }, [totals, triggerFlare]);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   const getPower = useCallback((pair: string): CelestialPower =>
     powers.find(p => p.domainPair === pair) ?? {
       id: 0, characterId: 0, domainPair: pair,
@@ -330,14 +339,18 @@ export default function CelestialDuel() {
       queryClient.invalidateQueries({ queryKey: ["ascension", "powers"] });
       queryClient.invalidateQueries({ queryKey: ["getCharacter"] });
 
-      // ── Clash impact: winning side shoves for 300ms ────────────────────────
       if (clashTimer.current) clearTimeout(clashTimer.current);
       setClashSide(type === "virtue" ? "virtue" : "sin");
       clashTimer.current = setTimeout(() => setClashSide(null), 300);
 
+      // ── Spawn amber particles on vice log ──────────────────────────────────
+      if (type === "vice" && particleContainerRef.current) {
+        spawnAmberParticles(particleContainerRef.current);
+      }
+
       if (result.greatFall) {
         triggerGlitch();
-        setTimeout(triggerGlitch, 300); // double-hit for catastrophic event
+        setTimeout(triggerGlitch, 300);
         toast({ title: "[THE GREAT FALL] Domain Corrupted", description: "Ascension lost. All stats −50. 75% of gold seized. The Shadow devours your legacy.", variant: "destructive", duration: 10000 });
       } else if (result.overflowTriggered) {
         triggerGlitch();
@@ -368,18 +381,19 @@ export default function CelestialDuel() {
     return "border-white/5";
   }, []);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render — wrapped in celestial-void-context for scoped CSS isolation ────
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
+    <div className="celestial-void-context min-h-screen bg-background text-foreground relative">
 
-      {/* Domain Drift Background Layer */}
+      {/* Domain Drift Background Layer — Amber-tinted void */}
       <div className="absolute inset-0 z-0 flex overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="flex-1 relative animate-domain-drift" style={{
-          background: `url(${sinsImg}) center/cover fixed, #3b0764`,
+          background: `url(${sinsImg}) center/cover fixed, hsl(35 80% 8%)`,
           transform: "scale(1.1)",
-          filter: "blur(22px) saturate(0.22) brightness(0.18)",
+          filter: "blur(22px) saturate(0.3) brightness(0.2)",
         }}>
-          <div className="absolute inset-0 bg-red-950/20" />
+          {/* Amber overlay replaces the old red/purple tint */}
+          <div className="absolute inset-0" style={{ background: "hsl(35 90% 20% / 0.22)" }} />
         </div>
         <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-32 bg-gradient-to-r from-black via-black to-black opacity-90 blur-xl" />
         <div className="flex-1 relative animate-domain-drift" style={{
@@ -390,6 +404,13 @@ export default function CelestialDuel() {
           <div className="absolute inset-0 bg-blue-950/20" />
         </div>
       </div>
+
+      {/* Amber Particle Container — attached to viewport, not scrollable */}
+      <div
+        ref={particleContainerRef}
+        className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
+        aria-hidden="true"
+      />
 
       {/* Main Content Layer */}
       <div className="relative z-10 flex flex-col">
@@ -427,7 +448,7 @@ export default function CelestialDuel() {
                     <div key={dp.pair} className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
                       <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2.5">
-                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "text-red-400" : "text-muted-foreground"}`}>{dp.vice}</span>
+                          <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "text-amber-500" : "text-muted-foreground"}`}>{dp.vice}</span>
                           <span className="text-xs font-stat text-muted-foreground bg-white/5 rounded px-2 py-0.5">{power.viceScore}</span>
                         </div>
                         {power.isAscended && (
@@ -444,7 +465,7 @@ export default function CelestialDuel() {
                         </div>
                       </div>
                       <TugBar viceScore={power.viceScore} virtueScore={power.virtueScore} />
-                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "text-red-400/80" : "text-amber-300/80"}`}>
+                      <p className={`mt-3.5 text-xs leading-relaxed italic ${underSiege ? "text-orange-400/90 font-semibold" : viceWins ? "text-amber-600/80" : "text-amber-300/80"}`}>
                         <span className="font-semibold not-italic">{advice.label}: </span>
                         {advice.text}
                       </p>
@@ -477,10 +498,11 @@ export default function CelestialDuel() {
                       {power.isAscended && <span className="ml-1.5 text-amber-500">✦</span>}
                     </p>
                     <div className="flex gap-2.5">
+                      {/* Vice button — Amber Corruption identity */}
                       <button
                         disabled={logging === `vice:${dp.pair}`}
                         onClick={() => handleLog("vice", dp.pair)}
-                        className="flex-1 min-h-[44px] rounded-xl border border-red-900/40 bg-red-950/30 py-2.5 text-sm font-semibold text-red-400 transition-all hover:bg-red-900/40 hover:text-red-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 min-h-[44px] rounded-xl border border-amber-500/40 bg-amber-950/30 py-2.5 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-900/50 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {logging === `vice:${dp.pair}` ? "..." : `+${dp.vice}`}
                       </button>
@@ -509,13 +531,13 @@ export default function CelestialDuel() {
 
           {/* Info Panels */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 corruption-smoke">
-            <section className="rounded-2xl border border-red-900/30 bg-red-950/10 p-6 shadow-inner corruption-smoke">
+            <section className="rounded-2xl border border-amber-900/30 bg-amber-950/10 p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
-                <LucideAlertTriangle className="h-8 w-8 text-red-500 flex-shrink-0 mt-0.5" />
+                <LucideAlertTriangle className="h-8 w-8 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
-                  <h4 className="font-display text-sm tracking-widest uppercase text-red-400">Momentum Overload</h4>
+                  <h4 className="font-display text-sm tracking-widest uppercase text-amber-400">Momentum Overload</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Vice overflow past <span className="text-red-400 font-bold font-stat">100</span>: Gold halved, streak &amp; multiplier reset to Day 1, +20 Corruption.
+                    Vice overflow past <span className="text-amber-400 font-bold font-stat">100</span>: Gold halved, streak &amp; multiplier reset to Day 1, +20 Corruption.
                   </p>
                 </div>
               </div>

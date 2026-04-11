@@ -1,0 +1,55 @@
+I am authorizing Strike 0.5: The Scoped Amber Restoration. We are injecting the 'Amber Corruption' visual identity, but it must be strictly isolated to the Celestial Duel page (The Void). Execute exactly as specified:
+
+1. Scoped CSS (artifacts/shadow-leveling/src/index.css):
+Add these to the bottom of the file. Note the .celestial-void-context nesting to prevent global leakage:
+
+CSS
+/* --- AMBER CORRUPTION: SCOPED TO CELESTIAL VOID --- */
+.celestial-void-context {
+  --amber-glow: hsl(45 100% 60%);
+  --amber-dark: hsl(35 100% 50%);
+}
+
+.celestial-void-context @keyframes amberCorruptionFlicker {
+  0%, 100% { 
+    background-color: var(--amber-glow);
+    box-shadow: 0 0 10px 2px hsl(45 100% 60% / 0.7);
+  }
+  50% { 
+    background-color: var(--amber-dark);
+    box-shadow: 0 0 15px 4px hsl(35 100% 50% / 0.9);
+  }
+}
+
+.celestial-void-context .amber-corruption-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  animation: 
+    amberCorruptionFlicker 0.3s ease-in-out infinite,
+    corruptionSmoke 1.2s ease-out forwards;
+}
+2. Component Isolation (artifacts/shadow-leveling/src/pages/CelestialDuel.tsx):
+Wrap the entire return JSX of the CelestialDuel component in a div with the class name celestial-void-context. This ensures the scoped CSS only triggers here.
+
+Update Particle Component:
+Refactor to use the amber-corruption-particle class for the Vice side.
+
+Update TugBar Vice Side:
+Change the Vice gradient to the Amber theme: linear-gradient(90deg, hsl(35 80% 20%), hsl(45 100% 50%)).
+
+Update Domain Vice Buttons:
+Use border-amber-500/40 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50.
+
+The Background Layer (The Void):
+Ensure the domainDrift animation in the background of this page uses an Amber-tinted overlay instead of the standard purple.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the full source of CelestialDuel.tsx and the index.css additions.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the Amber effect is successfully isolated to the /celestial route."

@@ -742,3 +742,29 @@
 .animate-domain-drift { animation: domainDrift 15s ease-in-out infinite; }
 .animate-siege-pulse { animation: siegePulse 2s ease-in-out infinite; }
 .animate-glitch-high { animation: glitchHigh 0.4s steps(1) forwards; }
+
+/* --- AMBER CORRUPTION: SCOPED TO CELESTIAL VOID --- */
+.celestial-void-context {
+  --amber-glow: hsl(45 100% 60%);
+  --amber-dark: hsl(35 100% 50%);
+}
+
+@keyframes amberCorruptionFlicker {
+  0%, 100% {
+    background-color: var(--amber-glow, hsl(45 100% 60%));
+    box-shadow: 0 0 10px 2px hsl(45 100% 60% / 0.7);
+  }
+  50% {
+    background-color: var(--amber-dark, hsl(35 100% 50%));
+    box-shadow: 0 0 15px 4px hsl(35 100% 50% / 0.9);
+  }
+}
+
+.celestial-void-context .amber-corruption-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  animation:
+    amberCorruptionFlicker 0.3s ease-in-out infinite,
+    corruptionSmoke 1.2s ease-out forwards;
+}
