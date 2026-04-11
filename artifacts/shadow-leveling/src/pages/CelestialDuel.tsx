@@ -217,7 +217,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
             key={glitchKey}
             className={[
               "font-display text-3xl md:text-4xl font-black tracking-widest text-red-300 drop-shadow-lg",
-              glitching ? "glitch-active glitch-burst" : "",
+              glitching ? "animate-glitch-high" : "",
             ].join(" ")}
             data-text="SINS"
           >
@@ -322,7 +322,7 @@ export default function CelestialDuel() {
       const res = await fetch(`${BASE}/api/ascension/quick-log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, pair }),
+        body: JSON.stringify({ type, pair, points: 10 }),
       });
       if (!res.ok) throw new Error("Log failed");
       const result = await res.json();
@@ -362,7 +362,7 @@ export default function CelestialDuel() {
   }, [logging, queryClient, triggerGlitch, triggerShimmer, triggerFlare]);
 
   const getDomainClass = useCallback((power: CelestialPower): string => {
-    if (power.isAscended && power.viceScore > 50) return "runic-siege under-siege border-red-900/40";
+    if (power.isAscended && power.viceScore > 50) return "runic-siege under-siege border-red-900/40 animate-siege-pulse";
     if (power.viceScore > power.virtueScore) return "corruption-smoke border-red-900/10";
     if (power.virtueScore > power.viceScore) return "arise-mana border-amber-900/10";
     return "border-white/5";
@@ -374,20 +374,18 @@ export default function CelestialDuel() {
 
       {/* Domain Drift Background Layer */}
       <div className="absolute inset-0 z-0 flex overflow-hidden pointer-events-none" aria-hidden="true">
-        <div className="flex-1 relative" style={{
+        <div className="flex-1 relative animate-domain-drift" style={{
           background: `url(${sinsImg}) center/cover fixed, #3b0764`,
           transform: "scale(1.1)",
           filter: "blur(22px) saturate(0.22) brightness(0.18)",
-          animation: "domainDriftLeft 15s ease-in-out infinite",
         }}>
           <div className="absolute inset-0 bg-red-950/20" />
         </div>
         <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-32 bg-gradient-to-r from-black via-black to-black opacity-90 blur-xl" />
-        <div className="flex-1 relative" style={{
+        <div className="flex-1 relative animate-domain-drift" style={{
           background: `url(${virtuesImg}) center/cover fixed, #a16207`,
           transform: "scale(1.1)",
           filter: "blur(22px) saturate(0.35) brightness(0.16) hue-rotate(200deg)",
-          animation: "domainDriftRight 15s ease-in-out infinite",
         }}>
           <div className="absolute inset-0 bg-blue-950/20" />
         </div>
@@ -400,6 +398,7 @@ export default function CelestialDuel() {
           glitching={glitching}
           shimmering={shimmering}
           flaring={flaring}
+          clashSide={clashSide}
         />
 
         <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-12 corruption-smoke">
