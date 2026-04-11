@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   useListBosses, 
   useChallengeBoss,
@@ -6,8 +6,8 @@ import {
   getListBossesQueryKey,
   getGetCharacterQueryKey
 } from "@workspace/api-client-react";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Skull, Lock, Swords, ShieldAlert, AlertCircle, Zap, Flame } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skull, Lock, Swords, ShieldAlert, AlertCircle, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,9 @@ import {
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { BossVictoryScreen } from "@/components/BossVictoryScreen";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
+import { AriseRitual } from "@/components/AriseRitual";
+import { motion, AnimatePresence } from "framer-motion";
+
 const bossArenaImg = "/images/boss-arena.png";
 
 const bossImageMap: Record<number, string> = {
@@ -37,12 +40,75 @@ const bossImageMap: Record<number, string> = {
   7: "/images/bosses/boss-7.png",
 };
 
+type RawBoss = {
+  id: number;
+  name: string;
+  rank: string;
+  description: string;
+  challenge: string;
+  xpThreshold: number;
+  xpReward: number;
+  goldReward: number;
+  xpPenalty: number;
+  maxHp: number;
+  currentHp: number;
+  isDefeated: boolean;
+  isExtracted: boolean;
+  isUnlocked: boolean;
+  defeatRecordedAt: string | null;
+  failureRecordedAt: string | null;
+};
+
+function ShadowConfetti() {
+  const particles = Array.from({ length: 48 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    color: ["#60a5fa", "#818cf8", "#a78bfa", "#f59e0b", "#34d399"][i % 5],
+    delay: Math.random() * 0.6,
+    duration: 1.8 + Math.random() * 1.2,
+    size: 4 + Math.random() * 6,
+    drift: (Math.random() - 0.5) * 200,
+  }));
+
+  return (
+    <div className="fixed inset-0 z-[10000] pointer-events-none overflow-hidden" aria-hidden="true">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute top-0 rounded-sm"
+          style={{
+            left: `${p.x}%`,
+            width: p.size,
+            height: p.size * 0.5,
+            backgroundColor: p.color,
+            boxShadow: `0 0 6px ${p.color}`,
+          }}
+          initial={{ y: -20, opacity: 0, rotate: 0, x: 0 }}
+          animate={{
+            y: "110vh",
+            opacity: [0, 1, 1, 0],
+            rotate: 360 * (Math.random() > 0.5 ? 1 : -1),
+            x: p.drift,
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            ease: "easeIn",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function BossArena() {
   const { data: character } = useGetCharacter();
-  const { data: bosses = [], isLoading, isError, refetch } = useListBosses();
+  const { data: rawBosses = [], isLoading, isError, refetch } = useListBosses();
+  const bosses = rawBosses as unknown as RawBoss[];
   const challengeBoss = useChallengeBoss();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
   const [victoryData, setVictoryData] = useState<{
     bossName: string;
     xpGained: number;
@@ -50,6 +116,52 @@ export default function BossArena() {
     statDeltas: Array<{ name: string; value: number }>;
   } | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas?: Array<{ name: string; value: number }> } | null>(null);
+
+  const [showRitual, setShowRitual] = useState(false);
+  const [ritualBoss, setRitualBoss] = useState<{ id: number; name: string } | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [extractedBossIds, setExtractedBossIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (isLoading || bosses.length === 0) return;
+    const candidate = bosses.find(
+      (b) => b.isDefeated && b.currentHp === 0 && !b.isExtracted && !extractedBossIds.has(b.id)
+    );
+    if (candidate && !showRitual) {
+      setRitualBoss({ id: candidate.id, name: candidate.name });
+      setShowRitual(true);
+    }
+  }, [bosses, isLoading]);
+
+  const handleRitualSuccess = useCallback((shadowName: string) => {
+    if (ritualBoss) {
+      setExtractedBossIds((prev) => new Set([...prev, ritualBoss.id]));
+    }
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3500);
+
+    queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+
+    toast({
+      title: "SHADOW EXTRACTED",
+      description: `${shadowName} has joined your army.`,
+      className: "border-blue-700/60 shadow-[0_0_20px_rgba(96,165,250,0.4)] bg-background/95",
+    });
+
+    setTimeout(() => {
+      setShowRitual(false);
+      setRitualBoss(null);
+    }, 3800);
+  }, [ritualBoss, queryClient, toast]);
+
+  const handleRitualClose = useCallback(() => {
+    if (ritualBoss) {
+      setExtractedBossIds((prev) => new Set([...prev, ritualBoss.id]));
+    }
+    setShowRitual(false);
+    setRitualBoss(null);
+  }, [ritualBoss]);
 
   const handleChallenge = (id: number) => {
     const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
@@ -123,6 +235,10 @@ export default function BossArena() {
 
   return (
     <div className="min-h-screen relative">
+      <AnimatePresence>
+        {showConfetti && <ShadowConfetti key="confetti" />}
+      </AnimatePresence>
+
       <div 
         className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-overlay"
         style={{ backgroundImage: `url(${bossArenaImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -146,6 +262,8 @@ export default function BossArena() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {bosses.map((boss) => {
             const bossImage = bossImageMap[boss.id];
+            const isExtractable = boss.isDefeated && boss.currentHp === 0 && !boss.isExtracted;
+
             return (
               <Card key={boss.id} className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
                 {!boss.isUnlocked && (
@@ -167,7 +285,7 @@ export default function BossArena() {
                     <img
                       src={bossImage}
                       alt={boss.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${boss.isExtracted ? 'grayscale opacity-60' : ''}`}
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90" />
                     <div className="absolute bottom-0 left-0 p-4 flex items-end justify-between w-full">
@@ -183,9 +301,16 @@ export default function BossArena() {
                         </InfoTooltip>
                         <h2 className="text-2xl font-black font-display text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{boss.name}</h2>
                       </div>
-                      {boss.isDefeated && (
-                        <Badge className="bg-green-500/70 text-green-100 border-green-500/50 backdrop-blur-sm">DEFEATED</Badge>
-                      )}
+                      <div className="flex flex-col gap-1 items-end">
+                        {boss.isExtracted && (
+                          <Badge className="bg-blue-900/70 text-blue-200 border-blue-700/50 backdrop-blur-sm flex items-center gap-1">
+                            <Ghost className="w-3 h-3" /> EXTRACTED
+                          </Badge>
+                        )}
+                        {boss.isDefeated && !boss.isExtracted && (
+                          <Badge className="bg-green-500/70 text-green-100 border-green-500/50 backdrop-blur-sm">DEFEATED</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -199,9 +324,16 @@ export default function BossArena() {
                         </Badge>
                         <h2 className="text-2xl font-black font-display text-white">{boss.name}</h2>
                       </div>
-                      {boss.isDefeated && (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">DEFEATED</Badge>
-                      )}
+                      <div className="flex flex-col gap-1 items-end">
+                        {boss.isExtracted && (
+                          <Badge className="bg-blue-900/30 text-blue-300 border-blue-700/30 flex items-center gap-1">
+                            <Ghost className="w-3 h-3" /> EXTRACTED
+                          </Badge>
+                        )}
+                        {boss.isDefeated && !boss.isExtracted && (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">DEFEATED</Badge>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -219,6 +351,27 @@ export default function BossArena() {
                     </p>
                     <p className="text-muted-foreground text-sm">{boss.challenge}</p>
                   </div>
+
+                  {(boss.maxHp > 0) && (
+                    <div className="mb-6">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1 tracking-widest uppercase font-bold">
+                        <span>Boss HP</span>
+                        <span>{boss.isExtracted ? "Extracted" : `${boss.currentHp.toLocaleString()} / ${boss.maxHp.toLocaleString()}`}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-zinc-800/60 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            boss.isExtracted
+                              ? "bg-blue-700/60"
+                              : boss.currentHp === 0
+                              ? "w-0"
+                              : "bg-gradient-to-r from-red-700 to-red-500"
+                          }`}
+                          style={{ width: boss.isExtracted ? "100%" : `${(boss.currentHp / boss.maxHp) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between text-sm mb-6 border-t border-b border-white/5 py-4">
                     <InfoTooltip
@@ -257,44 +410,79 @@ export default function BossArena() {
                     </InfoTooltip>
                   </div>
 
-                  <Dialog>
-                    <InfoTooltip
-                      what={boss.isDefeated ? "Already Conquered — this boss has been defeated." : "Initiate Challenge — start this boss encounter."}
-                      fn={boss.isDefeated ? "You have already proven yourself against this boss. Each boss can only be defeated once." : "Opens a confirmation dialog. If you proceed, you are committing to attempt the real-world challenge."}
-                      usage={boss.isDefeated ? "Look for higher-rank bosses to continue pushing your limits." : "Press only when you are ready to start the challenge immediately in the real world. Back out if you are not prepared."}
+                  {isExtractable ? (
+                    <Button
+                      className="w-full h-12 bg-blue-900/30 text-blue-300 hover:bg-blue-800/50 border border-blue-700/50 tracking-widest font-bold font-display arise-mana transition-all"
+                      onClick={() => {
+                        setRitualBoss({ id: boss.id, name: boss.name });
+                        setShowRitual(true);
+                      }}
                     >
-                      <DialogTrigger asChild>
-                        <Button 
-                          className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 tracking-widest font-bold font-display"
-                          disabled={!boss.isUnlocked || boss.isDefeated}
-                        >
-                          {boss.isDefeated ? "ALREADY CONQUERED" : "INITIATE CHALLENGE"}
-                        </Button>
-                      </DialogTrigger>
-                    </InfoTooltip>
-                    <DialogContent className="glass-panel border-destructive/50 bg-background/95">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-display font-black text-destructive flex items-center gap-3">
-                          <ShieldAlert className="w-6 h-6" /> WARNING
-                        </DialogTitle>
-                        <DialogDescription className="text-base text-white/80 pt-4">
-                          You are about to challenge <strong className="text-white">{boss.name}</strong>.
-                          This is a high-stakes encounter. If you fail to complete the real-world challenge, you will lose {boss.xpPenalty} XP and random attributes may decrease.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter className="mt-6">
-                        <Button variant="outline" className="border-white/20">RETREAT</Button>
-                        <Button 
-                          variant="destructive" 
-                          className="bg-destructive hover:bg-destructive/90 text-white font-bold tracking-widest"
-                          onClick={() => handleChallenge(boss.id)}
-                          disabled={challengeBoss.isPending}
-                        >
-                          {challengeBoss.isPending ? "FIGHTING..." : "ENTER DUNGEON"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                      <Ghost className="w-4 h-4 mr-2" />
+                      ARISE — EXTRACTION RITUAL
+                    </Button>
+                  ) : (
+                    <Dialog>
+                      <InfoTooltip
+                        what={
+                          boss.isExtracted
+                            ? "Shadow Extracted — this boss now serves in your army."
+                            : boss.isDefeated
+                            ? "Already Conquered — this boss has been defeated."
+                            : "Initiate Challenge — start this boss encounter."
+                        }
+                        fn={
+                          boss.isExtracted
+                            ? "The shadow of this boss has been extracted and added to your Shadow Army."
+                            : boss.isDefeated
+                            ? "You have already proven yourself against this boss. Each boss can only be defeated once."
+                            : "Opens a confirmation dialog. If you proceed, you are committing to attempt the real-world challenge."
+                        }
+                        usage={
+                          boss.isExtracted
+                            ? "Visit the Shadow Army section to manage your extracted soldiers."
+                            : boss.isDefeated
+                            ? "Look for higher-rank bosses to continue pushing your limits."
+                            : "Press only when you are ready to start the challenge immediately in the real world. Back out if you are not prepared."
+                        }
+                      >
+                        <DialogTrigger asChild>
+                          <Button 
+                            className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 tracking-widest font-bold font-display"
+                            disabled={!boss.isUnlocked || boss.isDefeated || boss.isExtracted}
+                          >
+                            {boss.isExtracted
+                              ? "SHADOW EXTRACTED"
+                              : boss.isDefeated
+                              ? "ALREADY CONQUERED"
+                              : "INITIATE CHALLENGE"}
+                          </Button>
+                        </DialogTrigger>
+                      </InfoTooltip>
+                      <DialogContent className="glass-panel border-destructive/50 bg-background/95">
+                        <DialogHeader>
+                          <DialogTitle className="text-2xl font-display font-black text-destructive flex items-center gap-3">
+                            <ShieldAlert className="w-6 h-6" /> WARNING
+                          </DialogTitle>
+                          <DialogDescription className="text-base text-white/80 pt-4">
+                            You are about to challenge <strong className="text-white">{boss.name}</strong>.
+                            This is a high-stakes encounter. If you fail to complete the real-world challenge, you will lose {boss.xpPenalty} XP and random attributes may decrease.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="mt-6">
+                          <Button variant="outline" className="border-white/20">RETREAT</Button>
+                          <Button 
+                            variant="destructive" 
+                            className="bg-destructive hover:bg-destructive/90 text-white font-bold tracking-widest"
+                            onClick={() => handleChallenge(boss.id)}
+                            disabled={challengeBoss.isPending}
+                          >
+                            {challengeBoss.isPending ? "FIGHTING..." : "ENTER DUNGEON"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -317,6 +505,15 @@ export default function BossArena() {
         statDeltas={levelUpData?.statDeltas}
         onDismiss={() => setLevelUpData(null)}
       />
+
+      {showRitual && ritualBoss && (
+        <AriseRitual
+          bossId={ritualBoss.id}
+          bossName={ritualBoss.name}
+          onClose={handleRitualClose}
+          onSuccess={handleRitualSuccess}
+        />
+      )}
     </div>
   );
 }
