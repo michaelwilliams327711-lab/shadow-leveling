@@ -56,21 +56,25 @@ const DOMAIN_PAIRS = [
 ] as const;
 
 // ── AmberParticle spawner ──────────────────────────────────────────────────────
-function spawnAmberParticles(container: HTMLDivElement) {
-  const count = 7;
+function spawnAmberParticles(container: HTMLDivElement, highIntensity = false) {
+  const count = highIntensity ? 18 : 7;
+  const sizeMultiplier = highIntensity ? 1.8 : 1;
+  const durationMultiplier = highIntensity ? 0.65 : 1;
   for (let i = 0; i < count; i++) {
     const p = document.createElement("div");
     p.className = "amber-corruption-particle";
-    const size = 4 + Math.random() * 6;
+    const size = (4 + Math.random() * 6) * sizeMultiplier;
+    const duration = 1.2 * durationMultiplier;
     p.style.cssText = `
       width: ${size}px;
       height: ${size}px;
-      left: ${10 + Math.random() * 80}%;
-      bottom: ${10 + Math.random() * 40}%;
-      animation-delay: ${Math.random() * 0.3}s;
+      left: ${5 + Math.random() * 90}%;
+      bottom: ${5 + Math.random() * 60}%;
+      animation-delay: ${Math.random() * (highIntensity ? 0.15 : 0.3)}s;
+      animation-duration: 0.2s, ${duration}s;
     `;
     container.appendChild(p);
-    setTimeout(() => p.remove(), 1600);
+    setTimeout(() => p.remove(), highIntensity ? 1000 : 1600);
   }
 }
 
@@ -323,7 +327,7 @@ export default function CelestialDuel() {
       viceScore: 0, virtueScore: 0, isAscended: false
     }, [powers]);
 
-  const handleLog = useCallback(async (type: "vice" | "virtue", pair: string) => {
+  const handleLog = useCallback(async (type: "vice" | "virtue", pair: string, highIntensity = false) => {
     const key = `${type}:${pair}`;
     if (logging === key) return;
     setLogging(key);
@@ -345,7 +349,7 @@ export default function CelestialDuel() {
 
       // ── Spawn amber particles on vice log ──────────────────────────────────
       if (type === "vice" && particleContainerRef.current) {
-        spawnAmberParticles(particleContainerRef.current);
+        spawnAmberParticles(particleContainerRef.current, highIntensity);
       }
 
       if (result.greatFall) {
@@ -438,6 +442,7 @@ export default function CelestialDuel() {
                   const underSiege = power.isAscended && power.viceScore > 50;
                   const viceWins   = power.viceScore > power.virtueScore;
                   const atmosphereClass = getDomainClass(power);
+                  const isHighIntensity = dp.pair === "sloth_diligence";
                   const advice = underSiege
                     ? { label: "Void Warning",    text: dp.warning }
                     : viceWins
@@ -445,7 +450,11 @@ export default function CelestialDuel() {
                     : { label: "Sage's Guidance", text: dp.sage };
 
                   return (
-                    <div key={dp.pair} className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
+                    <div
+                      key={dp.pair}
+                      className={`relative transition-all duration-500 ${isHighIntensity ? "primal-glow scale-[1.02]" : ""}`}
+                    >
+                    <div className={`rounded-2xl border bg-white/[0.01] p-5 shadow-inner ${atmosphereClass}`}>
                       <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2.5">
                           <span className={`text-sm md:text-base font-bold tracking-tight ${viceWins ? "text-amber-500" : "text-muted-foreground"}`}>{dp.vice}</span>
@@ -470,6 +479,7 @@ export default function CelestialDuel() {
                         {advice.text}
                       </p>
                     </div>
+                    </div>
                   );
                 })}
               </div>
@@ -486,14 +496,18 @@ export default function CelestialDuel() {
                 const power = getPower(dp.pair);
                 const atmosphereClass = getDomainClass(power);
                 const underSiege = power.isAscended && power.viceScore > 50;
+                const isHighIntensity = dp.pair === "sloth_diligence";
 
                 return (
                   <div
                     key={dp.pair}
+                    className={`relative transition-all duration-500 ${isHighIntensity ? "primal-glow scale-[1.02]" : ""}`}
+                  >
+                  <div
                     className={`rounded-2xl border bg-white/[0.01] p-5 space-y-4 shadow-lg ${atmosphereClass}`}
                     style={underSiege ? { borderColor: "rgba(239,68,68,0.4)", background: "rgba(127,29,29,0.06)" } : {}}
                   >
-                    <p className="text-xs tracking-widest text-muted-foreground uppercase font-display text-center truncate">
+                    <p className={`text-xs tracking-widest uppercase font-display text-center truncate ${isHighIntensity ? "primal-text text-amber-400" : "text-muted-foreground"}`}>
                       {dp.vice} <span className="text-white/20">vs</span> {dp.virtue}
                       {power.isAscended && <span className="ml-1.5 text-amber-500">✦</span>}
                     </p>
@@ -501,7 +515,7 @@ export default function CelestialDuel() {
                       {/* Vice button — Amber Corruption identity */}
                       <button
                         disabled={logging === `vice:${dp.pair}`}
-                        onClick={() => handleLog("vice", dp.pair)}
+                        onClick={() => handleLog("vice", dp.pair, isHighIntensity)}
                         className="flex-1 min-h-[44px] rounded-xl border border-amber-500/40 bg-amber-950/30 py-2.5 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-900/50 hover:text-amber-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {logging === `vice:${dp.pair}` ? "..." : `+${dp.vice}`}
@@ -523,6 +537,7 @@ export default function CelestialDuel() {
                         ✦ Transmute — Ascend Now
                       </button>
                     )}
+                  </div>
                   </div>
                 );
               })}
