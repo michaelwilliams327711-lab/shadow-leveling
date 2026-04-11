@@ -162,6 +162,7 @@ export default function ShadowDashboard() {
   const failuresByCategory = apiData.failuresByCategory ?? [];
   const greatestWeakness = failuresByCategory[0]?.category ?? "None";
   const missedCount = apiData.outcomeBreakdown?.MISSED_DAY ?? 0;
+  const totalXpBled = apiData.totalXpBled ?? 0;
 
   const xpByDate = (apiData.xpBledByDate ?? []).map((d) => ({
     date: parseDateLabel(d.date),
@@ -212,7 +213,7 @@ export default function ShadowDashboard() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
                   <p className="text-3xl font-stat font-bold text-red-400">
-                    40
+                    {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
                   </p>
                   <p className="text-xs text-muted-foreground">last 30 days</p>
                 </div>

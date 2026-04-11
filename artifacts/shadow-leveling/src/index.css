@@ -183,14 +183,22 @@
 @keyframes ember-float {
   0% {
     background-position:
-      15% 110%, 38% 115%, 62% 108%, 80% 112%, 28% 120%, 52% 107%, 72% 116%;
+      5% 112%, 9% 118%, 12% 108%, 16% 121%, 20% 113%, 23% 119%, 26% 110%, 30% 124%,
+      33% 116%, 36% 109%, 39% 122%, 42% 114%, 45% 120%, 48% 111%, 51% 125%, 54% 117%,
+      57% 109%, 60% 123%, 63% 115%, 66% 121%, 69% 112%, 72% 118%, 75% 110%, 78% 124%,
+      81% 116%, 84% 109%, 87% 122%, 90% 114%, 93% 120%, 96% 111%, 7% 126%, 18% 117%,
+      29% 129%, 40% 118%, 53% 127%, 64% 119%, 76% 128%, 88% 117%, 95% 125%, 14% 130%;
     opacity: 0;
   }
   8%  { opacity: 1; }
   88% { opacity: 0.55; }
   100% {
     background-position:
-      11% -30%, 42% -22%, 58% -38%, 76% -26%, 33% -32%, 56% -18%, 68% -28%;
+      4% -30%, 10% -18%, 13% -42%, 17% -24%, 21% -36%, 24% -20%, 27% -44%, 31% -28%,
+      34% -34%, 37% -22%, 40% -46%, 43% -26%, 46% -38%, 49% -19%, 52% -48%, 55% -31%,
+      58% -35%, 61% -21%, 64% -45%, 67% -27%, 70% -39%, 73% -17%, 76% -43%, 79% -29%,
+      82% -33%, 85% -23%, 88% -47%, 91% -25%, 94% -37%, 97% -20%, 8% -49%, 19% -32%,
+      30% -52%, 41% -24%, 54% -50%, 65% -33%, 77% -51%, 89% -27%, 96% -45%, 15% -55%;
     opacity: 0;
   }
 }
@@ -230,9 +238,46 @@
     radial-gradient(circle 1px,   rgba(255,140,50,0.80) 0%, transparent 100%),
     radial-gradient(circle 1.5px, rgba(239,68,68,0.55) 0%, transparent 100%),
     radial-gradient(circle 1px,   rgba(200,50,50,0.70) 0%, transparent 100%),
-    radial-gradient(circle 2px,   rgba(255,60,0,0.65)  0%, transparent 100%);
+    radial-gradient(circle 2px,   rgba(255,60,0,0.65)  0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,180,80,0.72) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.68) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,95,35,0.76) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(239,68,68,0.58) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,145,45,0.82) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(220,45,45,0.62) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,120,30,0.78) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,70,10,0.66) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,175,70,0.72) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.74) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,105,38,0.70) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(210,35,35,0.60) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,135,45,0.84) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.56) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,85,25,0.76) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,65,0,0.64) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,165,70,0.74) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(235,55,55,0.70) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,115,35,0.78) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(239,68,68,0.62) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,150,50,0.80) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(215,45,45,0.58) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,95,20,0.74) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,75,5,0.68) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,170,75,0.72) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.66) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,125,35,0.78) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(230,50,40,0.60) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,155,60,0.82) 0%, transparent 100%),
+    radial-gradient(circle 1.5px, rgba(239,68,68,0.64) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,100,30,0.76) 0%, transparent 100%),
+    radial-gradient(circle 2px,   rgba(255,60,0,0.66) 0%, transparent 100%),
+    radial-gradient(circle 1px,   rgba(255,185,85,0.72) 0%, transparent 100%);
   background-size:
-    14% 28%, 22% 32%, 18% 26%, 12% 22%, 26% 30%, 16% 24%, 20% 28%;
+    14% 28%, 22% 32%, 18% 26%, 12% 22%, 26% 30%, 16% 24%, 20% 28%, 13% 23%,
+    19% 27%, 15% 25%, 24% 31%, 12% 21%, 18% 29%, 21% 26%, 14% 24%, 23% 30%,
+    17% 25%, 20% 28%, 13% 22%, 25% 31%, 16% 27%, 22% 24%, 14% 29%, 19% 23%,
+    24% 30%, 15% 26%, 21% 28%, 13% 24%, 18% 31%, 26% 27%, 16% 22%, 20% 30%,
+    14% 25%, 23% 29%, 17% 24%, 22% 32%, 15% 23%, 19% 28%, 25% 30%, 13% 26%;
   background-repeat: no-repeat;
   animation: ember-float 7s ease-in-out infinite;
 }
