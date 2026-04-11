@@ -1,3 +1,36 @@
+I am authorizing Strike 1: The Celestial Foundation. We are building the 'Scale of Souls' feature from a clean slate. Execute the following file creations and updates exactly as specified:
+
+1. Database Schema (lib/db/src/schema/celestial.ts):
+Create this file:
+
+TypeScript
+import { pgTable, serial, integer, text, boolean, timestamp, unique } from "drizzle-orm/pg-core";
+import { characterTable } from "./character";
+
+export const celestialPowerTable = pgTable("celestial_power", {
+  id: serial("id").primaryKey(),
+  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  domainPair: text("domain_pair").notNull(),
+  virtueScore: integer("virtue_score").notNull().default(0),
+  viceScore: integer("vice_score").notNull().default(0),
+  isAscended: boolean("is_ascended").notNull().default(false),
+  lastInteraction: timestamp("last_interaction").notNull().defaultNow(),
+}, (table) => [
+  unique("celestial_power_character_domain_unique").on(table.characterId, table.domainPair),
+]);
+
+export type CelestialPower = typeof celestialPowerTable.$inferSelect;
+2. Schema Index (lib/db/src/schema/index.ts):
+Add this export to the bottom of the file:
+export * from "./celestial";
+
+3. Run Database Push:
+Run pnpm db:push in the shell to ensure the new table is live in the database.
+
+4. Core Engine (artifacts/api-server/src/lib/celestialPower.ts):
+Create this file. It contains the Resilience Rule and The Great Fall logic:
+
+TypeScript
 import { db } from "@workspace/db";
 import { celestialPowerTable, characterTable, penaltyLogTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
@@ -96,3 +129,14 @@ export async function applyViceRetaliation(
 
   return { overflowTriggered: true, greatFall: false };
 }
+'Sovereign Format' Reporting Protocol (REQUIRED):
+Upon completion, you MUST provide your report using the following rules:
+
+NO SUMMARIES: I need the raw, line-by-line source code of the created files.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming the DB push was successful.
+"

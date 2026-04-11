@@ -7,3 +7,4 @@ export * from "./activity";
 export * from "./corruption";
 export * from "./vocations";
 export * from "./ascension";
+export * from "./celestial";
