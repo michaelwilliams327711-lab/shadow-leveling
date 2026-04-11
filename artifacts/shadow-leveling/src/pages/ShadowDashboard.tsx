@@ -45,10 +45,10 @@ function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeo
     <>
       {Array.from({ length: count }, (_, i) => {
         const size = [1.5, 2, 2.5, 1, 3, 1.5, 2, 1, 2.5][i % 9];
-        const left = ((i * 2.47 + 3) % 92) + 4;
-        const delay = (i * 0.18) % 7;
-        const dur = 5 + (i % 5) * 0.5;
-        const drift = (i % 2 === 0 ? 1 : -1) * (3 + (i % 6));
+        const left = (i * (97 / count) + (i % 3) * 1.1) % 100;
+        const delay = (i * 0.23) % 8;
+        const dur = 4.5 + (i % 7) * 0.6;
+        const drift = (i % 2 === 0 ? 1 : -1) * (2 + (i % 5));
         const color = colors[i % colors.length];
         return (
           <span
