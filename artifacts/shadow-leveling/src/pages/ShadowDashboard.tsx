@@ -399,8 +399,24 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Card className="glass-panel border border-red-900/30 h-full">
-            <CardHeader>
+          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+            <CardHeader className="relative z-10">
               <InfoTooltip variant="shadow"
                 what="Time Sink — your failures broken down by quest category."
                 fn="A doughnut chart showing which stat categories (Strength, Intellect, etc.) account for the most failed or missed quests."
@@ -411,7 +427,7 @@ export default function ShadowDashboard() {
                 </CardTitle>
               </InfoTooltip>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 corruption-smoke">
+            <CardContent className="flex flex-col items-center gap-4 relative z-10 corruption-smoke">
               {failuresByCategory.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. For now.</p>
               ) : (
@@ -474,8 +490,24 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="glass-panel border border-red-900/30 h-full">
-            <CardHeader>
+          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+            <CardHeader className="relative z-10">
               <InfoTooltip variant="shadow"
                 what="Graveyard — a log of your most recent failures."
                 fn="Lists the last 20 failed quests and missed days, including the date, category, description, and XP penalty incurred."
@@ -486,7 +518,7 @@ export default function ShadowDashboard() {
                 </CardTitle>
               </InfoTooltip>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2 corruption-smoke">
+            <CardContent className="overflow-y-auto max-h-[280px] pr-1 space-y-2 relative z-10 corruption-smoke">
               {entries.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No failures recorded. Stay weak.</p>
               ) : (
@@ -529,8 +561,24 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="glass-panel border border-red-900/30">
-          <CardHeader>
+        <Card className="glass-panel border border-red-900/30 corruption-smoke">
+              {EMBER_PARTICLES.map((particle) => (
+                <span
+                  aria-hidden="true"
+                  className="ember-particle"
+                  key={particle.id}
+                  style={{
+                    "--ember-left": particle.left,
+                    "--ember-bottom": particle.bottom,
+                    "--ember-drift": particle.drift,
+                    "--ember-size": particle.size,
+                    "--ember-duration": particle.duration,
+                    "--ember-delay": particle.delay,
+                    "--ember-color": particle.color,
+                  } as CSSProperties}
+                />
+              ))}
+          <CardHeader className="relative z-10">
             <InfoTooltip variant="shadow"
               what="Corruption History — your corruption score over time."
               fn="A line chart plotting how your Corruption stat has changed with each relapse or purification event. The log below shows each relapse event."
@@ -542,7 +590,7 @@ export default function ShadowDashboard() {
               </CardTitle>
             </InfoTooltip>
           </CardHeader>
-          <CardContent className="corruption-smoke">
+          <CardContent className="corruption-smoke relative z-10">
             {corruptionChartData.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-10">No corruption events recorded yet.</p>
             ) : (
