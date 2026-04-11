@@ -271,8 +271,8 @@ export default function BossArena() {
                 {!boss.isUnlocked && (
                   <ShadowIntel
                     title="Shadow Intel"
-                    intel={SYSTEM_INTEL.GATE_FRAGMENTS}
-                    detail={`Locked archive seal: reach ${boss.xpThreshold.toLocaleString()} total XP and forge a Gate Key from 3 Gate Fragments to breach this Boss gate.`}
+                    intel={SYSTEM_INTEL.LEVEL_GATE}
+                    detail={`Required threshold: ${boss.xpThreshold.toLocaleString()} total XP. Level and accumulated XP now govern Boss visibility; no stat requirement is checked.`}
                     side="bottom"
                   >
                     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border border-white/5">

@@ -8,10 +8,6 @@ import { strictLimiter } from "../lib/rate-limiters.js";
 import { getActiveRngEvent } from "./rng.js";
 import { runBossRetaliationChecks } from "../lib/bossRetaliation.js";
 
-const MIN_INTELLECT_BY_RANK: Record<string, number> = {
-  F: 0, E: 0, D: 0, C: 20, B: 35, A: 50, S: 70, SS: 90, SSS: 110,
-};
-
 const router: IRouter = Router();
 
 router.get("/bosses", async (req, res) => {
@@ -27,28 +23,32 @@ router.get("/bosses", async (req, res) => {
 
     const mapped = bosses.map((b) => {
       const rankRewards  = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
-      // DB column takes precedence; rank-based floor ensures hidden bosses degrade correctly
-      const minIntellect = Math.max(b.intellectRequirement, MIN_INTELLECT_BY_RANK[b.rank] ?? 0);
       const isUnlocked   = totalXp >= b.xpThreshold || b.gateUnlocked;
-
-      // Stat-gate: boss is hidden if the character lacks the intellect requirement
-      // AND hasn't already been unlocked via XP or Gate Fragments
-      const isHidden = !isUnlocked && char.intellect < minIntellect;
+      const isHidden     = !isUnlocked && totalXp < (b.xpThreshold * 0.8);
 
       return {
-        ...b,
+        id:                  b.id,
+        name:                b.name,
+        description:         b.description,
+        rank:                b.rank,
+        xpThreshold:         b.xpThreshold,
         xpReward:            rankRewards.xp,
         goldReward:          rankRewards.gold,
         xpPenalty:           Math.floor(rankRewards.xp * 0.6),
+        challenge:           b.challenge,
+        maxHp:               b.maxHp,
+        currentHp:           b.currentHp,
+        isDefeated:          b.isDefeated,
+        isExtracted:         b.isExtracted,
+        gateUnlocked:        b.gateUnlocked,
         isUnlocked,
         isHidden,
-        minIntellect,
         defeatRecordedAt:    b.defeatRecordedAt?.toISOString()    ?? null,
         failureRecordedAt:   b.failureRecordedAt?.toISOString()   ?? null,
         lastDamageAt:        b.lastDamageAt?.toISOString()        ?? null,
         lastRetaliationAt:   b.lastRetaliationAt?.toISOString()   ?? null,
       };
-    });
+    }).filter((boss) => !boss.isHidden);
 
     res.json(mapped);
   } catch (err) {

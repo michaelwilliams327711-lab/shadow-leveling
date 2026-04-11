@@ -18,6 +18,7 @@ export const bossesTable = pgTable("bosses", {
   isDefeated: boolean("is_defeated").notNull().default(false),
   isExtracted: boolean("is_extracted").notNull().default(false),
   gateUnlocked: boolean("gate_unlocked").notNull().default(false),
+  /** @deprecated Boss visibility is governed by xpThreshold and gateUnlocked only. */
   intellectRequirement: integer("intellect_requirement").notNull().default(0),
   defeatRecordedAt: timestamp("defeat_recorded_at"),
   failureRecordedAt: timestamp("failure_recorded_at"),
