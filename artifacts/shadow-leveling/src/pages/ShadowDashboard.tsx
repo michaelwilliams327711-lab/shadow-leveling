@@ -37,7 +37,23 @@ const EMBER_COLORS = {
     "rgba(253,186,116,0.75)", "rgba(194,65,12,0.9)", "rgba(252,165,80,0.8)",
     "rgba(245,100,20,0.85)", "rgba(255,130,40,0.75)", "rgba(230,80,15,0.9)",
   ],
+  blue: [
+    "rgba(0,200,255,0.9)", "rgba(30,160,255,0.85)", "rgba(100,220,255,0.8)",
+    "rgba(0,180,255,0.92)", "rgba(60,210,255,0.75)", "rgba(0,230,255,0.88)",
+    "rgba(80,190,255,0.8)", "rgba(0,150,255,0.9)",  "rgba(120,230,255,0.75)",
+  ],
 };
+
+function SystemCorners() {
+  return (
+    <>
+      <span className="sl-corner tl" />
+      <span className="sl-corner tr" />
+      <span className="sl-corner bl" />
+      <span className="sl-corner br" />
+    </>
+  );
+}
 
 function EmberParticles({ palette = "red", count = 40 }: { palette?: keyof typeof EMBER_COLORS; count?: number }) {
   const colors = EMBER_COLORS[palette];
@@ -106,24 +122,24 @@ function parseDateFull(dateStr: string): string {
 }
 
 const SHADOW_THEME = {
-  grid: "hsl(var(--destructive) / 0.08)",
-  text: "hsl(var(--muted-foreground))",
-  red: "hsl(var(--destructive))",
-  darkRed: "hsl(var(--destructive) / 0.6)",
-  orange: "hsl(var(--destructive) / 0.8)",
+  grid: "rgba(0,180,255,0.08)",
+  text: "rgba(140,210,255,0.7)",
+  red: "rgba(0,200,255,0.9)",
+  darkRed: "rgba(0,100,255,0.6)",
+  orange: "rgba(0,170,255,0.8)",
   tooltip: {
-    background: "hsl(var(--card))",
-    border: "hsl(var(--destructive))",
-    text: "hsl(var(--destructive-foreground) / 0.85)",
+    background: "rgba(0,4,20,0.96)",
+    border: "rgba(0,180,255,0.5)",
+    text: "rgba(160,230,255,0.9)",
   },
 };
 
 const DOUGHNUT_COLORS = [
-  "hsl(var(--destructive))",
-  "hsl(var(--destructive) / 0.85)",
-  "hsl(var(--destructive) / 0.7)",
-  "hsl(var(--destructive) / 0.55)",
-  "hsl(var(--destructive) / 0.4)",
+  "rgba(0,200,255,0.92)",
+  "rgba(30,140,255,0.88)",
+  "rgba(100,200,255,0.82)",
+  "rgba(0,160,255,0.76)",
+  "rgba(60,220,255,0.70)",
 ];
 
 function ShadowTooltip({
@@ -236,13 +252,13 @@ export default function ShadowDashboard() {
         >
           <h1
             className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-1"
-            style={{ color: "hsl(var(--destructive))", textShadow: "0 0 30px hsl(var(--destructive) / 0.4)" }}
+            style={{ color: "rgba(0,210,255,1)", textShadow: "0 0 30px rgba(0,180,255,0.55), 0 0 60px rgba(0,120,255,0.3)" }}
           >
             THE VOID
           </h1>
         </InfoTooltip>
-        <p className="text-muted-foreground text-lg tracking-widest uppercase">
-          <TrendingDown className="inline w-4 h-4 mr-2 text-red-500" />
+        <p className="text-lg tracking-widest uppercase" style={{ color: "rgba(100,200,255,0.65)" }}>
+          <TrendingDown className="inline w-4 h-4 mr-2" style={{ color: "rgba(0,200,255,0.7)" }} />
           Failure Analytics — 30-Day Reckoning
         </p>
       </motion.div>
@@ -254,18 +270,19 @@ export default function ShadowDashboard() {
             fn="The cumulative XP deducted from failed quests and missed days over the past 30-day window."
             usage="Use this number to quantify the cost of your bad days. Reducing it means fewer failures and a healthier growth curve."
           >
-            <Card className="glass-panel border border-red-500/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="red" />
+            <Card className="glass-panel sl-panel border">
+              <SystemCorners />
+              <EmberParticles palette="blue" />
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                  <TrendingDown className="w-7 h-7 text-red-500" />
+                <div className="p-3 rounded-xl" style={{ background: "rgba(0,180,255,0.1)", border: "1px solid rgba(0,180,255,0.3)" }}>
+                  <TrendingDown className="w-7 h-7" style={{ color: "rgba(0,210,255,0.9)" }} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Total XP Bled</p>
-                  <p className="text-3xl font-stat font-bold text-red-400">
+                  <p className="text-xs uppercase tracking-widest mb-0.5 font-mono" style={{ color: "rgba(0,200,255,0.55)" }}>Total XP Bled</p>
+                  <p className="text-3xl font-stat font-bold" style={{ color: "rgba(0,220,255,1)", textShadow: "0 0 12px rgba(0,180,255,0.6)" }}>
                     {totalXpBled === 0 ? "0" : `-${totalXpBled.toLocaleString()}`}
                   </p>
-                  <p className="text-xs text-muted-foreground">last 30 days</p>
+                  <p className="text-xs" style={{ color: "rgba(100,190,255,0.5)" }}>last 30 days</p>
                 </div>
               </CardContent>
             </Card>
@@ -278,18 +295,19 @@ export default function ShadowDashboard() {
             fn="Counts the number of MISSED_DAY events in the past 30 days — days where no quests were completed and your streak was reset."
             usage="Each missed day here cost you your streak multiplier. Aim to keep this at zero by completing at least one small quest every day."
           >
-            <Card className="glass-panel border border-red-800/40 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="crimson" />
+            <Card className="glass-panel sl-panel border">
+              <SystemCorners />
+              <EmberParticles palette="blue" />
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-900/20 border border-red-800/40">
-                  <Skull className="w-7 h-7 text-red-700" />
+                <div className="p-3 rounded-xl" style={{ background: "rgba(0,140,255,0.08)", border: "1px solid rgba(0,160,255,0.28)" }}>
+                  <Skull className="w-7 h-7" style={{ color: "rgba(60,190,255,0.85)" }} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Streaks Shattered</p>
-                  <p className="text-3xl font-stat font-bold" style={{ color: "hsl(var(--destructive))" }}>
+                  <p className="text-xs uppercase tracking-widest mb-0.5 font-mono" style={{ color: "rgba(0,200,255,0.55)" }}>Streaks Shattered</p>
+                  <p className="text-3xl font-stat font-bold" style={{ color: "rgba(0,220,255,1)", textShadow: "0 0 12px rgba(0,180,255,0.6)" }}>
                     {missedCount}
                   </p>
-                  <p className="text-xs text-muted-foreground">missed days recorded</p>
+                  <p className="text-xs" style={{ color: "rgba(100,190,255,0.5)" }}>missed days recorded</p>
                 </div>
               </CardContent>
             </Card>
@@ -302,18 +320,19 @@ export default function ShadowDashboard() {
             fn="Identifies the quest category where you fail or miss the most, revealing the area of life requiring the most attention."
             usage="Create easier quests in this category to build momentum, or examine why tasks in this area are consistently not being completed."
           >
-            <Card className="glass-panel border border-orange-700/30 corruption-smoke" style={{ boxShadow: "0 0 20px hsl(var(--destructive) / 0.07)" }}>
-              <EmberParticles palette="orange" />
+            <Card className="glass-panel sl-panel border">
+              <SystemCorners />
+              <EmberParticles palette="blue" />
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-orange-900/15 border border-orange-700/30">
-                  <AlertTriangle className="w-7 h-7 text-orange-500" />
+                <div className="p-3 rounded-xl" style={{ background: "rgba(0,160,255,0.08)", border: "1px solid rgba(0,170,255,0.28)" }}>
+                  <AlertTriangle className="w-7 h-7" style={{ color: "rgba(0,200,255,0.85)" }} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Greatest Weakness</p>
-                  <p className="text-xl font-display font-bold text-orange-400 truncate max-w-[140px]">
+                  <p className="text-xs uppercase tracking-widest mb-0.5 font-mono" style={{ color: "rgba(0,200,255,0.55)" }}>Greatest Weakness</p>
+                  <p className="text-xl font-display font-bold truncate max-w-[140px]" style={{ color: "rgba(0,220,255,1)", textShadow: "0 0 10px rgba(0,180,255,0.5)" }}>
                     {greatestWeakness}
                   </p>
-                  <p className="text-xs text-muted-foreground">most failures here</p>
+                  <p className="text-xs" style={{ color: "rgba(100,190,255,0.5)" }}>most failures here</p>
                 </div>
               </CardContent>
             </Card>
@@ -322,14 +341,15 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="glass-panel border border-red-900/30">
+        <Card className="glass-panel sl-panel border">
+          <SystemCorners />
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="XP Bleed — your daily XP losses over the past 30 days."
               fn="Each point shows how much XP was lost on that day due to failed quests or missed days. The area fills downward, representing loss."
               usage="Clusters of loss reveal your worst periods. Cross-reference with the Graveyard below to understand what habits caused each drop."
             >
-              <CardTitle className="font-display tracking-widest text-lg text-red-400">
+              <CardTitle className="font-display tracking-widest text-lg" style={{ color: "rgba(0,210,255,0.9)", textShadow: "0 0 8px rgba(0,180,255,0.4)" }}>
                 XP Bleed — 30-Day Loss Curve
               </CardTitle>
             </InfoTooltip>
@@ -386,15 +406,16 @@ export default function ShadowDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
-            <EmberParticles palette="red" />
+          <Card className="glass-panel sl-panel border h-full">
+            <SystemCorners />
+            <EmberParticles palette="blue" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Time Sink — your failures broken down by quest category."
                 fn="A doughnut chart showing which stat categories (Strength, Intellect, etc.) account for the most failed or missed quests."
                 usage="The largest slice is your biggest time sink. Focus improvement efforts there — either reduce difficulty or increase accountability for tasks in that category."
               >
-                <CardTitle className="font-display tracking-widest text-lg text-red-400">
+                <CardTitle className="font-display tracking-widest text-lg" style={{ color: "rgba(0,210,255,0.9)", textShadow: "0 0 8px rgba(0,180,255,0.4)" }}>
                   Time Sink — Failures by Category
                 </CardTitle>
               </InfoTooltip>
@@ -451,7 +472,7 @@ export default function ShadowDashboard() {
                           }}
                         />
                         <span className="text-sm text-muted-foreground flex-1 truncate">{item.category}</span>
-                        <span className="text-sm font-bold text-red-400">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: "rgba(0,210,255,0.9)" }}>{item.count}</span>
                       </div>
                     ))}
                   </div>
@@ -462,15 +483,16 @@ export default function ShadowDashboard() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="glass-panel border border-red-900/30 h-full corruption-smoke">
-            <EmberParticles palette="crimson" />
+          <Card className="glass-panel sl-panel border h-full">
+            <SystemCorners />
+            <EmberParticles palette="blue" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Graveyard — a log of your most recent failures."
                 fn="Lists the last 20 failed quests and missed days, including the date, category, description, and XP penalty incurred."
                 usage="Review this regularly to spot recurring failure patterns. If the same description appears repeatedly, that task needs to be restructured or broken into smaller steps."
               >
-                <CardTitle className="font-display tracking-widest text-lg text-red-400">
+                <CardTitle className="font-display tracking-widest text-lg" style={{ color: "rgba(0,210,255,0.9)", textShadow: "0 0 8px rgba(0,180,255,0.4)" }}>
                   Graveyard — Recent Failures
                 </CardTitle>
               </InfoTooltip>
@@ -485,25 +507,25 @@ export default function ShadowDashboard() {
                   return (
                     <div
                       key={entryKey}
-                      className="rounded-md px-3 py-2.5 border flex items-start gap-3"
+                      className="rounded-md px-3 py-2.5 flex items-start gap-3"
                       style={{
-                        background: isMissed ? "hsl(var(--destructive) / 0.12)" : "hsl(var(--destructive) / 0.06)",
-                        borderColor: isMissed ? "hsl(var(--destructive) / 0.4)" : "hsl(var(--destructive) / 0.2)",
+                        background: isMissed ? "rgba(0,120,255,0.12)" : "rgba(0,100,255,0.06)",
+                        border: `1px solid ${isMissed ? "rgba(0,180,255,0.4)" : "rgba(0,160,255,0.2)"}`,
                       }}
                     >
-                      <span className="text-lg mt-0.5 select-none">{isMissed ? "💀" : "✝"}</span>
+                      <span className="text-lg mt-0.5 select-none">{isMissed ? "⚠" : "◈"}</span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className="text-xs uppercase tracking-widest font-bold mb-0.5"
-                          style={{ color: "hsl(var(--destructive))" }}
+                          className="text-xs uppercase tracking-widest font-bold mb-0.5 font-mono"
+                          style={{ color: "rgba(0,200,255,0.85)" }}
                         >
                           [{entry.action_type}] {entry.stat_category}
                         </p>
-                        <p className="text-sm text-zinc-300 truncate">{entry.description}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-sm truncate" style={{ color: "rgba(180,230,255,0.85)" }}>{entry.description}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "rgba(100,180,255,0.55)" }}>
                           {parseDateFull(entry.date)}{" "}
                           &mdash;{" "}
-                          <span style={{ color: "hsl(var(--destructive))" }}>
+                          <span style={{ color: "rgba(0,210,255,0.9)" }}>
                             {entry.xp_change} XP
                           </span>
                         </p>
@@ -518,15 +540,16 @@ export default function ShadowDashboard() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="glass-panel border border-red-900/30 corruption-smoke">
-          <EmberParticles palette="crimson" count={60} />
+        <Card className="glass-panel sl-panel border">
+          <SystemCorners />
+          <EmberParticles palette="blue" count={60} />
           <CardHeader>
             <InfoTooltip variant="shadow"
               what="Corruption History — your corruption score over time."
               fn="A line chart plotting how your Corruption stat has changed with each relapse or purification event. The log below shows each relapse event."
               usage="Use this to see patterns in your relapses and measure your progress in keeping corruption low."
             >
-              <CardTitle className="font-display tracking-widest text-lg text-red-400 flex items-center gap-2">
+              <CardTitle className="font-display tracking-widest text-lg flex items-center gap-2" style={{ color: "rgba(0,210,255,0.9)", textShadow: "0 0 8px rgba(0,180,255,0.4)" }}>
                 <ShieldAlert className="w-5 h-5" />
                 Corruption History
               </CardTitle>
@@ -566,15 +589,16 @@ export default function ShadowDashboard() {
 
       {relapseEvents.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="glass-panel border border-red-900/30 corruption-smoke">
-            <EmberParticles palette="crimson" />
+          <Card className="glass-panel sl-panel border">
+            <SystemCorners />
+            <EmberParticles palette="blue" />
             <CardHeader>
               <InfoTooltip variant="shadow"
                 what="Relapse Log — every relapse event recorded."
                 fn="Shows date, habit name, and corruption increase for each logged relapse."
                 usage="Review this log to identify which habits are causing the most damage and focus your effort there."
               >
-                <CardTitle className="font-display tracking-widest text-lg text-red-400 flex items-center gap-2">
+                <CardTitle className="font-display tracking-widest text-lg flex items-center gap-2" style={{ color: "rgba(0,210,255,0.9)", textShadow: "0 0 8px rgba(0,180,255,0.4)" }}>
                   <Zap className="w-5 h-5" />
                   Relapse Log
                 </CardTitle>
@@ -584,17 +608,17 @@ export default function ShadowDashboard() {
               {relapseEvents.map((event, i) => (
                 <div
                   key={`${event.occurredAt}-${i}`}
-                  className="rounded-md px-3 py-2.5 border flex items-start gap-3"
-                  style={{ background: "hsl(var(--destructive) / 0.06)", borderColor: "hsl(var(--destructive) / 0.2)" }}
+                  className="rounded-md px-3 py-2.5 flex items-start gap-3"
+                  style={{ background: "rgba(0,100,255,0.06)", border: "1px solid rgba(0,160,255,0.2)" }}
                 >
-                  <span className="text-lg mt-0.5 select-none">☠️</span>
+                  <span className="text-lg mt-0.5 select-none">◈</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs uppercase tracking-widest font-bold mb-0.5 text-red-400">
+                    <p className="text-xs uppercase tracking-widest font-bold mb-0.5 font-mono" style={{ color: "rgba(0,200,255,0.85)" }}>
                       RELAPSE — {event.habitName}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs mt-0.5" style={{ color: "rgba(100,180,255,0.55)" }}>
                       {parseDateFull(event.date)} &mdash;{" "}
-                      <span style={{ color: "hsl(var(--destructive))" }}>+{event.delta} Corruption</span>
+                      <span style={{ color: "rgba(0,210,255,0.9)" }}>+{event.delta} Corruption</span>
                     </p>
                   </div>
                 </div>
