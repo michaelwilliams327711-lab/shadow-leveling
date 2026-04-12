@@ -6,9 +6,11 @@ interface StatRadarProps {
 }
 
 const DOMAIN_POINTS = [
-  { subject: "DILIGENCE", key: "discipline" as const, color: "#c084fc" },
-  { subject: "FOCUS",     key: "intellect"  as const, color: "#60a5fa" },
-  { subject: "RESILIENCE",key: "endurance"  as const, color: "#4ade80" },
+  { subject: "STR", key: "strength"   as const, color: "#f87171" },
+  { subject: "AGI", key: "agility"    as const, color: "#22d3ee" },
+  { subject: "END", key: "endurance"  as const, color: "#4ade80" },
+  { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
+  { subject: "INT", key: "intellect"  as const, color: "#818cf8" },
 ];
 
 function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payload: { value: string }; textAnchor: string }) {
