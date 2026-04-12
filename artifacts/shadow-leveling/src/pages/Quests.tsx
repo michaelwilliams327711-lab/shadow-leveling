@@ -1424,7 +1424,10 @@ export default function Quests() {
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
-    const deadlineIso = data.deadline ? new Date(data.deadline).toISOString() : null;
+    const deadlineDate = data.deadline ? new Date(data.deadline) : null;
+    const deadlineIso = (deadlineDate && !isNaN(deadlineDate.getTime()))
+      ? deadlineDate.toISOString()
+      : null;
     createQuest.mutate({
       data: {
         name: data.name,
