@@ -7,7 +7,7 @@ interface StatRadarProps {
 
 const DOMAIN_POINTS = [
   { subject: "STR", key: "strength"   as const, color: "#f87171" },
-  { subject: "AGI", key: "agility"    as const, color: "#22d3ee" },
+  { subject: "SPI", key: "agility"    as const, color: "#22d3ee" },
   { subject: "END", key: "endurance"  as const, color: "#4ade80" },
   { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
   { subject: "INT", key: "intellect"  as const, color: "#818cf8" },
