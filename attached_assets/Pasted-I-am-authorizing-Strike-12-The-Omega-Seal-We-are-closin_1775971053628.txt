@@ -1,0 +1,41 @@
+I am authorizing Strike 12: The Omega Seal. We are closing the final logic gaps and purging all remaining 'Ghost Code'. Execute exactly as specified:
+
+1. Fix XP Overflow Logic (lib/db/src/logic/character.ts):
+
+Refactor the level-up check. When XP added exceeds the current threshold, calculate the remainder: overflowXp = totalXp - threshold.
+
+Increment the level, calculate the new xpToNextLevel, and set the character's xp to the overflowXp.
+
+Loop: If the overflow is massive (e.g., from a high-rank Boss), ensure the character can gain multiple levels in a single transaction.
+
+2. The Monarch’s Slot Guard (api-server/src/routes/bosses.ts):
+
+Locate: The 'Arise' / Extraction Ritual logic.
+
+Add Guard: Before setting isExtracted: true, query the shadowsTable to count current soldiers.
+
+Capacity Logic: If currentShadows >= shadowLimit (base it on Intellect or a fixed Rank cap), return res.status(400).json({ error: "Shadow Army capacity reached. Release a soldier to extract more." }). Do not allow the Boss to be consumed if the shadow can't be saved.
+
+3. Final Redundancy Purge (Minimalist Monarch):
+
+Delete Vocations: Completely remove the vocationsTable and delete api-server/src/routes/vocations.ts. Remove all 'Mage/Fighter/Tank' references from the UI.
+
+Prune Domains: Modify celestialPowerTable to keep only Diligence, Focus, and Resilience.
+
+Update Logic: Point all quest category stat-mapping to these 3 domains in fireCelestialVice/Virtue. Update the StatRadar component to a 3-point triangle layout.
+
+4. Mobile/PWA Optimization:
+
+Touch Targets: Increase the size of the weekly recurrence day-toggles in Quests.tsx to a minimum of 44x44px for better mobile use.
+
+Zombie Cleanup: In the Push Reminder cron, if webpush.sendNotification returns a 410 (Gone) or 404 error, delete that subscription from the DB immediately.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the refactored code for the XP Overflow logic and the Shadow Extraction Guard.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: Confirm that XP now carries over and that the 3-domain 'Minimalist' layout is active.
