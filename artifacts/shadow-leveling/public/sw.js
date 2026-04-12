@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE  = `shadow-static-${CACHE_VERSION}`;
 const API_CACHE     = `shadow-api-${CACHE_VERSION}`;
 
@@ -19,6 +19,19 @@ const API_ROUTES = [
   "/api/inventory",
   "/api/dungeon/gates",
 ];
+
+function isViteDevPath(url) {
+  return (
+    url.pathname.startsWith("/@") ||
+    url.pathname.startsWith("/src/") ||
+    url.pathname.startsWith("/node_modules/") ||
+    url.search.includes("t=") ||
+    url.search.includes("v=") ||
+    url.search.includes("import") ||
+    url.pathname.endsWith(".ts") ||
+    url.pathname.endsWith(".tsx")
+  );
+}
 
 // ── Install: pre-cache static shell ─────────────────────────────────────────
 self.addEventListener("install", (event) => {
@@ -47,8 +60,10 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only intercept same-origin or known API origin requests
   if (request.method !== "GET") return;
+
+  // Never intercept Vite dev-server module requests — let HMR work freely
+  if (isViteDevPath(url)) return;
 
   const isApiCall = API_ROUTES.some((r) => url.pathname.startsWith(r));
 
@@ -56,10 +71,9 @@ self.addEventListener("fetch", (event) => {
     // Network-First for API: try network, fall back to cache
     event.respondWith(networkFirst(request));
   } else if (url.origin === self.location.origin) {
-    // Cache-First for all same-origin static assets
+    // Cache-First for static assets (icons, manifest, fonts)
     event.respondWith(cacheFirst(request));
   }
-  // Cross-origin (Google Fonts, CDN, etc.) — let pass through naturally
 });
 
 // ── Strategy: Cache-First ────────────────────────────────────────────────────
@@ -75,7 +89,6 @@ async function cacheFirst(request) {
     }
     return networkResponse;
   } catch {
-    // Offline fallback: serve cached index.html so the SPA shell loads
     const fallback = await caches.match("/index.html");
     if (fallback) return fallback;
     return new Response("Shadow Leveling — offline. Please reconnect.", {
@@ -132,7 +145,6 @@ async function networkFirst(request) {
     }
     return networkResponse;
   } catch {
-    // Offline: serve last-known API response from cache
     const cached = await cache.match(request);
     if (cached) return cached;
 
