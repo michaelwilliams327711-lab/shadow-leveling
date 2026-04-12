@@ -4,12 +4,8 @@ import { eq, and, sql, asc, inArray } from "drizzle-orm";
 
 export const VIRTUE_DOMAIN_MAP: Record<string, string> = {
   diligence:  "sloth_diligence",
-  temperance: "gluttony_temperance",
-  charity:    "greed_charity",
-  chastity:   "lust_chastity",
-  patience:   "wrath_patience",
-  kindness:   "envy_kindness",
-  humility:   "pride_humility",
+  focus:      "entropy_focus",
+  resilience: "decay_resilience",
 };
 
 export const VICE_OVERFLOW_THRESHOLD   = 100;

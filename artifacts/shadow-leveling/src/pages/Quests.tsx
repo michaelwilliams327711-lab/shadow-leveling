@@ -423,7 +423,7 @@ function RecurrenceFieldsUI({
             <div className="flex gap-1.5 flex-wrap">
               {DAYS_OF_WEEK.map(d => (
                 <label key={d.value} className={cn(
-                  "flex items-center justify-center w-10 h-8 rounded text-xs cursor-pointer border transition-colors",
+                  "flex items-center justify-center min-w-[44px] min-h-[44px] rounded text-xs cursor-pointer border transition-colors",
                   (field.value ?? []).includes(d.value)
                     ? "bg-primary/30 border-primary/60 text-primary"
                     : "bg-background/50 border-white/10 text-muted-foreground hover:border-white/30"

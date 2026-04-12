@@ -13,13 +13,15 @@ import {
   type RecurrenceConfig,
 } from "@workspace/api-zod";
 import { getOrCreateCharacter, upsertActivity, invalidateCharacterCache } from "./character.js";
-import { awardVocXp } from "./vocations.js";
 import { getActiveRngEvent } from "./rng.js";
 import { applyViceRetaliation } from "../lib/celestialPower.js";
 
 const STAT_TO_VIRTUE: Record<string, string> = {
-  discipline: "diligence", intellect:  "humility", strength:   "patience",
-  endurance:  "temperance", agility:    "kindness",
+  discipline: "diligence",
+  intellect:  "focus",
+  endurance:  "resilience",
+  strength:   "resilience",
+  agility:    "focus",
 };
 
 function fireCelestialVice(characterId: number, statField: string): void {
@@ -823,15 +825,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       req.log.warn({ err: fragErr }, "Gate fragment drop failed; quest completion still succeeds");
     }
 
-    let vocResult: { gateTriggered: boolean; gateBlocked: boolean; xpAwarded: number; newLevel: number; newXp: number } | null = null;
-    if (quest.vocationId) {
-      try {
-        vocResult = await awardVocXp(quest.vocationId, quest.difficulty);
-      } catch (vocErr) {
-        req.log.error({ err: vocErr, vocationId: quest.vocationId }, "Failed to award VOC XP; quest completion still succeeds");
-      }
-    }
-
     const statGains = {
       strength: statField === "strength" ? statGain : 0,
       intellect: statField === "intellect" ? statGain : 0,
@@ -856,11 +849,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       },
     });
     const responseData: Record<string, unknown> = { ...data };
-    if (vocResult) {
-      responseData.vocGateTriggered = vocResult.gateTriggered;
-      responseData.vocGateBlocked = vocResult.gateBlocked;
-      responseData.vocXpAwarded = vocResult.xpAwarded;
-    }
     if (gateFragmentDropped) {
       responseData.gateFragmentDropped = true;
     }

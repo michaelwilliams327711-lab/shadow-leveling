@@ -1,13 +1,18 @@
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from "recharts";
 import type { Character } from "@workspace/api-client-react";
-import { STAT_META } from "@workspace/shared";
 
 interface StatRadarProps {
   character: Character;
 }
 
+const DOMAIN_POINTS = [
+  { subject: "DILIGENCE", key: "discipline" as const, color: "#c084fc" },
+  { subject: "FOCUS",     key: "intellect"  as const, color: "#60a5fa" },
+  { subject: "RESILIENCE",key: "endurance"  as const, color: "#4ade80" },
+];
+
 function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payload: { value: string }; textAnchor: string }) {
-  const entry = Object.values(STAT_META).find((m) => m.abbr === payload.value);
+  const entry = DOMAIN_POINTS.find((p) => p.subject === payload.value);
   const color = entry?.color ?? "hsl(var(--foreground))";
   return (
     <text
@@ -15,7 +20,7 @@ function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payl
       y={y}
       textAnchor={textAnchor}
       fill={color}
-      fontSize={12}
+      fontSize={11}
       fontFamily="Rajdhani, sans-serif"
       fontWeight={700}
     >
@@ -27,13 +32,11 @@ function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payl
 export function StatRadar({ character }: StatRadarProps) {
   const fullMark = 110_000;
 
-  const data = [
-    { subject: STAT_META.strength.abbr,   A: character.strength,   fullMark },
-    { subject: STAT_META.agility.abbr,    A: character.agility,    fullMark },
-    { subject: STAT_META.endurance.abbr,  A: character.endurance,  fullMark },
-    { subject: STAT_META.discipline.abbr, A: character.discipline, fullMark },
-    { subject: STAT_META.intellect.abbr,  A: character.intellect,  fullMark },
-  ];
+  const data = DOMAIN_POINTS.map((p) => ({
+    subject: p.subject,
+    A: character[p.key],
+    fullMark,
+  }));
 
   return (
     <div className="h-[250px] w-full mt-4">
@@ -44,9 +47,9 @@ export function StatRadar({ character }: StatRadarProps) {
             dataKey="subject"
             tick={(props) => <ColoredTick {...props} />}
           />
-          <PolarRadiusAxis angle={30} domain={[0, fullMark]} tick={false} axisLine={false} />
+          <PolarRadiusAxis angle={90} domain={[0, fullMark]} tick={false} axisLine={false} />
           <Radar
-            name="Stats"
+            name="Domains"
             dataKey="A"
             stroke="hsl(var(--primary))"
             strokeWidth={2}

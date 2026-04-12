@@ -77,6 +77,19 @@ router.post("/shadows/extract", async (req: Request, res: Response): Promise<voi
 
   const char = await getOrCreateCharacter();
 
+  const shadowLimit = 5 + Math.floor(char.intellect / 10);
+  const existingShadows = await db
+    .select()
+    .from(shadowArmyTable)
+    .where(eq(shadowArmyTable.characterId, char.id));
+
+  if (existingShadows.length >= shadowLimit) {
+    res.status(400).json({
+      error: `Shadow Army capacity reached (${existingShadows.length}/${shadowLimit}). Release a soldier to extract more.`,
+    });
+    return;
+  }
+
   const intellectBonus = Math.min(char.intellect * 0.5, 40);
   const successChance = 40 + intellectBonus;
   const roll = Math.random() * 100;

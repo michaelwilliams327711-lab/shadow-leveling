@@ -28,7 +28,6 @@ import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
-import { VocationWidget } from "@/components/VocationWidget";
 import { STAT_META } from "@workspace/shared";
 
 function formatRelativeTime(isoString: string): string {
@@ -469,8 +468,6 @@ export default function Dashboard() {
 
         {/* Right Column - Stats */}
         <div className="space-y-8">
-          <VocationWidget />
-
           <Card className="glass-panel">
             <CardHeader className="pb-2">
               <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">

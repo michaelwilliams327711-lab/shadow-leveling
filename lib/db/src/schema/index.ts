@@ -5,7 +5,6 @@ export * from "./bosses";
 export * from "./awakening";
 export * from "./activity";
 export * from "./corruption";
-export * from "./vocations";
 export * from "./ascension";
 export * from "./celestial";
 export * from "./shadows";

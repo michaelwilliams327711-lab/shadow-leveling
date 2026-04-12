@@ -5,10 +5,10 @@ export const CATEGORY_STAT_MAP: Record<string, string> = {
   Productivity: "intellect",
   Study: "intellect",
   Health: "endurance",
-  Creative: "agility",
-  Social: "agility",
-  Spirit: "agility",
-  Other: "strength",
+  Creative: "intellect",
+  Social: "discipline",
+  Spirit: "endurance",
+  Other: "discipline",
 };
 
 export const RANK_BASE_REWARDS: Record<string, { xp: number; gold: number }> = {

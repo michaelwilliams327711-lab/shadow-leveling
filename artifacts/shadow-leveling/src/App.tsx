@@ -27,7 +27,6 @@ import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
-import VocationPaths from "@/pages/VocationPaths";
 import CelestialDuel from "@/pages/CelestialDuel";
 import NotFound from "@/pages/not-found";
 
@@ -135,7 +134,7 @@ function Router() {
       <Route path="/analytics"><Redirect to="/quests" /></Route>
       <Route path="/shadow" component={ShadowDashboard} />
       <Route path="/bad-habits" component={BadHabits} />
-      <Route path="/vocations" component={VocationPaths} />
+      <Route path="/vocations"><Redirect to="/" /></Route>
       <Route path="/celestial" component={CelestialDuel} />
       <Route path="/planner"><Redirect to="/quests" /></Route>
       <Route component={NotFound} />
