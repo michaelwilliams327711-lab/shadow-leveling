@@ -2,7 +2,7 @@ import { Router } from "express";
 import webpush from "web-push";
 import { db } from "@workspace/db";
 import { pushSubscriptionsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -11,12 +11,14 @@ const VAPID_PUBLIC_KEY = process.env["VAPID_PUBLIC_KEY"] ?? "";
 const VAPID_PRIVATE_KEY = process.env["VAPID_PRIVATE_KEY"] ?? "";
 const VAPID_SUBJECT = process.env["VAPID_SUBJECT"] ?? "mailto:admin@shadow-leveling.app";
 
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+const vapidConfigured = !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+
+if (vapidConfigured) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 }
 
 const SubscribeSchema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().url().max(2048),
   keys: z.object({
     p256dh: z.string(),
     auth: z.string(),
@@ -24,6 +26,7 @@ const SubscribeSchema = z.object({
   reminderHour: z.number().int().min(0).max(23).default(9),
   reminderMinute: z.number().int().min(0).max(59).default(0),
   reminderEnabled: z.boolean().default(true),
+  timezoneOffset: z.number().int().min(-720).max(840).default(0),
 });
 
 router.get("/push/vapid-public-key", (_req, res) => {
@@ -42,6 +45,7 @@ router.post("/push/subscribe", async (req, res) => {
         reminderHour: body.reminderHour,
         reminderMinute: body.reminderMinute,
         reminderEnabled: body.reminderEnabled,
+        timezoneOffset: body.timezoneOffset,
       })
       .onConflictDoUpdate({
         target: pushSubscriptionsTable.endpoint,
@@ -51,6 +55,7 @@ router.post("/push/subscribe", async (req, res) => {
           reminderHour: body.reminderHour,
           reminderMinute: body.reminderMinute,
           reminderEnabled: body.reminderEnabled,
+          timezoneOffset: body.timezoneOffset,
         },
       });
     res.json({ ok: true });
@@ -73,6 +78,9 @@ router.delete("/push/subscribe", async (req, res) => {
 });
 
 router.post("/push/test", async (req, res) => {
+  if (!vapidConfigured) {
+    return res.status(503).json({ error: "Push notifications are not configured on this server." });
+  }
   const { endpoint } = req.body as { endpoint?: string };
   if (!endpoint) return res.status(400).json({ error: "endpoint required" });
   try {
@@ -99,21 +107,23 @@ router.post("/push/test", async (req, res) => {
 });
 
 export async function sendDailyQuestReminders(log: { info: (msg: string) => void; error: (obj: object, msg: string) => void }) {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  if (!vapidConfigured) return;
 
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  const currentUtcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
 
   try {
     const subs = await db
       .select()
       .from(pushSubscriptionsTable)
-      .where(eq(pushSubscriptionsTable.reminderEnabled, true));
+      .where(
+        and(
+          eq(pushSubscriptionsTable.reminderEnabled, true),
+          sql`MOD(${pushSubscriptionsTable.reminderHour} * 60 + ${pushSubscriptionsTable.reminderMinute} - ${pushSubscriptionsTable.timezoneOffset} + 1440, 1440) = ${currentUtcMinutes}`
+        )
+      );
 
     for (const sub of subs) {
-      if (sub.reminderHour !== currentHour || sub.reminderMinute !== currentMinute) continue;
-
       const payload = JSON.stringify({
         title: "⚔️ Quest Awaits, Hunter",
         body: "The System demands action. Complete your daily quests before the rift closes.",

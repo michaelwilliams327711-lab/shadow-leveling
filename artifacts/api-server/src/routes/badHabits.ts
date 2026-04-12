@@ -74,31 +74,31 @@ function computeCleanStreakFromMap(byDate: Map<string, LogRow[]>, localDate?: st
   return streak;
 }
 
-function computeLongestStreak(logs: LogRow[]): number {
+function computeLongestStreak(logs: LogRow[], localDate?: string): number {
   if (!logs.length) return 0;
 
   const byDate = buildDateMap(logs);
   const dates = [...byDate.keys()].sort();
   if (!dates.length) return 0;
 
+  const startDate = dates[0];
+  const endDate = getSystemDate(localDate);
+
   let longest = 0;
   let current = 0;
-  let prevDate: string | null = null;
+  let cursor = startDate;
 
-  for (const date of dates) {
-    const status = getDayStatusFromMap(byDate, date);
-    if (status !== "clean") {
-      current = 0;
-      prevDate = date;
-      continue;
-    }
-    if (prevDate && dateAddDays(prevDate, 1) !== date) {
+  while (cursor <= endDate) {
+    const status = getDayStatusFromMap(byDate, cursor);
+    if (status === "clean") {
+      current++;
+      if (current > longest) longest = current;
+    } else {
       current = 0;
     }
-    current++;
-    if (current > longest) longest = current;
-    prevDate = date;
+    cursor = dateAddDays(cursor, 1);
   }
+
   return longest;
 }
 
@@ -135,7 +135,7 @@ router.get("/bad-habits", async (req, res) => {
     const result = habits.map((habit) => {
       const logs = logsByHabitId.get(habit.id) ?? [];
       const cleanStreak = computeCleanStreak(logs, localDate);
-      const longestStreak = computeLongestStreak(logs);
+      const longestStreak = computeLongestStreak(logs, localDate);
       return { ...habit, cleanStreak, longestStreak };
     });
 
@@ -153,7 +153,7 @@ router.post("/bad-habits", async (req, res) => {
     res.status(201).json({ ...habit, cleanStreak: 0, longestStreak: 0 });
   } catch (err) {
     req.log.error({ err }, "Error creating bad habit");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -171,10 +171,10 @@ router.patch("/bad-habits/:id", async (req, res) => {
       .where(eq(badHabitLogTable.habitId, id))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-    res.json({ ...updated, cleanStreak: computeCleanStreak(logs, localDate), longestStreak: computeLongestStreak(logs) });
+    res.json({ ...updated, cleanStreak: computeCleanStreak(logs, localDate), longestStreak: computeLongestStreak(logs, localDate) });
   } catch (err) {
     req.log.error({ err }, "Error updating bad habit");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -203,8 +203,6 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
 
     const todayStr = getSystemDateFromReq(req);
 
-    // Read char INSIDE the transaction so the penalty is always calculated on
-    // the latest committed XP — no stale-cache de-leveling miscalculation.
     let resultCorruption = 0;
     await db.transaction(async (tx) => {
       const chars = await tx.select().from(characterTable).limit(1);

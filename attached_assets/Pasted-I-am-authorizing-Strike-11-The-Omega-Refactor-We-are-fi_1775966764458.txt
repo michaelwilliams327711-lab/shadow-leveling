@@ -1,0 +1,45 @@
+I am authorizing Strike 11: The Omega Refactor. We are fixing the most critical issues from the Integrity Audit. Execute exactly as specified:
+
+1. Fix Streak Inflation ([F-001] - lib/db/src/logic/badHabits.ts):
+
+Refactor computeLongestStreak(): Generate a continuous array of dates from the first log entry to today.
+
+Iterate through the entire range. If a day has no 'clean' entry or a 'relapse' entry, reset the current streak to 0. Only increment if the day is explicitly marked 'clean'.
+
+2. Fix Push Desync & Performance ([F-002, P-001] - api-server/src/lib/push.ts):
+
+Schema: Add timezone_offset (integer) to push_subscriptions table.
+
+Logic: Update the cron job to filter via SQL: WHERE reminder_enabled = true AND reminder_hour = $calculatedHour.
+
+Calculation: Adjust the matching logic to compare stored user time against the server's UTC clock using the timezone_offset.
+
+3. Fix Global Validation Errors ([F-007] - api-server/src/app.ts):
+
+Implement a global error-handling middleware.
+
+Logic: If err instanceof ZodError, return res.status(400).json({ error: err.flatten() }). Stop returning 500s for bad input.
+
+4. Fix Auth & CORS ([S-001, S-003] - api-server/src/app.ts):
+
+Standardize Authorization: Bearer as the sole auth method.
+
+Update corsOptions.allowedHeaders to explicitly include ["Content-Type", "Authorization", "x-local-date"].
+
+Ensure credentials: true is only active if CORS_ORIGIN is not a wildcard *.
+
+5. Clean the Fat (Redundancy Removal):
+
+Delete the vocation column from characterTable.
+
+Merge corruption logic: Remove the corruption column and instead derive 'Corruption' effects in the UI if vice_score > 80.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw source code for the refactored badHabits.ts (streak logic) and the updated app.ts (error/auth).
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: End with an 'Inventory Check' confirming that streaks now break on skipped days and 400 errors are returned for bad quest data.

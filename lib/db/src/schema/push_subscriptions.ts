@@ -8,5 +8,6 @@ export const pushSubscriptionsTable = pgTable("push_subscriptions", {
   reminderEnabled: boolean("reminder_enabled").notNull().default(true),
   reminderHour: integer("reminder_hour").notNull().default(9),
   reminderMinute: integer("reminder_minute").notNull().default(0),
+  timezoneOffset: integer("timezone_offset").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

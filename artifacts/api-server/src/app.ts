@@ -5,6 +5,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { globalLimiter } from "./lib/rate-limiters.js";
 import { validateDateHeader } from "@workspace/shared";
+import { ZodError } from "zod/v4";
 
 const app: Express = express();
 
@@ -31,11 +32,21 @@ app.use(
 );
 
 const corsOrigin = process.env.CORS_ORIGIN;
+
+if (corsOrigin === "*") {
+  logger.warn(
+    "CORS_ORIGIN is set to '*' — credentials will be disabled to comply with browser CORS spec. " +
+    "Set CORS_ORIGIN to the exact frontend origin (e.g. https://yourapp.replit.app) to enable credentials."
+  );
+}
+
+const credentialsEnabled = !!corsOrigin && corsOrigin !== "*";
+
 app.use(
   cors({
     origin: corsOrigin ?? "*",
     allowedHeaders: ["Content-Type", "Authorization", "x-local-date"],
-    credentials: !!corsOrigin,
+    credentials: credentialsEnabled,
   }),
 );
 
@@ -81,5 +92,14 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use("/api", router);
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction): void => {
+  if (err instanceof ZodError) {
+    res.status(400).json({ error: err.flatten() });
+    return;
+  }
+  logger.error({ err }, "Unhandled error");
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;
