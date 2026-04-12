@@ -544,7 +544,7 @@ router.post("/quests", async (req, res) => {
         difficulty: body.difficulty,
         durationMinutes: body.durationMinutes,
         description: body.description ?? null,
-        deadline: body.deadline ? new Date((body.deadline as string) + "T00:00:00.000Z") : null,
+        deadline: (() => { if (!body.deadline) return null; const d = new Date(body.deadline as string); return isNaN(d.getTime()) ? null : d; })(),
         statBoost: body.statBoost ?? null,
         targetAmount: body.targetAmount ?? null,
         amountUnit: body.amountUnit ?? null,
