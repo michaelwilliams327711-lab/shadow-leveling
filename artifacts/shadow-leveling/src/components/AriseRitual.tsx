@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { X } from "lucide-react";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
@@ -39,14 +40,11 @@ export function AriseRitual({ bossId, bossName, onClose, onSuccess }: AriseRitua
 
   const extractMutation = useMutation<ExtractResult, Error, void>({
     mutationFn: async () => {
-      const res = await fetch("/api/shadows/extract", {
+      return customFetch<ExtractResult>("/api/shadows/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bossId, command }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Extraction failed");
-      return data as ExtractResult;
     },
     onMutate: () => {
       setPhase("charging");

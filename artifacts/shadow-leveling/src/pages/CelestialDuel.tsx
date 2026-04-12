@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { customFetch } from "@workspace/api-client-react";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -299,9 +300,7 @@ export default function CelestialDuel() {
   const { data: powers = [], isLoading } = useQuery<CelestialPower[]>({
     queryKey: ["ascension", "powers"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/ascension/powers`);
-      if (!res.ok) throw new Error("Failed to load powers");
-      return res.json();
+      return customFetch<CelestialPower[]>("/api/ascension/powers");
     },
     staleTime: 1000 * 30,
   });
@@ -330,13 +329,11 @@ export default function CelestialDuel() {
     if (logging === key) return;
     setLogging(key);
     try {
-      const res = await fetch(`${BASE}/api/ascension/quick-log`, {
+      const result = await customFetch<Record<string, unknown>>("/api/ascension/quick-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, pair, points: 10 }),
       });
-      if (!res.ok) throw new Error("Log failed");
-      const result = await res.json();
 
       queryClient.invalidateQueries({ queryKey: ["ascension", "powers"] });
       queryClient.invalidateQueries({ queryKey: ["getCharacter"] });

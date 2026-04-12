@@ -1,0 +1,39 @@
+1. The Status Window (Character Profile) lets change the "agility" attribute to "spirit (emotion)" You actually explained it perfectly! You already have a really solid grasp of what these two attributes represent. We just need to define the boundaries and figure out what specific actions or habits will give the user "XP" (experience points) for each one.
+
+Here is a breakdown to help you flesh out both attributes for your app:
+
+Spirit This attribute is the "inner world" gauge. It represents emotional intelligence, resilience, mindfulness, and alignment with your core self.
+
+Core Focus: Emotional regulation, stress management, self-discovery, and mental wellbeing.
+
+Ways to Earn XP:
+
+Completing a 10-minute meditation or deep breathing exercise.
+
+Journaling to process a difficult emotion or to map out your deeper "reason why" in life.
+
+Successfully practicing emotional regulation during a frustrating moment.
+
+Reaching a "flow state" during a peaceful, creative hobby, like sketching out manga or character designs.
+
+Leveling Up Means: You are becoming more centered, less reactive, and more in tune with your personal peace.
+
+Intellect
+
+This attribute is the "outer world" processor. It represents knowledge acquisition, cognitive challenges, and practical life skills.
+
+Core Focus: Continuous learning, problem-solving, logic, and feeding the mind with actionable or deep information.
+
+Ways to Earn XP:
+
+Reading a chapter of a book on financial literacy or business building.
+
+Tackling a complex coding module, like practicing C++ in Unreal Engine.
+
+Studying deep, thought-provoking topics, like ethics or the problem of evil.
+
+Drafting a roadmap for a new project or entertainment company.
+
+Leveling Up Means: You are sharpening your mind, expanding your skillset, and becoming more equipped to navigate complex real-world challenges.
+
+How are you planning to have users track these activities—will they input custom tasks themselves, or will you have a pre-set list of daily quests they can choose from? you don't have to include all of this I'm just to give you an idea of what I'm trying to do. Make sure the difference between intellect and spirit. Is known in the app. you may need to update the "system info" pop-ups

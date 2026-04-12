@@ -16,6 +16,7 @@ import {
   getGetCharacterQueryKey,
   getListQuestsWindowedQueryKey,
   getDailyOrdersTodayQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
 
 // Pages
@@ -82,7 +83,7 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
           onPenalties(allPenalties);
         }
 
-        fetch("/api/daily-orders/expire-stale", { method: "POST", headers }).then(() => {
+        customFetch<unknown>("/api/daily-orders/expire-stale", { method: "POST", headers }).then(() => {
           queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
         }).catch(() => {});
 

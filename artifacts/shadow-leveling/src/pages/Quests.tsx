@@ -27,6 +27,7 @@ import {
   type YearlyKeyEvent,
 } from "@workspace/api-client-react";
 import type { RecurrenceConfig } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
@@ -1031,9 +1032,7 @@ function ChronicleSection() {
   const { data, isLoading, isError, error } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats"],
     queryFn: async ({ signal }) => {
-      const res = await fetch("/api/dashboard-stats", { signal });
-      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
-      return res.json();
+      return customFetch<DashboardStats>("/api/dashboard-stats", { signal });
     },
     staleTime: 5 * 60 * 1000,
   });
