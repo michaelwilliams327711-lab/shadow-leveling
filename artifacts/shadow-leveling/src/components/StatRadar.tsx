@@ -10,7 +10,7 @@ const DOMAIN_POINTS = [
   { subject: "SPI", key: "agility"    as const, color: "#f472b6" },
   { subject: "END", key: "endurance"  as const, color: "#4ade80" },
   { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
-  { subject: "INT", key: "intellect"  as const, color: "#818cf8" },
+  { subject: "INT", key: "intellect"  as const, color: "#60a5fa" },
 ];
 
 function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payload: { value: string }; textAnchor: string }) {
