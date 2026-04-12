@@ -29,6 +29,7 @@ import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { AriseRitual } from "@/components/AriseRitual";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { ShadowArmyPanel } from "@/components/ShadowArmyPanel";
+import { ShadowJournal } from "@/components/ShadowJournal";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -544,6 +545,7 @@ export default function BossArena() {
       </div>
 
       <ShadowArmyPanel />
+      <ShadowJournal />
 
       <BossVictoryScreen
         open={victoryData !== null}

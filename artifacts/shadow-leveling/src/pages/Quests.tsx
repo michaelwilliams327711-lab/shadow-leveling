@@ -84,8 +84,7 @@ import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
 import { playQuestComplete } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { listVocations } from "@/lib/vocations-client";
-import type { VocationPath } from "@/lib/vocations-client";
+
 import {
   AreaChart,
   Area,
@@ -1296,13 +1295,6 @@ export default function Quests() {
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
-  const [createVocationId, setCreateVocationId] = useState<string>("");
-  const [editVocationId, setEditVocationId] = useState<string>("");
-  const { data: vocations = [] } = useQuery({
-    queryKey: ["vocations"],
-    queryFn: listVocations,
-    staleTime: 60_000,
-  });
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -1350,8 +1342,6 @@ export default function Quests() {
         recurrence: rec ?? { type: "none" },
       });
       setShowEditRecurrence(!!(rec && rec.type !== "none"));
-      const vId = (editingQuest as Quest & { vocationId?: string | null }).vocationId ?? "";
-      setEditVocationId(vId ?? "");
     }
   }, [editingQuest?.id]);
 
@@ -1457,14 +1447,13 @@ export default function Quests() {
         targetAmount: data.targetAmount ?? null,
         amountUnit: data.amountUnit || null,
         recurrence: buildRecurrence(data.recurrence),
-        vocationId: createVocationId || null,
+        vocationId: null,
       }
     }, {
       onSuccess: () => {
         invalidateQuests();
         setIsCreateOpen(false);
         setShowRecurrence(false);
-        setCreateVocationId("");
         createForm.reset();
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
       }
@@ -1486,7 +1475,7 @@ export default function Quests() {
           targetAmount: data.targetAmount ?? null,
           amountUnit: data.amountUnit || null,
           recurrence: buildRecurrence(data.recurrence),
-          vocationId: editVocationId || null,
+          vocationId: null,
         }
       },
       {
@@ -1756,26 +1745,6 @@ export default function Quests() {
                   </FormItem>
                 )} />
 
-                {vocations.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium leading-none flex items-center gap-2">
-                      Vocation Path <span className="text-muted-foreground text-xs">(optional)</span>
-                    </label>
-                    <Select onValueChange={(v) => setCreateVocationId(v === "__none__" ? "" : v)} value={createVocationId || "__none__"}>
-                      <SelectTrigger className="bg-background/50 h-9 text-sm">
-                        <SelectValue placeholder="None — no VOC XP" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">None — no VOC XP</SelectItem>
-                        {vocations.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Completing this quest awards VOC XP to the linked path</p>
-                  </div>
-                )}
-
                 <FormField control={createForm.control} name="durationMinutes" render={({ field }) => (
                   <FormItem>
                     <InfoTooltip what="How long you plan to spend on this quest." fn="Logged in minutes. Used to track total time invested per category over time." usage="Set a realistic target. If a task consistently takes longer than the duration you set, increase it to keep your log accurate.">
@@ -1940,26 +1909,6 @@ export default function Quests() {
                   <FormMessage />
                 </FormItem>
               )} />
-
-              {vocations.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium leading-none flex items-center gap-2">
-                    Vocation Path <span className="text-muted-foreground text-xs">(optional)</span>
-                  </label>
-                  <Select onValueChange={(v) => setEditVocationId(v === "__none__" ? "" : v)} value={editVocationId || "__none__"}>
-                    <SelectTrigger className="bg-background/50 h-9 text-sm">
-                      <SelectValue placeholder="None — no VOC XP" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">None — no VOC XP</SelectItem>
-                      {vocations.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Completing this quest awards VOC XP to the linked path</p>
-                </div>
-              )}
 
               <FormField control={editForm.control} name="durationMinutes" render={({ field }) => (
                 <FormItem>

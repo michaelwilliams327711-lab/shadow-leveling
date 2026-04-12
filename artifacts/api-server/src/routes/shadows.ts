@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { bossesTable, shadowArmyTable, characterTable, questsTable } from "@workspace/db";
-import { eq, count, and, isNull } from "drizzle-orm";
+import { bossesTable, shadowArmyTable, shadowJournalTable, characterTable, questsTable } from "@workspace/db";
+import { eq, count, and, isNull, desc } from "drizzle-orm";
 import { getOrCreateCharacter } from "./character.js";
 import { z } from "zod/v4";
 
@@ -152,6 +152,17 @@ router.get("/shadows", async (_req: Request, res: Response): Promise<void> => {
 
 const assignBodySchema = z.object({
   questId: z.number().int().positive(),
+});
+
+router.get("/shadows/journal", async (_req: Request, res: Response): Promise<void> => {
+  const char = await getOrCreateCharacter();
+  const entries = await db
+    .select()
+    .from(shadowJournalTable)
+    .where(eq(shadowJournalTable.characterId, char.id))
+    .orderBy(desc(shadowJournalTable.occurredAt))
+    .limit(50);
+  res.json(entries);
 });
 
 router.patch("/shadows/:id/assign", async (req: Request, res: Response): Promise<void> => {

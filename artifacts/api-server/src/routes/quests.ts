@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable } from "@workspace/db";
+import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable, shadowJournalTable } from "@workspace/db";
 import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
@@ -774,6 +774,20 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
         .update(shadowArmyTable)
         .set({ assignedTaskId: null })
         .where(eq(shadowArmyTable.id, assignedShadow.id));
+
+      await db.insert(shadowJournalTable).values({
+        characterId: char.id,
+        shadowId: assignedShadow.id,
+        shadowName: assignedShadow.name,
+        shadowRank: assignedShadow.rank,
+        questId: quest.id,
+        questName: quest.name,
+        questCategory: quest.category,
+        questDifficulty: quest.difficulty,
+        shadowBonusPct: shadowBonus,
+        xpAwarded: xpAwarded,
+        goldAwarded: goldAwarded,
+      });
     }
 
     await db.insert(questLogTable).values({
