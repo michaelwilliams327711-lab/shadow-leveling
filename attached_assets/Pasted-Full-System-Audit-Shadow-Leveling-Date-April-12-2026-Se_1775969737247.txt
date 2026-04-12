@@ -1,0 +1,62 @@
+Full System Audit — Shadow Leveling
+Date: April 12, 2026 | Services: Both running clean
+
+VERIFIED FIXED (from prior work)
+ID	Item
+✅ F-001	computeLongestStreak now walks the full calendar range — gaps break streaks
+✅ F-002/P-001	Push cron uses getUTCHours(), SQL filters by timezone offset, full-table-scan eliminated
+✅ S-001/S-003	Authorization: Bearer canonical, CORS wildcard guard in place, allowedHeaders explicit
+✅ F-007 (partial)	Global ZodError → 400 handler active; badHabits.ts routes throw to reach it
+✅ Deadline crash	Frontend + backend deadline parsing fixed with isNaN guards
+✅ Service worker	Cache version bumped to v2, Vite dev paths excluded from Cache-First
+REMAINING BUGS
+[BUG-001] Medium — getNextOccurrenceDate uses local-time date methods throughout
+quests.ts lines 101–136 call next.setDate(next.getDate() + interval), next.getDay(), next.setMonth(), and construct month-boundary dates with new Date(year, month+1, 0) — all local-time. The next object is constructed as UTC midnight but then mutated with local-time methods. In any non-UTC environment or during DST, weekly/monthly/yearly recurrences fire on the wrong day.
+Fix: Replace every local-time call with its UTC equivalent: getUTCDay(), setUTCDate(), setUTCMonth(), setUTCFullYear(), and Date.UTC(y, m+1, 0) for last-day-of-month.
+
+[BUG-002] Medium — processOverdueQuestsLogic reads character without a lock
+quests.ts line 216: await tx.select().from(characterTable).limit(1) — no .for("update"). The subsequent character UPDATE at line 321 writes absolute computed values (Math.max(0, char.xp - totalXpDeducted)). If two concurrent cron ticks run (e.g. on server restart overlap), both reads return the same character state and the second write silently discards the first's penalty.
+Fix: Add .for("update") to the character select at line 216 and switch lines 324–325 to sql\GREATEST(0, ${characterTable.xp} - ${totalXpDeducted})`` to match the pattern used everywhere else.
+
+[BUG-003] Medium — fireCelestialVice uses || fallback, wrong stat on null statBoost
+quests.ts line 344 (overdue auto-fail) and line 977 (manual fail): quest.statBoost || "discipline". When statBoost is null and the quest's category is, say, "Health" (which maps to endurance), the vice stat fires against discipline instead. Every other call site in the file already uses quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength".
+Fix: Replace both || instances with ?? CATEGORY_STAT_MAP[quest.category] ?? "strength".
+
+[BUG-004] Medium — ZodError → 400 only works in badHabits.ts; all other routes still 500 on bad input
+The global error handler works correctly but only helps routes that throw instead of locally swallowing the error. POST /quests, PATCH /quests/:id, PATCH /character, POST /shop/rewards, and all planner, vocations, awakening, ascension routes still catch all errors and call res.status(500) directly. A client sending a malformed quest body gets 500, not 400.
+Fix: In every catch block, either throw err (Express 5 async handlers propagate automatically) or add if (err instanceof ZodError) return res.status(400).json({ error: err.flatten() }) before the 500 fallback. The throw pattern is cleanest.
+
+[BUG-005] Low — Shop timesRedeemed is a non-atomic read-modify-write
+shop.ts line 78: timesRedeemed: reward.timesRedeemed + 1. The reward row is selected without FOR UPDATE inside the transaction. Two simultaneous purchases of the same reward both read timesRedeemed = N and both write N+1, losing one increment. Character gold is locked correctly but the reward counter is not.
+Fix: timesRedeemed: sql\${rewardsTable.timesRedeemed} + 1``
+
+[BUG-006] Low — Boss HP bridge missing isDefeated = false guard in WHERE
+quests.ts line 795: db.update(bossesTable).set({currentHp: newHp, ...}).where(eq(bossesTable.id, activeBoss.id)) — no AND isDefeated = false in the WHERE. If the boss was just defeated by a concurrent challenge call between the SELECT on line 775 and this update, the HP bridge overwrites the defeated boss's HP and could flip isDefeated: true back to the damage-state isDefeated: false. Low probability but the fix is one condition.
+Fix: Add and(eq(bossesTable.id, activeBoss.id), eq(bossesTable.isDefeated, false)) to the WHERE clause.
+
+[BUG-007] Low — PATCH /quests/:id has no path to update deadline
+The PATCH handler at quests.ts lines 586–602 builds an updates object from UpdateQuestBody but deadline is never read from the body or placed into updates. A user editing a quest cannot change or clear its deadline after creation.
+Fix: Add if ("deadline" in body) updates.deadline = body.deadline ? (() => { const d = new Date(body.deadline as string); return isNaN(d.getTime()) ? null : d; })() : null; using the same safe parse pattern as the POST.
+
+FRONTEND ISSUES
+[UI-001] Medium — Dashboard "Rank: E" is hardcoded and never updates
+Dashboard.tsx line 476: <span>Rank: E</span> — static string regardless of character level. A level-25 player still sees Rank E. The rank ladder (E → D → C → B → A → S → SS → SSS) is implied by the boss xpThreshold system.
+Fix: Derive rank from character.level or totalXpEarned using a lookup against the boss thresholds or a simple ladder constant.
+
+[UI-002] Medium — Planner views return null on fetch failure with no error state
+Quests.tsx: PlannerDailyView, PlannerWeeklyView, PlannerMonthlyView, and PlannerYearlyView all do if (!data) return null. An API error renders a completely blank panel with no message. Users see nothing and have no way to retry.
+Fix: Replace return null with a minimal error card showing "Data unavailable" and a retry button.
+
+[UI-003] Low — XP progress bar percent is not clamped and can be NaN
+Dashboard.tsx line 171: Math.round((character.xp / character.xpToNextLevel) * 100). If xpToNextLevel is 0 at max level, this is Infinity or NaN, which Framer Motion passes as the width prop and throws.
+Fix: const xpPercent = character.xpToNextLevel > 0 ? Math.min(100, Math.round((character.xp / character.xpToNextLevel) * 100)) : 100
+
+INFRASTRUCTURE STATUS
+Area	Status
+API server	✅ Running clean, all routes responding
+Frontend (Vite)	✅ Running, HMR active
+Service worker	✅ v2 cache, Vite paths pass-through
+DB schema	✅ timezone_offset column live in push_subscriptions
+Rate limiters	⚠️ In-memory store — safe for single-instance, needs Redis for horizontal scale
+corruption column	✅ Active and correctly wired — no changes needed
+Priority order for next fixes: BUG-001 (recurrence date math), BUG-002 (character lock), BUG-003 (vice stat), BUG-004 (ZodError propagation across all routes), UI-001 (rank display).
