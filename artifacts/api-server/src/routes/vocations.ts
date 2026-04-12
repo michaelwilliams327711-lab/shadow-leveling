@@ -165,8 +165,7 @@ router.post("/vocations", async (req, res) => {
 
     res.status(201).json({ ...serializeVocation(vocation), linkedQuestCount: 0 });
   } catch (err) {
-    req.log.error({ err }, "Error creating vocation");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -198,8 +197,7 @@ router.patch("/vocations/:id", async (req, res) => {
 
     res.json({ ...serializeVocation(updated), linkedQuestCount: countRow?.count ?? 0 });
   } catch (err) {
-    req.log.error({ err }, "Error updating vocation");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -278,8 +276,7 @@ router.post("/vocations/:id/complete-milestone", async (req, res) => {
       evolved: true,
     });
   } catch (err) {
-    req.log.error({ err }, "Error completing vocation milestone");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

@@ -98,41 +98,41 @@ function getNextOccurrenceDate(recurrence: RecurrenceConfig, fromDate: Date): Da
   switch (recurrence.type) {
     case "daily": {
       const interval = recurrence.intervalDays ?? 1;
-      next.setDate(next.getDate() + interval);
+      next.setUTCDate(next.getUTCDate() + interval);
       return next;
     }
     case "weekly": {
       const days = recurrence.daysOfWeek ?? [];
       if (days.length === 0) {
-        next.setDate(next.getDate() + 7);
+        next.setUTCDate(next.getUTCDate() + 7);
         return next;
       }
-      const currentDay = next.getDay();
+      const currentDay = next.getUTCDay();
       const futureDays = days.filter(d => d > currentDay);
       if (futureDays.length > 0) {
-        next.setDate(next.getDate() + (futureDays[0] - currentDay));
+        next.setUTCDate(next.getUTCDate() + (futureDays[0] - currentDay));
       } else {
         const minDay = Math.min(...days);
-        next.setDate(next.getDate() + (7 - currentDay + minDay));
+        next.setUTCDate(next.getUTCDate() + (7 - currentDay + minDay));
       }
       return next;
     }
     case "monthly": {
       const dom = recurrence.dayOfMonth ?? 1;
-      next.setDate(1);
-      next.setMonth(next.getMonth() + 1);
-      const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-      next.setDate(Math.min(dom, lastDay));
+      next.setUTCDate(1);
+      next.setUTCMonth(next.getUTCMonth() + 1);
+      const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+      next.setUTCDate(Math.min(dom, lastDay));
       return next;
     }
     case "yearly": {
       const month = recurrence.month ?? 1;
       const day = recurrence.day ?? 1;
-      next.setDate(1);
-      next.setFullYear(next.getFullYear() + 1);
-      next.setMonth(month - 1);
-      const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-      next.setDate(Math.min(day, lastDay));
+      next.setUTCDate(1);
+      next.setUTCFullYear(next.getUTCFullYear() + 1);
+      next.setUTCMonth(month - 1);
+      const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+      next.setUTCDate(Math.min(day, lastDay));
       return next;
     }
     default:
@@ -213,7 +213,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       return false;
     });
 
-    const chars = await tx.select().from(characterTable).limit(1);
+    const chars = await tx.select().from(characterTable).limit(1).for("update");
     const char = chars.length > 0
       ? chars[0]
       : (await tx.insert(characterTable).values({ name: "Hunter" }).returning())[0];
@@ -321,8 +321,8 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
     const [updated] = await tx
       .update(characterTable)
       .set({
-        xp: Math.max(0, char.xp - totalXpDeducted),
-        gold: Math.max(0, char.gold - totalGoldDeducted),
+        xp: sql`GREATEST(0, ${characterTable.xp} - ${totalXpDeducted})`,
+        gold: sql`GREATEST(0, ${characterTable.gold} - ${totalGoldDeducted})`,
         strength: statAccum.strength,
         intellect: statAccum.intellect,
         endurance: statAccum.endurance,
@@ -341,7 +341,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
   invalidateCharacterCache();
 
   for (const q of processedOverdue) {
-    fireCelestialVice(updatedChar.id, q.statBoost || "discipline");
+    fireCelestialVice(updatedChar.id, q.statBoost ?? CATEGORY_STAT_MAP[q.category] ?? "strength");
   }
 
   return {
@@ -556,8 +556,7 @@ router.post("/quests", async (req, res) => {
       .returning();
     res.status(201).json(serializeQuest(quest));
   } catch (err) {
-    req.log.error({ err }, "Error creating quest");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -596,6 +595,11 @@ router.patch("/quests/:id", async (req, res) => {
     if (body.recurrence !== undefined) {
       updates.recurrence = body.recurrence ?? null;
     }
+    if ("deadline" in body) {
+      updates.deadline = body.deadline
+        ? (() => { const d = new Date(body.deadline as string); return isNaN(d.getTime()) ? null : d; })()
+        : null;
+    }
     if ("vocationId" in req.body) {
       updates.vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
     }
@@ -604,8 +608,7 @@ router.patch("/quests/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Quest not found" });
     res.json(serializeQuest(updated));
   } catch (err) {
-    req.log.error({ err }, "Error updating quest");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -798,7 +801,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
             lastDamageAt: new Date(),
             ...(bossDefeated ? { isDefeated: true, defeatRecordedAt: new Date() } : {}),
           })
-          .where(eq(bossesTable.id, activeBoss.id));
+          .where(and(eq(bossesTable.id, activeBoss.id), eq(bossesTable.isDefeated, false)));
       }
     } catch (bossErr) {
       req.log.warn({ err: bossErr }, "Boss damage bridge failed; quest completion still succeeds");
@@ -974,7 +977,7 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
     // Only fire stat-based vice if virtueCategory did not already handle it above.
     // Prevents double vice increment on quests that have both fields set.
     if (!quest.virtueCategory) {
-      fireCelestialVice(char.id, quest.statBoost || "discipline");
+      fireCelestialVice(char.id, quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength");
     }
     res.json(data);
   } catch (err) {

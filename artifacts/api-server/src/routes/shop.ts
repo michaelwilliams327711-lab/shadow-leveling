@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { rewardsTable, characterTable } from "@workspace/db";
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import { CreateRewardBody } from "@workspace/api-zod";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 
@@ -29,8 +29,7 @@ router.post("/shop/rewards", async (req, res) => {
     }).returning();
     res.status(201).json({ ...reward, createdAt: reward.createdAt.toISOString() });
   } catch (err) {
-    req.log.error({ err }, "Error creating reward");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -75,7 +74,7 @@ router.post("/shop/rewards/:id/purchase", async (req, res) => {
         .where(eq(characterTable.id, freshChar.id));
 
       await tx.update(rewardsTable)
-        .set({ timesRedeemed: reward.timesRedeemed + 1 })
+        .set({ timesRedeemed: sql`${rewardsTable.timesRedeemed} + 1` })
         .where(eq(rewardsTable.id, id));
 
       purchaseResult = { newGold, rewardName: reward.name, goldCost: reward.goldCost };

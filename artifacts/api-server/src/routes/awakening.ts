@@ -26,8 +26,7 @@ router.get("/awakening", async (req, res) => {
     const entry = await getOrCreateAwakening();
     res.json({ ...entry, updatedAt: entry.updatedAt.toISOString() });
   } catch (err) {
-    req.log.error({ err }, "Error getting awakening");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -46,8 +45,7 @@ router.put("/awakening", async (req, res) => {
       .returning();
     res.json({ ...updated, updatedAt: updated.updatedAt.toISOString() });
   } catch (err) {
-    req.log.error({ err }, "Error saving awakening");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

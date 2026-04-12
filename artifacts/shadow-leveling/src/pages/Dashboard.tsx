@@ -168,7 +168,9 @@ export default function Dashboard() {
     );
   }
 
-  const xpPercent = Math.round((character.xp / character.xpToNextLevel) * 100);
+  const xpPercent = character.xpToNextLevel > 0
+    ? Math.min(100, Math.round((character.xp / character.xpToNextLevel) * 100))
+    : 100;
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;
@@ -473,7 +475,18 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">
                 Attributes
-                <span className="text-xs font-sans text-muted-foreground bg-white/5 px-2 py-1 rounded">Rank: E</span>
+                <span className="text-xs font-sans text-muted-foreground bg-white/5 px-2 py-1 rounded">Rank: {(() => {
+                  const lvl = character.level;
+                  if (lvl >= 80) return "SSS";
+                  if (lvl >= 60) return "SS";
+                  if (lvl >= 40) return "S";
+                  if (lvl >= 25) return "A";
+                  if (lvl >= 15) return "B";
+                  if (lvl >= 10) return "C";
+                  if (lvl >= 5)  return "D";
+                  if (lvl >= 2)  return "E";
+                  return "F";
+                })()}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>

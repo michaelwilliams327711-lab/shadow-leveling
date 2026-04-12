@@ -23,7 +23,7 @@ router.get("/ascension/powers", async (req, res) => {
     const powers = await db.select().from(celestialPowerTable).where(eq(celestialPowerTable.characterId, char.id));
     res.json(powers);
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -120,7 +120,7 @@ router.post("/ascension/quick-log", async (req, res) => {
 
     res.json({ domain: updated, overflowTriggered, greatFall, ascensionTriggered });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

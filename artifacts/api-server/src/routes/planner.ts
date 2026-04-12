@@ -560,8 +560,7 @@ router.patch("/planner/quest/:id/reschedule", async (req, res) => {
       deadline: updated.deadline?.toISOString() ?? null,
     });
   } catch (err) {
-    req.log.error({ err }, "Error rescheduling quest");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

@@ -77,8 +77,7 @@ router.patch("/character", async (req, res) => {
     });
     res.json(data);
   } catch (err) {
-    req.log.error({ err }, "Error updating character");
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

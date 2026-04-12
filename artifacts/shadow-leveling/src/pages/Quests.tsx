@@ -574,10 +574,27 @@ function PlannerViewSkeleton() {
   );
 }
 
+function PlannerErrorCard({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+      <div className="rounded-full bg-destructive/10 p-4">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-white mb-1">Data Unavailable</p>
+        <p className="text-xs text-muted-foreground">Could not load planner data. Check your connection and try again.</p>
+      </div>
+      <Button variant="outline" size="sm" onClick={onRetry} className="border-white/20 tracking-widest text-xs">
+        Retry
+      </Button>
+    </div>
+  );
+}
+
 function PlannerDailyView() {
-  const { data, isLoading } = useGetPlannerDaily();
+  const { data, isLoading, isError, refetch } = useGetPlannerDaily();
   if (isLoading) return <PlannerViewSkeleton />;
-  if (!data) return null;
+  if (isError || !data) return <PlannerErrorCard onRetry={refetch} />;
   const completionPct = data.totalDueCount > 0 ? Math.round((data.completedTodayCount / data.totalDueCount) * 100) : 0;
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr + "T00:00:00");
@@ -674,13 +691,13 @@ function PlannerDailyView() {
 }
 
 function PlannerWeeklyView() {
-  const { data, isLoading } = useGetPlannerWeekly();
+  const { data, isLoading, isError, refetch } = useGetPlannerWeekly();
   const rescheduleQuest = useRescheduleQuest();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const dragQuestRef = useRef<{ questId: number; fromDate: string } | null>(null);
   if (isLoading) return <PlannerViewSkeleton />;
-  if (!data) return null;
+  if (isError || !data) return <PlannerErrorCard onRetry={refetch} />;
   const today = new Date().toLocaleDateString("en-CA");
   const handleDragStart = (questId: number, fromDate: string) => { dragQuestRef.current = { questId, fromDate }; };
   const handleDrop = async (toDate: string) => {
@@ -735,10 +752,10 @@ function PlannerWeeklyView() {
 }
 
 function PlannerMonthlyView() {
-  const { data, isLoading } = useGetPlannerMonthly();
+  const { data, isLoading, isError, refetch } = useGetPlannerMonthly();
   const [selectedDay, setSelectedDay] = useState<MonthlyPlannerDay | null>(null);
   if (isLoading) return <PlannerViewSkeleton />;
-  if (!data) return null;
+  if (isError || !data) return <PlannerErrorCard onRetry={refetch} />;
   const firstDay = new Date(`${data.year}-${String(data.month).padStart(2, "0")}-01`).getDay();
   const emptyLeadingCells = firstDay;
   return (
@@ -809,11 +826,11 @@ function PlannerMonthlyView() {
 const HEATMAP_COLORS = ["bg-white/5 border-white/5", "bg-primary/20 border-primary/20", "bg-primary/40 border-primary/40", "bg-primary/60 border-primary/60", "bg-primary border-primary/80"];
 
 function PlannerYearlyView() {
-  const { data, isLoading } = useGetPlannerYearly();
+  const { data, isLoading, isError, refetch } = useGetPlannerYearly();
   const [hoverDay, setHoverDay] = useState<{ day: YearlyHeatmapDay; x: number; y: number } | null>(null);
 
   if (isLoading) return <PlannerViewSkeleton />;
-  if (!data) return null;
+  if (isError || !data) return <PlannerErrorCard onRetry={refetch} />;
   const weeks: YearlyHeatmapDay[][] = [];
   let currentWeek: YearlyHeatmapDay[] = [];
   const firstDayOfYear = new Date(data.year, 0, 1).getDay();
