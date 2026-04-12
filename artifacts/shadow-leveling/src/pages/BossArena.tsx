@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { 
   useListBosses, 
   useChallengeBoss,
+  useForgeBossGateKey,
   useGetCharacter,
   getListBossesQueryKey,
   getGetCharacterQueryKey
@@ -57,6 +58,8 @@ type RawBoss = {
   isDefeated: boolean;
   isExtracted: boolean;
   isUnlocked: boolean;
+  isLocked: boolean;
+  gateUnlocked: boolean;
   defeatRecordedAt: string | null;
   failureRecordedAt: string | null;
 };
@@ -108,6 +111,7 @@ export default function BossArena() {
   const { data: rawBosses = [], isLoading, isError, refetch } = useListBosses();
   const bosses = rawBosses as unknown as RawBoss[];
   const challengeBoss = useChallengeBoss();
+  const forgeBossKey = useForgeBossGateKey();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -209,6 +213,28 @@ export default function BossArena() {
     });
   };
 
+  const handleForgeKey = (id: number) => {
+    forgeBossKey.mutate({ id }, {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+        toast({
+          title: "GATE KEY FORGED",
+          description: `${data.name ?? "The boss gate"} is now open.`,
+          className: "border-yellow-700/60 shadow-[0_0_20px_rgba(234,179,8,0.35)] bg-background/95",
+        });
+      },
+      onError: (err) => {
+        const errorData = err as { data?: { error?: string }; message?: string };
+        toast({
+          title: "FORGE FAILED",
+          description: errorData.data?.error ?? errorData.message ?? "Unable to forge Gate Key.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
   if (isLoading) return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
       <Skeleton className="h-16 w-64 rounded-xl" />
@@ -265,6 +291,7 @@ export default function BossArena() {
           {bosses.map((boss) => {
             const bossImage = bossImageMap[boss.id];
             const isExtractable = boss.isDefeated && boss.currentHp === 0 && !boss.isExtracted;
+            const isForgingThisBoss = forgeBossKey.isPending && forgeBossKey.variables?.id === boss.id;
 
             return (
               <Card key={boss.id} className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
@@ -431,6 +458,21 @@ export default function BossArena() {
                       ARISE — EXTRACTION RITUAL
                     </Button>
                   ) : (
+                    boss.isLocked ? (
+                      <ShadowIntel
+                        title="Shadow Intel"
+                        intel={SYSTEM_INTEL.GATE_FRAGMENTS}
+                        detail={`Current fragments: ${character?.gateFragments ?? 0} / 3.`}
+                      >
+                        <Button
+                          className="w-full h-12 bg-yellow-900/20 text-yellow-300 hover:bg-yellow-800/40 border border-yellow-700/50 tracking-widest font-bold font-display"
+                          disabled={(character?.gateFragments ?? 0) < 3 || forgeBossKey.isPending || boss.isDefeated || boss.isExtracted}
+                          onClick={() => handleForgeKey(boss.id)}
+                        >
+                          {isForgingThisBoss ? "FORGING KEY..." : "FORGE GATE KEY (3 FRAGMENTS REQUIRED)"}
+                        </Button>
+                      </ShadowIntel>
+                    ) : (
                     <Dialog>
                       <InfoTooltip
                         what={
@@ -458,7 +500,7 @@ export default function BossArena() {
                         <DialogTrigger asChild>
                           <Button 
                             className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 tracking-widest font-bold font-display"
-                            disabled={!boss.isUnlocked || boss.isDefeated || boss.isExtracted}
+                            disabled={!boss.isUnlocked || !boss.gateUnlocked || boss.isDefeated || boss.isExtracted}
                           >
                             {boss.isExtracted
                               ? "SHADOW EXTRACTED"
@@ -491,6 +533,7 @@ export default function BossArena() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                    )
                   )}
                 </CardContent>
               </Card>

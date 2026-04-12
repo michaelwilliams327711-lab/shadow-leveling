@@ -16,6 +16,7 @@ export interface Character {
   xp: number;
   xpToNextLevel: number;
   gold: number;
+  gateFragments: number;
   strength: number;
   intellect: number;
   endurance: number;
@@ -310,10 +311,18 @@ export interface Boss {
   goldReward: number;
   xpPenalty: number;
   challenge: string;
+  maxHp: number;
+  currentHp: number;
   isDefeated: boolean;
+  isExtracted: boolean;
+  gateUnlocked: boolean;
   isUnlocked: boolean;
+  isLocked: boolean;
+  isHidden: boolean;
   defeatRecordedAt?: string | null;
   failureRecordedAt?: string | null;
+  lastDamageAt?: string | null;
+  lastRetaliationAt?: string | null;
 }
 
 export interface BossChallengeResult {

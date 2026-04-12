@@ -17,8 +17,16 @@ export interface Boss {
   goldReward: number;
   xpPenalty: number;
   challenge: string;
+  maxHp: number;
+  currentHp: number;
   isDefeated: boolean;
+  isExtracted: boolean;
+  gateUnlocked: boolean;
   isUnlocked: boolean;
+  isLocked: boolean;
+  isHidden: boolean;
   defeatRecordedAt?: string | null;
   failureRecordedAt?: string | null;
+  lastDamageAt?: string | null;
+  lastRetaliationAt?: string | null;
 }

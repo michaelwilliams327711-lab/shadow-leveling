@@ -24,6 +24,7 @@ export const GetCharacterResponse = zod.object({
   xp: zod.number(),
   xpToNextLevel: zod.number(),
   gold: zod.number(),
+  gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
   endurance: zod.number(),
@@ -54,6 +55,7 @@ export const UpdateCharacterResponse = zod.object({
   xp: zod.number(),
   xpToNextLevel: zod.number(),
   gold: zod.number(),
+  gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
   endurance: zod.number(),
@@ -106,6 +108,7 @@ export const CharacterLoginResponse = zod.object({
     xp: zod.number(),
     xpToNextLevel: zod.number(),
     gold: zod.number(),
+    gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
@@ -131,7 +134,7 @@ export const ListQuestsResponseItem = zod.object({
   name: zod.string(),
   category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  durationMinutes: zod.number().int(),
+  durationMinutes: zod.number(),
   status: zod.enum(["active", "completed", "failed"]),
   isPaused: zod.boolean(),
   description: zod.string().nullish(),
@@ -161,11 +164,11 @@ export const ListQuestsResponse = zod.array(ListQuestsResponseItem);
  * @summary Create a quest
  */
 export const CreateQuestBody = zod.object({
-  name: zod.string().min(1).max(200),
-  category: zod.string().max(100),
+  name: zod.string(),
+  category: zod.string(),
   difficulty: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  durationMinutes: zod.number().int().min(1),
-  description: zod.string().max(2000).nullish(),
+  durationMinutes: zod.number(),
+  description: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
     .enum(["strength", "intellect", "endurance", "agility", "discipline"])
@@ -230,14 +233,14 @@ export const UpdateQuestParams = zod.object({
 });
 
 export const UpdateQuestBody = zod.object({
-  name: zod.string().min(1).max(200).optional(),
-  category: zod.string().max(100).optional(),
+  name: zod.string().optional(),
+  category: zod.string().optional(),
   difficulty: zod
     .enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"])
     .optional(),
-  durationMinutes: zod.number().int().min(1).optional(),
+  durationMinutes: zod.number().optional(),
   isPaused: zod.boolean().optional(),
-  description: zod.string().max(2000).nullish(),
+  description: zod.string().nullish(),
   statBoost: zod
     .enum(["strength", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
@@ -364,6 +367,7 @@ export const CompleteQuestResponse = zod.object({
     xp: zod.number(),
     xpToNextLevel: zod.number(),
     gold: zod.number(),
+    gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
@@ -406,6 +410,7 @@ export const FailQuestResponse = zod.object({
     xp: zod.number(),
     xpToNextLevel: zod.number(),
     gold: zod.number(),
+    gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
@@ -491,6 +496,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
     xp: zod.number(),
     xpToNextLevel: zod.number(),
     gold: zod.number(),
+    gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
@@ -515,7 +521,7 @@ export const ListRewardsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number().int().min(0),
+  goldCost: zod.number(),
   category: zod.string(),
   timesRedeemed: zod.number(),
   createdAt: zod.string(),
@@ -526,10 +532,10 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem);
  * @summary Create a custom reward
  */
 export const CreateRewardBody = zod.object({
-  name: zod.string().min(1).max(200),
-  description: zod.string().max(2000).nullish(),
-  goldCost: zod.number().int().min(0),
-  category: zod.string().max(100),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  goldCost: zod.number(),
+  category: zod.string(),
 });
 
 /**
@@ -565,15 +571,23 @@ export const ListBossesResponseItem = zod.object({
   name: zod.string(),
   description: zod.string(),
   rank: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
-  xpThreshold: zod.number().int().min(0),
+  xpThreshold: zod.number(),
   xpReward: zod.number(),
   goldReward: zod.number(),
   xpPenalty: zod.number(),
   challenge: zod.string(),
+  maxHp: zod.number(),
+  currentHp: zod.number(),
   isDefeated: zod.boolean(),
+  isExtracted: zod.boolean(),
+  gateUnlocked: zod.boolean(),
   isUnlocked: zod.boolean(),
+  isLocked: zod.boolean(),
+  isHidden: zod.boolean(),
   defeatRecordedAt: zod.string().nullish(),
   failureRecordedAt: zod.string().nullish(),
+  lastDamageAt: zod.string().nullish(),
+  lastRetaliationAt: zod.string().nullish(),
 });
 export const ListBossesResponse = zod.array(ListBossesResponseItem);
 
@@ -599,6 +613,7 @@ export const ChallengeBossResponse = zod.object({
     xp: zod.number(),
     xpToNextLevel: zod.number(),
     gold: zod.number(),
+    gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
@@ -614,6 +629,37 @@ export const ChallengeBossResponse = zod.object({
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
   }),
+});
+
+/**
+ * @summary Forge a Gate Key for a boss
+ */
+export const ForgeBossGateKeyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ForgeBossGateKeyResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string(),
+  rank: zod.enum(["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"]),
+  xpThreshold: zod.number(),
+  xpReward: zod.number(),
+  goldReward: zod.number(),
+  xpPenalty: zod.number(),
+  challenge: zod.string(),
+  maxHp: zod.number(),
+  currentHp: zod.number(),
+  isDefeated: zod.boolean(),
+  isExtracted: zod.boolean(),
+  gateUnlocked: zod.boolean(),
+  isUnlocked: zod.boolean(),
+  isLocked: zod.boolean(),
+  isHidden: zod.boolean(),
+  defeatRecordedAt: zod.string().nullish(),
+  failureRecordedAt: zod.string().nullish(),
+  lastDamageAt: zod.string().nullish(),
+  lastRetaliationAt: zod.string().nullish(),
 });
 
 /**

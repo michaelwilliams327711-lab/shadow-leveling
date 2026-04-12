@@ -13,6 +13,7 @@ export interface Character {
   xp: number;
   xpToNextLevel: number;
   gold: number;
+  gateFragments: number;
   strength: number;
   intellect: number;
   endurance: number;

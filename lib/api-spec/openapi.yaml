@@ -403,6 +403,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/BossChallengeResult"
 
+  /bosses/{id}/forge-key:
+    post:
+      operationId: forgeBossGateKey
+      tags: [bosses]
+      summary: Forge a Gate Key for a boss
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated boss
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Boss"
+
   /awakening:
     get:
       operationId: getAwakening
@@ -617,6 +636,8 @@ components:
           type: integer
         gold:
           type: integer
+        gateFragments:
+          type: integer
         strength:
           type: integer
         intellect:
@@ -649,7 +670,7 @@ components:
         corruption:
           type: integer
       required:
-        [id, name, level, xp, xpToNextLevel, gold, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
+        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
 
     UpdateCharacterRequest:
       type: object
@@ -1014,9 +1035,21 @@ components:
           type: integer
         challenge:
           type: string
+        maxHp:
+          type: integer
+        currentHp:
+          type: integer
         isDefeated:
           type: boolean
+        isExtracted:
+          type: boolean
+        gateUnlocked:
+          type: boolean
         isUnlocked:
+          type: boolean
+        isLocked:
+          type: boolean
+        isHidden:
           type: boolean
         defeatRecordedAt:
           type: string
@@ -1024,7 +1057,13 @@ components:
         failureRecordedAt:
           type: string
           nullable: true
-      required: [id, name, description, rank, xpThreshold, xpReward, goldReward, xpPenalty, challenge, isDefeated, isUnlocked]
+        lastDamageAt:
+          type: string
+          nullable: true
+        lastRetaliationAt:
+          type: string
+          nullable: true
+      required: [id, name, description, rank, xpThreshold, xpReward, goldReward, xpPenalty, challenge, maxHp, currentHp, isDefeated, isExtracted, gateUnlocked, isUnlocked, isLocked, isHidden]
 
     BossChallengeResult:
       type: object

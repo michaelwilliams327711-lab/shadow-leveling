@@ -1857,6 +1857,90 @@ export const useChallengeBoss = <
 };
 
 /**
+ * @summary Forge a Gate Key for a boss
+ */
+export const getForgeBossGateKeyUrl = (id: number) => {
+  return `/api/bosses/${id}/forge-key`;
+};
+
+export const forgeBossGateKey = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Boss> => {
+  return customFetch<Boss>(getForgeBossGateKeyUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getForgeBossGateKeyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgeBossGateKey>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgeBossGateKey>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["forgeBossGateKey"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgeBossGateKey>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return forgeBossGateKey(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgeBossGateKeyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof forgeBossGateKey>>
+>;
+
+export type ForgeBossGateKeyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Forge a Gate Key for a boss
+ */
+export const useForgeBossGateKey = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgeBossGateKey>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof forgeBossGateKey>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getForgeBossGateKeyMutationOptions(options));
+};
+
+/**
  * @summary Get vision/anti-vision journal
  */
 export const getGetAwakeningUrl = () => {

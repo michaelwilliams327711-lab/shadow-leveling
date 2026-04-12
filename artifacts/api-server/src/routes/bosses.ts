@@ -10,6 +10,38 @@ import { runBossRetaliationChecks } from "../lib/bossRetaliation.js";
 
 const router: IRouter = Router();
 
+type BossRow = typeof bossesTable.$inferSelect;
+
+function bossResponse(b: BossRow, totalXp: number) {
+  const rankRewards = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
+  const isUnlocked = totalXp >= b.xpThreshold;
+  const isHidden = !isUnlocked && totalXp < b.xpThreshold * 0.8;
+
+  return {
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    rank: b.rank,
+    xpThreshold: b.xpThreshold,
+    xpReward: rankRewards.xp,
+    goldReward: rankRewards.gold,
+    xpPenalty: Math.floor(rankRewards.xp * 0.6),
+    challenge: b.challenge,
+    maxHp: b.maxHp,
+    currentHp: b.currentHp,
+    isDefeated: b.isDefeated,
+    isExtracted: b.isExtracted,
+    gateUnlocked: b.gateUnlocked,
+    isUnlocked,
+    isLocked: isUnlocked && !b.gateUnlocked,
+    isHidden,
+    defeatRecordedAt: b.defeatRecordedAt?.toISOString() ?? null,
+    failureRecordedAt: b.failureRecordedAt?.toISOString() ?? null,
+    lastDamageAt: b.lastDamageAt?.toISOString() ?? null,
+    lastRetaliationAt: b.lastRetaliationAt?.toISOString() ?? null,
+  };
+}
+
 router.get("/bosses", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
@@ -21,38 +53,80 @@ router.get("/bosses", async (req, res) => {
       req.log.warn({ err: retErr }, "Boss retaliation check failed")
     );
 
-    const mapped = bosses.map((b) => {
-      const rankRewards  = RANK_BASE_REWARDS[b.rank] ?? { xp: 350, gold: 175 };
-      const isUnlocked   = totalXp >= b.xpThreshold || b.gateUnlocked;
-      const isHidden     = !isUnlocked && totalXp < (b.xpThreshold * 0.8);
-
-      return {
-        id:                  b.id,
-        name:                b.name,
-        description:         b.description,
-        rank:                b.rank,
-        xpThreshold:         b.xpThreshold,
-        xpReward:            rankRewards.xp,
-        goldReward:          rankRewards.gold,
-        xpPenalty:           Math.floor(rankRewards.xp * 0.6),
-        challenge:           b.challenge,
-        maxHp:               b.maxHp,
-        currentHp:           b.currentHp,
-        isDefeated:          b.isDefeated,
-        isExtracted:         b.isExtracted,
-        gateUnlocked:        b.gateUnlocked,
-        isUnlocked,
-        isHidden,
-        defeatRecordedAt:    b.defeatRecordedAt?.toISOString()    ?? null,
-        failureRecordedAt:   b.failureRecordedAt?.toISOString()   ?? null,
-        lastDamageAt:        b.lastDamageAt?.toISOString()        ?? null,
-        lastRetaliationAt:   b.lastRetaliationAt?.toISOString()   ?? null,
-      };
-    }).filter((boss) => !boss.isHidden);
+    const mapped = bosses
+      .map((boss) => bossResponse(boss, totalXp))
+      .filter((boss) => !boss.isHidden);
 
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error listing bosses");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/bosses/:id/forge-key", strictLimiter, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid boss ID" });
+
+    const char = await getOrCreateCharacter();
+    const totalXp = totalXpEarned(char.xp, char.level);
+
+    const updatedBoss = await db.transaction(async (tx) => {
+      const [lockedChar] = await tx
+        .select()
+        .from(characterTable)
+        .where(eq(characterTable.id, char.id))
+        .for("update");
+
+      if (!lockedChar) {
+        throw Object.assign(new Error("Character not found"), { code: "CHARACTER_NOT_FOUND" });
+      }
+
+      if (lockedChar.gateFragments < 3) {
+        throw Object.assign(new Error("Insufficient Gate Fragments"), { code: "INSUFFICIENT_FRAGMENTS" });
+      }
+
+      const [boss] = await tx
+        .select()
+        .from(bossesTable)
+        .where(eq(bossesTable.id, id))
+        .for("update");
+
+      if (!boss) {
+        throw Object.assign(new Error("Boss not found"), { code: "BOSS_NOT_FOUND" });
+      }
+
+      const isUnlocked = totalXp >= boss.xpThreshold;
+      if (!isUnlocked) {
+        throw Object.assign(new Error("XP threshold not met"), { code: "XP_THRESHOLD_NOT_MET" });
+      }
+
+      if (!boss.gateUnlocked) {
+        await tx
+          .update(characterTable)
+          .set({ gateFragments: sql`${characterTable.gateFragments} - 3` })
+          .where(eq(characterTable.id, lockedChar.id));
+      }
+
+      const [updated] = await tx
+        .update(bossesTable)
+        .set({ gateUnlocked: true })
+        .where(eq(bossesTable.id, id))
+        .returning();
+
+      return updated;
+    });
+
+    invalidateCharacterCache();
+    res.json(bossResponse(updatedBoss, totalXp));
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "BOSS_NOT_FOUND") return res.status(404).json({ error: "Boss not found" });
+    if (code === "CHARACTER_NOT_FOUND") return res.status(404).json({ error: "Character not found" });
+    if (code === "INSUFFICIENT_FRAGMENTS") return res.status(400).json({ error: "Requires 3 Gate Fragments" });
+    if (code === "XP_THRESHOLD_NOT_MET") return res.status(400).json({ error: "XP threshold not met" });
+    req.log.error({ err }, "Error forging boss gate key");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -82,6 +156,21 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
         success: false,
         victory: false,
         message: `You are not ready. Reach ${boss.xpThreshold} XP threshold to unlock this boss.`,
+        xpChange: 0,
+        goldChange: 0,
+        character: {
+          ...char,
+          xpToNextLevel: XP_PER_LEVEL(char.level),
+          lastCheckin: char.lastCheckin?.toISOString() ?? null,
+        },
+      });
+    }
+
+    if (!boss.gateUnlocked) {
+      return res.json({
+        success: false,
+        victory: false,
+        message: "This gate is sealed. Forge a Gate Key using 3 Gate Fragments before entering.",
         xpChange: 0,
         goldChange: 0,
         character: {
