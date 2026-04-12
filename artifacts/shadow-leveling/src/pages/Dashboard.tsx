@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
   useGetActivityHeatmap, 
@@ -60,6 +61,59 @@ function getOutcomeBadge(entry: QuestLogEntry) {
     return { label: "QUEST CLEARED", className: "bg-green-500/20 text-green-400 border border-green-500/40" };
   }
   return { label: "FAILED", className: "bg-red-500/20 text-red-400 border border-red-500/40" };
+}
+
+function CharacterStatsSkeleton() {
+  return (
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-72 rounded-lg" />
+          <Skeleton className="h-5 w-48 rounded" />
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <Skeleton className="h-10 w-32 rounded-xl" />
+          <Skeleton className="h-10 w-36 rounded-xl" />
+          <Skeleton className="h-10 w-28 rounded-xl" />
+        </div>
+      </div>
+
+      <div className="glass-panel rounded-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-8 w-24 rounded" />
+            <Skeleton className="h-4 w-40 rounded" />
+          </div>
+          <Skeleton className="h-14 w-14 rounded-xl" />
+        </div>
+        <Skeleton className="h-3 w-full rounded-full" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="glass-panel rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-4 w-16 rounded" />
+            </div>
+            <Skeleton className="h-7 w-12 rounded" />
+            <Skeleton className="h-1.5 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-panel rounded-2xl p-6 space-y-3">
+          <Skeleton className="h-6 w-32 rounded" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+        <div className="glass-panel rounded-2xl p-6 space-y-3">
+          <Skeleton className="h-6 w-36 rounded" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const STAT_CAP = 110_000;
@@ -152,7 +206,7 @@ export default function Dashboard() {
   };
 
   if (charLoading) {
-    return <div className="p-8 flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div></div>;
+    return <CharacterStatsSkeleton />;
   }
 
   if (charError || !character) {

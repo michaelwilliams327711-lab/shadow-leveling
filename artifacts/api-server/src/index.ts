@@ -85,34 +85,19 @@ cron.schedule("0 * * * *", async () => {
     return;
   }
 
-  const unprocessedIds = unprocessed.map(c => c.id);
-
-  // Mark all unprocessed characters as done for today
-  await db
-    .update(characterTable)
-    .set({ lastCronDate: localDate })
-    .where(inArray(characterTable.id, unprocessedIds));
-
-  _memLastProcessedDate = localDate;
   logger.info(
-    { localDate, localHour, characterCount: unprocessedIds.length },
+    { localDate, localHour },
     "Daily quest auto-refresh: local midnight window detected, running overdue processing"
   );
 
   try {
     const result = await processOverdueQuestsLogic(localDate);
+    _memLastProcessedDate = localDate;
     logger.info(
       { recurringReset: result.recurringReset, penaltiesApplied: result.penaltiesApplied, localDate },
       "Daily quest auto-refresh complete"
     );
   } catch (err) {
-    // Rollback lastCronDate so the cron retries next hour
-    await db
-      .update(characterTable)
-      .set({ lastCronDate: null })
-      .where(inArray(characterTable.id, unprocessedIds))
-      .catch(() => {});
-    _memLastProcessedDate = null;
     logger.error({ err, localDate }, "Daily quest auto-refresh: error during overdue processing");
   }
 });

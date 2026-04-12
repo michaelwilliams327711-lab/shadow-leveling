@@ -221,6 +221,10 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       : (await tx.insert(characterTable).values({ name: "Hunter" }).returning())[0];
 
     if (overdueQuests.length === 0) {
+      await tx
+        .update(characterTable)
+        .set({ lastCronDate: todayStr })
+        .where(eq(characterTable.id, char.id));
       return { updatedChar: char, recurringReset: recurringToReset.length, penaltiesApplied: 0, processedOverdue: overdueQuests };
     }
 
@@ -333,6 +337,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
         totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
         failStreak: runningFailStreak,
         penaltyMultiplier: finalXpGoldMult,
+        lastCronDate: todayStr,
       })
       .where(eq(characterTable.id, char.id))
       .returning();
@@ -444,55 +449,32 @@ router.get("/quests", async (req, res) => {
       const windowEnd = new Date(now);
       windowEnd.setUTCDate(windowEnd.getUTCDate() + windowDays);
 
-      const [nonActive, activeWithDeadline, activeNullDeadline] = await Promise.all([
-        db
-          .select()
-          .from(questsTable)
-          .where(
-            and(
-              isNull(questsTable.deletedAt),
+      const allQuests = await db
+        .select()
+        .from(questsTable)
+        .where(
+          and(
+            isNull(questsTable.deletedAt),
+            or(
               or(
                 eq(questsTable.status, "completed"),
                 eq(questsTable.status, "failed"),
               ),
+              and(
+                eq(questsTable.status, "active"),
+                isNotNull(questsTable.deadline),
+                lte(questsTable.deadline, windowEnd),
+              ),
+              and(
+                eq(questsTable.status, "active"),
+                isNotNull(questsTable.recurrence),
+              ),
             ),
-          )
-          .orderBy(questsTable.createdAt),
-        db
-          .select()
-          .from(questsTable)
-          .where(
-            and(
-              isNull(questsTable.deletedAt),
-              eq(questsTable.status, "active"),
-              isNotNull(questsTable.deadline),
-              lte(questsTable.deadline, windowEnd),
-            ),
-          )
-          .orderBy(questsTable.createdAt),
-        db
-          .select()
-          .from(questsTable)
-          .where(
-            and(
-              isNull(questsTable.deletedAt),
-              eq(questsTable.status, "active"),
-              isNotNull(questsTable.recurrence),
-            ),
-          )
-          .orderBy(questsTable.createdAt),
-      ]);
+          ),
+        )
+        .orderBy(questsTable.createdAt);
 
-      const seen = new Set<number>();
-      const merged: (typeof questsTable.$inferSelect)[] = [];
-      for (const q of [...nonActive, ...activeWithDeadline, ...activeNullDeadline]) {
-        if (!seen.has(q.id)) {
-          seen.add(q.id);
-          merged.push(q);
-        }
-      }
-
-      const filtered = merged.filter((q) => {
+      const filtered = allQuests.filter((q) => {
         if (q.status !== "active") return true;
 
         const recurrence = q.recurrence as RecurrenceConfig | null;
@@ -753,9 +735,9 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 
       const [updated] = await tx.update(characterTable)
         .set({
-          xp: newXp,
+          xp: Math.min(999_999_999, newXp),
           level: txNewLevel,
-          gold: sql`${characterTable.gold} + ${goldAwarded}`,
+          gold: sql`LEAST(999999, ${characterTable.gold} + ${goldAwarded})`,
           strength: sql`${characterTable.strength} + ${strengthGain}`,
           intellect: sql`${characterTable.intellect} + ${intellectGain}`,
           endurance: sql`${characterTable.endurance} + ${enduranceGain}`,
