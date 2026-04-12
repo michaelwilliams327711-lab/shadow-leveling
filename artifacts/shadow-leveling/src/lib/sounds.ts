@@ -1,6 +1,28 @@
 let _ctx: AudioContext | null = null;
+let _gestureReceived = false;
+
+/**
+ * Call this once from a confirmed user gesture (e.g. a button click).
+ * Creates/resumes the AudioContext so subsequent sounds can play on mobile browsers.
+ */
+export function initAudioContext(): void {
+  _gestureReceived = true;
+  if (_ctx) {
+    if (_ctx.state === "suspended") {
+      _ctx.resume().catch(() => {});
+    }
+    return;
+  }
+  try {
+    const AC = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext);
+    _ctx = new AC();
+  } catch {
+    // AudioContext not supported
+  }
+}
 
 function getAudioContext(): AudioContext | null {
+  if (!_gestureReceived) return null;
   if (_ctx) {
     if (_ctx.state === "suspended") {
       _ctx.resume().catch(() => {});

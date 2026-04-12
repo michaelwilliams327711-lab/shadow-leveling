@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -5,7 +6,14 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { globalLimiter } from "./lib/rate-limiters.js";
 import { validateDateHeader } from "@workspace/shared";
-import { ZodError } from "zod/v4";
+import { ZodError } from "zod";
+
+const apiSecretKey = process.env.API_SECRET_KEY;
+if (!apiSecretKey) {
+  logger.error("FATAL: API_SECRET_KEY environment variable is required but was not set.");
+  logger.error("Set API_SECRET_KEY in your environment secrets before starting the server.");
+  process.exit(1);
+}
 
 const app: Express = express();
 
@@ -67,14 +75,26 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 });
 
 function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const apiSecretKey = process.env.API_SECRET_KEY;
-  if (!apiSecretKey) {
-    next();
-    return;
-  }
   const authHeader = req.headers["authorization"];
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-  if (!token || token !== apiSecretKey) {
+
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  let authorized = false;
+  try {
+    const tokenBuf = Buffer.from(token);
+    const keyBuf = Buffer.from(apiSecretKey!);
+    if (tokenBuf.length === keyBuf.length) {
+      authorized = crypto.timingSafeEqual(tokenBuf, keyBuf);
+    }
+  } catch {
+    authorized = false;
+  }
+
+  if (!authorized) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

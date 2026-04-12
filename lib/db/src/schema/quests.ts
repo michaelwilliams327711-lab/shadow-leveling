@@ -1,6 +1,6 @@
 import { pgTable, serial, text, integer, boolean, timestamp, real, jsonb, unique, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { characterTable } from "./character";
 
 export const questsTable = pgTable("quests", {
@@ -28,6 +28,7 @@ export const questsTable = pgTable("quests", {
 
 export const questLogTable = pgTable("quest_log", {
   id: serial("id").primaryKey(),
+  characterId: integer("character_id").references(() => characterTable.id, { onDelete: "cascade" }),
   questName: text("quest_name").notNull(),
   category: text("category").notNull(),
   difficulty: text("difficulty").notNull(),
@@ -41,6 +42,8 @@ export const questLogTable = pgTable("quest_log", {
 }, (table) => [
   index("quest_log_occurred_at_idx").on(table.occurredAt),
   index("quest_log_action_type_idx").on(table.actionType),
+  index("quest_log_character_id_idx").on(table.characterId),
+  index("quest_log_quest_name_idx").on(table.questName),
 ]);
 
 export const penaltyLogTable = pgTable("penalty_log", {

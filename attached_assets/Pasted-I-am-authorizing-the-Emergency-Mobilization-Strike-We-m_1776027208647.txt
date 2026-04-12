@@ -1,0 +1,39 @@
+I am authorizing the Emergency Mobilization Strike. We must clear all high-priority bugs before the mobile transition today. Execute exactly as specified:
+
+1. Secure the Perimeter (api-server/src/app.ts):
+
+Auth Enforcement: Modify the auth middleware to always require API_SECRET_KEY. If the env variable is missing, the server must throw an error on startup instead of bypassing auth.
+
+Timing Attack Guard: Replace !== in the API key comparison with crypto.timingSafeEqual to prevent side-channel leaks.
+
+Zod Alignment: Force the zod version to match the workspace root (v3.x). Remove all references to zod/v4 to prevent runtime type crashes.
+
+2. Database Expansion (lib/db/src/schema/quests.ts):
+
+Schema Update: Add the missing character_id column to the quest_log table with a formal .references(() => characterTable.id).
+
+Integrity: Ensure the quest_name in the log is indexed for fast lookup during the mobile dashboard render.
+
+3. The Overseer's True Sight (api-server/src/lib/push.ts & quests.ts):
+
+Cron Refactor: Remove the limit(1) from the quest refresh/overdue cron.
+
+Logic: The cron must now iterate through all characters with active subscriptions or active quests. No hunter is ignored by the System.
+
+Dynamic Timezone: Instead of the hardcoded -5 offset, use the timezone_offset we recently added to the push_subscriptions table to calculate the exact 'Midnight Reset' for your current location in Florida.
+
+4. Mobile UX Hardening:
+
+Audio Context: Move the initialization of the 'System Alert' sound effects to a global user-gesture listener (like the first tap on the 'Enter System' button) to ensure sounds don't fail on mobile browsers (Safari/Chrome).
+
+Redirects: Fix the useEffect lag on the /penalty-zone redirect. Move the check to the router level or a higher-order component so the user never sees the dashboard if a Penalty is active.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw code for the refactored app.ts (Security) and the updated Cron logic.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: Confirm that limit(1) is gone and the API now strictly enforces the Secret Key.

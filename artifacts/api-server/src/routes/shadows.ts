@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { bossesTable, shadowArmyTable, shadowJournalTable, characterTable, questsTable } from "@workspace/db";
 import { eq, count, and, isNull, desc } from "drizzle-orm";
 import { getOrCreateCharacter } from "./character.js";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const router: IRouter = Router();
 

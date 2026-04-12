@@ -11,6 +11,7 @@ import { PenaltyProvider, usePenalty } from "@/context/PenaltyContext";
 import { PenaltyModal } from "@/components/PenaltyModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
+import { initAudioContext } from "@/lib/sounds";
 import {
   characterLogin,
   processOverdueQuests,
@@ -125,21 +126,22 @@ function DayChangeDetector() {
   return null;
 }
 
+/**
+ * Router-level penalty guard. If penalty is active, ALL routes except /penalty-zone
+ * immediately redirect — no useEffect lag, no flash of the wrong page.
+ */
 function Router() {
   const { penaltyActive } = usePenalty();
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
 
-  useEffect(() => {
-    if (penaltyActive && location !== "/penalty-zone") {
-      navigate("/penalty-zone");
-    }
-  }, [penaltyActive, location, navigate]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("penalty") === "1" || params.get("type") === "PENALTY_QUEST") {
-    }
-  }, []);
+  if (penaltyActive && location !== "/penalty-zone") {
+    return (
+      <Switch>
+        <Route path="/penalty-zone" component={PenaltyZone} />
+        <Route><Redirect to="/penalty-zone" /></Route>
+      </Switch>
+    );
+  }
 
   return (
     <Switch>
@@ -167,6 +169,23 @@ function App() {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
   } as React.CSSProperties;
+
+  // Initialize AudioContext on first user gesture — required for Safari/Chrome mobile
+  const handleFirstGesture = () => {
+    initAudioContext();
+    document.removeEventListener("click", handleFirstGesture);
+    document.removeEventListener("touchstart", handleFirstGesture);
+  };
+
+  useEffect(() => {
+    document.addEventListener("click", handleFirstGesture);
+    document.addEventListener("touchstart", handleFirstGesture);
+    return () => {
+      document.removeEventListener("click", handleFirstGesture);
+      document.removeEventListener("touchstart", handleFirstGesture);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

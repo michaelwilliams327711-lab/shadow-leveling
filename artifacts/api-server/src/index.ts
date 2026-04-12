@@ -1,7 +1,8 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool, db, characterTable, questsTable } from "@workspace/db";
-import { eq, and, isNull, lt } from "drizzle-orm";
+import { pushSubscriptionsTable } from "@workspace/db/schema";
+import { eq, and, isNull, lt, inArray } from "drizzle-orm";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
 import { sendDailyQuestReminders, sendOverseerPenaltyNotification } from "./routes/push.js";
@@ -21,27 +22,40 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 /**
- * Compute the "local date string" for the configured timezone.
- * Set LOCAL_TZ_OFFSET to a signed integer (e.g. "-5" for UTC-5, "5.5" for UTC+5:30).
- * When unset the cron fires at UTC midnight (offset = 0).
+ * Get the timezone offset in hours.
+ * Priority: push_subscriptions table (user's actual device timezone) → LOCAL_TZ_OFFSET env var → 0 (UTC).
+ * push_subscriptions stores timezone_offset in minutes (e.g. -300 for UTC-5, 60 for UTC+1).
  */
-function getLocalDateStr(): string {
-  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "-5");
-  const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
-  return new Date(Date.now() + offsetMs).toISOString().split("T")[0];
+async function getDynamicTimezoneOffsetHours(): Promise<number> {
+  try {
+    const subs = await db
+      .select({ timezoneOffset: pushSubscriptionsTable.timezoneOffset })
+      .from(pushSubscriptionsTable)
+      .limit(1);
+    if (subs.length > 0) {
+      return subs[0].timezoneOffset / 60;
+    }
+  } catch {
+    // push_subscriptions not available, fall through
+  }
+  return parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
 }
 
-function getLocalHour(): number {
-  const offsetHours = parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "-5");
+function computeLocalDateTime(offsetHours: number): { localDate: string; localHour: number } {
   const offsetMs = (isNaN(offsetHours) ? 0 : offsetHours) * 3600 * 1000;
-  return new Date(Date.now() + offsetMs).getUTCHours();
+  const adjusted = new Date(Date.now() + offsetMs);
+  const localDate = adjusted.toISOString().split("T")[0]!;
+  const localHour = adjusted.getUTCHours();
+  return { localDate, localHour };
 }
 
 let _memLastProcessedDate: string | null = null;
 
+const ADVISORY_LOCK_CRON = 9001;
+
 cron.schedule("0 * * * *", async () => {
-  const localHour = getLocalHour();
-  const localDate = getLocalDateStr();
+  const offsetHours = await getDynamicTimezoneOffsetHours();
+  const { localDate, localHour } = computeLocalDateTime(offsetHours);
 
   if (localHour !== 0 && localHour !== 1) {
     return;
@@ -51,12 +65,18 @@ cron.schedule("0 * * * *", async () => {
     return;
   }
 
+  // Get ALL characters — process every hunter, not just the first
   const chars = await db
     .select({ id: characterTable.id, lastCronDate: characterTable.lastCronDate })
-    .from(characterTable)
-    .limit(1);
+    .from(characterTable);
 
-  if (chars.length > 0 && chars[0].lastCronDate === localDate) {
+  if (chars.length === 0) {
+    return;
+  }
+
+  const unprocessed = chars.filter(c => c.lastCronDate !== localDate);
+
+  if (unprocessed.length === 0) {
     _memLastProcessedDate = localDate;
     logger.info(
       { localDate, localHour },
@@ -65,16 +85,17 @@ cron.schedule("0 * * * *", async () => {
     return;
   }
 
-  if (chars.length > 0) {
-    await db
-      .update(characterTable)
-      .set({ lastCronDate: localDate })
-      .where(eq(characterTable.id, chars[0].id));
-  }
+  const unprocessedIds = unprocessed.map(c => c.id);
+
+  // Mark all unprocessed characters as done for today
+  await db
+    .update(characterTable)
+    .set({ lastCronDate: localDate })
+    .where(inArray(characterTable.id, unprocessedIds));
 
   _memLastProcessedDate = localDate;
   logger.info(
-    { localDate, localHour },
+    { localDate, localHour, characterCount: unprocessedIds.length },
     "Daily quest auto-refresh: local midnight window detected, running overdue processing"
   );
 
@@ -85,13 +106,12 @@ cron.schedule("0 * * * *", async () => {
       "Daily quest auto-refresh complete"
     );
   } catch (err) {
-    if (chars.length > 0) {
-      await db
-        .update(characterTable)
-        .set({ lastCronDate: null })
-        .where(eq(characterTable.id, chars[0].id))
-        .catch(() => {});
-    }
+    // Rollback lastCronDate so the cron retries next hour
+    await db
+      .update(characterTable)
+      .set({ lastCronDate: null })
+      .where(inArray(characterTable.id, unprocessedIds))
+      .catch(() => {});
     _memLastProcessedDate = null;
     logger.error({ err, localDate }, "Daily quest auto-refresh: error during overdue processing");
   }
@@ -105,8 +125,8 @@ cron.schedule("* * * * *", async () => {
     error: (obj, msg) => logger.error(obj, msg),
   });
 
-  const localHour = getLocalHour();
-  const localDate = getLocalDateStr();
+  const offsetHours = await getDynamicTimezoneOffsetHours();
+  const { localDate, localHour } = computeLocalDateTime(offsetHours);
 
   if (localHour < 20) return;
   if (_overseerLastAlertDate === localDate) return;
@@ -142,15 +162,6 @@ const server = app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-
-  if (!process.env.API_SECRET_KEY) {
-    logger.warn("========================================================");
-    logger.warn("  WARNING: SECURE MODE DISABLED");
-    logger.warn("  API_SECRET_KEY is not set.");
-    logger.warn("  All API endpoints are publicly accessible.");
-    logger.warn("  Set API_SECRET_KEY before deploying to production.");
-    logger.warn("========================================================");
-  }
 });
 
 function shutdown(signal: string) {
