@@ -34,7 +34,7 @@ const STAT_ICONS: Record<StatKey, LucideIcon> = {
 const STAT_CSS_COLORS: Record<StatKey, string> = {
   discipline: "text-purple-400",
   strength: "text-red-400",
-  agility: "text-cyan-400",
+  agility: "text-pink-400",
   endurance: "text-green-400",
   intellect: "text-blue-400",
 };

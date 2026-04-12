@@ -20,7 +20,7 @@ interface LevelUpCeremonyProps {
 
 const STAT_COLORS: Record<string, string> = {
   strength: "text-red-400",
-  agility: "text-cyan-400",
+  agility: "text-pink-400",
   endurance: "text-green-400",
   intellect: "text-blue-400",
   discipline: "text-purple-400",

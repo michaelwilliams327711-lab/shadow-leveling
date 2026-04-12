@@ -119,7 +119,7 @@ const STAT_ICONS: Record<string, LucideIcon> = {
   strength: Dumbbell, agility: Sparkles, endurance: Shield, intellect: Brain, discipline: Target,
 };
 const STAT_TEXT_COLORS: Record<string, string> = {
-  strength: "text-red-400", agility: "text-cyan-400", endurance: "text-green-400",
+  strength: "text-red-400", agility: "text-pink-400", endurance: "text-green-400",
   intellect: "text-blue-400", discipline: "text-purple-400",
 };
 const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = Object.fromEntries(

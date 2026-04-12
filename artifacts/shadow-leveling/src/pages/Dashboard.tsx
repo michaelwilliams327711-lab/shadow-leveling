@@ -194,7 +194,7 @@ export default function Dashboard() {
 
   const stats = [
     { name: STAT_META.strength.label,   val: character.strength,   icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
-    { name: STAT_META.agility.label,    val: character.agility,    icon: Sparkles, color: "text-cyan-400", barColor: "bg-cyan-400" },
+    { name: STAT_META.agility.label,    val: character.agility,    icon: Sparkles, color: "text-pink-400", barColor: "bg-pink-400" },
     { name: STAT_META.endurance.label,  val: character.endurance,  icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
     { name: STAT_META.intellect.label,  val: character.intellect,  icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
     { name: STAT_META.discipline.label, val: character.discipline, icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
