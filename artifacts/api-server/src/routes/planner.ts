@@ -21,7 +21,7 @@ function dateToStr(d: Date): string {
 
 function addDays(d: Date, n: number): Date {
   const r = new Date(d);
-  r.setDate(r.getDate() + n);
+  r.setUTCDate(r.getUTCDate() + n);
   return r;
 }
 
@@ -354,7 +354,7 @@ router.get("/planner/monthly", async (req, res) => {
       } else if (q.deadline) {
         const deadlineStr = dateToStr(new Date(q.deadline));
         const deadlineDate = new Date(q.deadline);
-        if (deadlineDate.getFullYear() === year && deadlineDate.getMonth() === month) {
+        if (deadlineDate.getUTCFullYear() === year && deadlineDate.getUTCMonth() === month) {
           addToUpcoming(deadlineStr, q);
         }
       }

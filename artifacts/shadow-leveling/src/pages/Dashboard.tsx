@@ -243,7 +243,7 @@ export default function Dashboard() {
           </InfoTooltip>
           <InfoTooltip
             what="Daily check-in streak — consecutive days you've logged in and checked in."
-            fn="Builds a multiplier (up to 2×) that boosts XP and Gold rewards for completed quests."
+            fn="Builds a multiplier (up to 3×) that boosts XP and Gold rewards for completed quests. Tiers: 3 days → 1.5×, 7 days → 2×, 14 days → 2.5×, 30+ days → 3×."
             usage="Hit the 'Daily Arise' button every day to keep your streak alive and grow your multiplier."
           >
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30 relative overflow-hidden">

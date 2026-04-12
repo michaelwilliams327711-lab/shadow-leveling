@@ -205,7 +205,7 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
 
     let resultCorruption = 0;
     await db.transaction(async (tx) => {
-      const chars = await tx.select().from(characterTable).limit(1);
+      const chars = await tx.select().from(characterTable).limit(1).for("update");
       if (!chars.length) return;
       const char = chars[0];
 
@@ -346,8 +346,8 @@ router.get("/bad-habits/corruption-history", async (req, res) => {
     const offset = offsetParam ? Math.max(0, parseInt(String(offsetParam), 10)) : 0;
 
     const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 90);
-    windowStart.setHours(0, 0, 0, 0);
+    windowStart.setUTCDate(windowStart.getUTCDate() - 90);
+    windowStart.setUTCHours(0, 0, 0, 0);
 
     const [beforeWindowLogs, withinWindowLogs, allHabits] = await Promise.all([
       db
