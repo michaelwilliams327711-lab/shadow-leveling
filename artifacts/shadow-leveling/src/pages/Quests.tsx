@@ -30,7 +30,7 @@ import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Sparkles, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Sparkles, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +81,7 @@ import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
+import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
 import { playQuestComplete } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { listVocations } from "@/lib/vocations-client";
@@ -553,7 +554,7 @@ function PlannerQuestCard({ quest, compact = false }: { quest: Quest; compact?: 
             <span className="flex items-center gap-1">
               <Zap className="h-3 w-3 text-violet-400" />
               {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP
-              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Clear this quest for a 20% Archive roll toward Gate Fragment acquisition." />
+              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Clear this quest for a 15% Archive roll toward Gate Fragment acquisition." />
             </span>
             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{quest.durationMinutes}m</span>
           </div>
@@ -1277,6 +1278,7 @@ export default function Quests() {
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas: Array<{ name: string; value: number }> } | null>(null);
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
+  const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
   const [createVocationId, setCreateVocationId] = useState<string>("");
   const [editVocationId, setEditVocationId] = useState<string>("");
   const { data: vocations = [] } = useQuery({
@@ -1348,6 +1350,10 @@ export default function Quests() {
         if (!reduced) playQuestComplete();
         invalidateQuests();
         toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
+        if ((res as Record<string, unknown>).gateFragmentDropped) {
+          const fragCount = (res.character as Record<string, number> | undefined)?.gateFragments ?? 1;
+          setTimeout(() => setFragmentDropData({ count: Math.min(fragCount, 3) }), 700);
+        }
         if (res.leveledUp && res.newLevel) {
           const statNames = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
           const statDeltas: Array<{ name: string; value: number }> = [];
@@ -2112,7 +2118,7 @@ export default function Quests() {
                             <span className="flex items-center gap-1.5 text-primary">
                               <Trophy className="w-4 h-4" />
                               {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP
-                              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Successful quest completion triggers a 20% fragment roll. 3 fragments forge the Gate Key for a new Boss." />
+                              <ShadowIntel title="Shadow Intel" intel={SYSTEM_INTEL.GATE_FRAGMENTS} detail="Successful quest completion triggers a 15% fragment roll. 3 fragments forge the Gate Key for a new Boss." />
                             </span>
                             <InfoTooltip
                               what="Gold Reward — currency awarded on completion."
@@ -2244,6 +2250,12 @@ export default function Quests() {
         statName={rankUpData?.statName ?? ""}
         statValue={rankUpData?.statValue ?? 0}
         onDismiss={() => setRankUpData(null)}
+      />
+
+      <GateFragmentDropAnimation
+        active={fragmentDropData !== null}
+        fragmentCount={fragmentDropData?.count ?? 0}
+        onDone={() => setFragmentDropData(null)}
       />
       </div>
       )}

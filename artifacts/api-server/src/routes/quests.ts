@@ -804,10 +804,10 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       req.log.warn({ err: bossErr }, "Boss damage bridge failed; quest completion still succeeds");
     }
 
-    // Gate Fragment Drop — 20% chance per quest completion
+    // Gate Fragment Drop — 15% chance per quest completion
     let gateFragmentDropped = false;
     try {
-      if (Math.random() < 0.20) {
+      if (Math.random() < 0.15) {
         gateFragmentDropped = true;
         await db
           .update(characterTable)
