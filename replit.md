@@ -96,6 +96,7 @@ All at `/api`:
 - The Replit workflow `Start application` starts the API server on port 8080 and the React frontend on port 3000 with `BASE_PATH=/`.
 - Dependencies are installed from the existing `pnpm-lock.yaml` using pnpm workspaces.
 - The development PostgreSQL database is provisioned and the schema has been applied with `pnpm --filter @workspace/db run push`.
+- API bearer-token auth is enforced when `NODE_ENV=production`; local development can run without `API_SECRET_KEY`/`VITE_API_KEY`.
 - The post-merge setup script installs dependencies with the frozen lockfile and reapplies the Drizzle schema push so future merged work keeps the database schema in sync.
 
 ## Database Tables

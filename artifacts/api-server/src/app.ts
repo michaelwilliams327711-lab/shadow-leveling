@@ -9,10 +9,16 @@ import { validateDateHeader } from "@workspace/shared";
 import { ZodError } from "zod";
 
 const apiSecretKey = process.env.API_SECRET_KEY;
-if (!apiSecretKey) {
+const apiAuthRequired = process.env.NODE_ENV === "production";
+
+if (!apiSecretKey && apiAuthRequired) {
   logger.error("FATAL: API_SECRET_KEY environment variable is required but was not set.");
   logger.error("Set API_SECRET_KEY in your environment secrets before starting the server.");
   process.exit(1);
+}
+
+if (!apiSecretKey && !apiAuthRequired) {
+  logger.warn("API_SECRET_KEY is not set; API auth is disabled for this development run.");
 }
 
 const app: Express = express();
@@ -75,6 +81,11 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 });
 
 function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (!apiSecretKey) {
+    next();
+    return;
+  }
+
   const authHeader = req.headers["authorization"];
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
 
@@ -86,7 +97,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   let authorized = false;
   try {
     const tokenBuf = Buffer.from(token);
-    const keyBuf = Buffer.from(apiSecretKey!);
+    const keyBuf = Buffer.from(apiSecretKey);
     if (tokenBuf.length === keyBuf.length) {
       authorized = crypto.timingSafeEqual(tokenBuf, keyBuf);
     }
