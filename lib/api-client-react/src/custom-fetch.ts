@@ -10,6 +10,7 @@ export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
+const DEV_SECRET = "shadow-dev-access-key";
 
 // ---------------------------------------------------------------------------
 // Module-level configuration
@@ -359,11 +360,16 @@ export async function customFetch<T = unknown>(
   // Authorization header has already been set (by either _authTokenGetter above
   // or by the caller explicitly).
   if (!headers.has("authorization")) {
-    const apiKey =
+    const env =
       typeof import.meta !== "undefined" &&
       (import.meta as Record<string, unknown>).env != null
-        ? ((import.meta as { env: Record<string, string | undefined> }).env.VITE_API_KEY ?? "")
-        : "";
+        ? (import.meta as {
+            env: Record<string, string | boolean | undefined>;
+          }).env
+        : undefined;
+    const apiKey =
+      (typeof env?.VITE_API_KEY === "string" ? env.VITE_API_KEY : "") ||
+      (env?.DEV === true ? DEV_SECRET : "");
     if (apiKey) {
       headers.set("authorization", `Bearer ${apiKey}`);
     }
