@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { ParticleBurst } from "@/components/animation-primitives";
-import { Gem } from "lucide-react";
+import { KeyRound } from "lucide-react";
 
 interface GateFragmentDropAnimationProps {
   active: boolean;
@@ -41,7 +41,7 @@ export function GateFragmentDropAnimation({ active, fragmentCount, onDone }: Gat
               animate={{ opacity: [0, 0.18, 0] }}
               transition={{ duration: 1.4, ease: "easeOut" }}
               style={{
-                background: "radial-gradient(ellipse at center, rgba(99,58,237,0.55) 0%, transparent 70%)",
+                background: "radial-gradient(ellipse at center, rgba(236,72,153,0.45) 0%, transparent 70%)",
               }}
             />
           )}
@@ -51,7 +51,7 @@ export function GateFragmentDropAnimation({ active, fragmentCount, onDone }: Gat
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <ParticleBurst
                   count={18}
-                  colors={["#7c3aed", "#a855f7", "#c4b5fd", "#6366f1", "#e879f9"]}
+                  colors={["#ec4899", "#f472b6", "#fbcfe8", "#db2777", "#f9a8d4"]}
                   spread={100}
                   reduced={false}
                 />
@@ -71,12 +71,12 @@ export function GateFragmentDropAnimation({ active, fragmentCount, onDone }: Gat
                   animate={{ opacity: [0.8, 0.3, 0.8], scale: [1, 1.4, 1] }}
                   transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
                   style={{
-                    background: "radial-gradient(ellipse at center, rgba(168,85,247,0.7) 0%, transparent 70%)",
+                    background: "radial-gradient(ellipse at center, rgba(236,72,153,0.7) 0%, transparent 70%)",
                   }}
                 />
               )}
-              <div className="bg-purple-950/80 border-2 border-purple-400/70 rounded-2xl p-5 shadow-[0_0_30px_rgba(168,85,247,0.6)]">
-                <Gem className="w-12 h-12 text-purple-300" />
+              <div className="bg-pink-950/80 border-2 border-pink-400/70 rounded-2xl p-5 shadow-[0_0_30px_rgba(236,72,153,0.6)]">
+                <KeyRound className="w-12 h-12 text-pink-300" />
               </div>
             </motion.div>
 
@@ -87,10 +87,10 @@ export function GateFragmentDropAnimation({ active, fragmentCount, onDone }: Gat
               transition={{ delay: 0.3, duration: 0.4 }}
               className="flex flex-col items-center gap-1"
             >
-              <span className="text-purple-200 font-display font-bold text-xl tracking-widest uppercase drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]">
+              <span className="text-pink-200 font-display font-bold text-xl tracking-widest uppercase drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]">
                 Gate Fragment
               </span>
-              <span className="text-purple-400 text-sm font-mono tracking-wide">
+              <span className="text-pink-400 text-sm font-mono tracking-wide">
                 Acquired — {fragmentCount} / 3
               </span>
             </motion.div>

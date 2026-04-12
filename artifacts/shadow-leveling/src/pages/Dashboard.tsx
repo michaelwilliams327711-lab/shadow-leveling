@@ -16,7 +16,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, Gem } from "lucide-react";
+import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -278,12 +278,12 @@ export default function Dashboard() {
             fn="Each quest completion has a 15% chance to drop a Gate Fragment. Collect 3 to forge a Gate Key and enter the Boss Arena."
             usage="Head to the Boss Arena once you have 3 fragments to challenge a boss."
           >
-            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border border-purple-500/30">
-              <Gem className="text-purple-400 w-5 h-5" />
-              <span className="text-purple-300 font-stat font-bold text-xl">
+            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border border-pink-500/30">
+              <KeyRound className="text-pink-400 w-5 h-5" />
+              <span className="text-pink-300 font-stat font-bold text-xl">
                 {character.gateFragments} / 3
               </span>
-              <span className="text-purple-400/60 text-xs font-mono uppercase tracking-wide">Frags</span>
+              <span className="text-pink-400/60 text-xs font-mono uppercase tracking-wide">Frags</span>
             </div>
           </InfoTooltip>
           {failStreak > 0 && (
