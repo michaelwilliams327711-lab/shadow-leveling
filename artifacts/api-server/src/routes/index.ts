@@ -13,6 +13,7 @@ import plannerRouter from "./planner.js";
 import ascensionRouter from "./ascension.js";
 import shadowsRouter from "./shadows.js";
 import pushRouter from "./push.js";
+import penaltyRouter from "./penalty.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(plannerRouter);
 router.use(ascensionRouter);
 router.use(shadowsRouter);
 router.use(pushRouter);
+router.use(penaltyRouter);
 
 export default router;

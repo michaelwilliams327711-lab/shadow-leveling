@@ -708,7 +708,10 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       .limit(1);
     const shadowBonus = assignedShadow ? (SHADOW_RANK_BONUS[assignedShadow.rank] ?? 0) : 0;
 
-    const totalMultiplier = char.multiplier * rngMultiplier * (1 + eventBonus) * (1 + shadowBonus);
+    const survivorBuff =
+      char.survivorBuffExpiresAt && char.survivorBuffExpiresAt > new Date() ? 1.05 : 1.0;
+    const totalMultiplier =
+      char.multiplier * rngMultiplier * (1 + eventBonus) * (1 + shadowBonus) * survivorBuff;
 
     const xpAwarded = Math.floor(xpReward * totalMultiplier);
     const goldAwarded = Math.floor(goldReward * totalMultiplier);
