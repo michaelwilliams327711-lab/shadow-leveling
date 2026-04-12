@@ -1,0 +1,39 @@
+I am authorizing Strike 23: Deep-Logic Audit. We are verifying the mathematical and temporal integrity of the System. Execute exactly as specified:
+
+1. Leveling Math Verification (api-server/src/lib/game-logic.ts or equivalent):
+
+Read the Logic: Locate the function that handles XP gain and Leveling.
+
+The Check: Does the logic use a simple if (xp >= threshold) level++, or does it use a while loop/mathematical formula to calculate Multi-Level Jumps?
+
+Requirement: If a user earns 10,000 XP at Level 1, they must be correctly bumped to Level X based on the full XP curve without 'losing' any remaining XP.
+
+2. Timezone 'Midnight' Validation (api-server/src/index.ts & shared/time.ts):
+
+The Check: In the Cron job, look at how localDate is calculated.
+
+The Risk: Is the server using a global 'Midnight UTC' to trigger the cron, or is it checking the timezone_offset for the user specifically?
+
+Requirement: For a user in Florida (UTC-4/5), the cron must only trigger the quest reset/penalty when it is actually 00:00:00 in Florida.
+
+3. Mobile Vibration Safety (shadow-leveling/src/lib/vibration.ts or UI components):
+
+The Check: Locate the navigator.vibrate calls.
+
+Requirement: Ensure all vibration calls are wrapped in a try/catch block. Mobile browsers (especially iOS Safari) will crash the UI thread if a vibration is called without a direct user gesture or if the device is in 'Low Power Mode.'
+
+4. Asset Optimization (vite.config.ts & Image assets):
+
+The Check: Are we using any plugins for image compression?
+
+Requirement: Verify if vite-plugin-imagemin or similar is active. If not, suggest a list of all images over 500KB that need to be converted to WebP.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw code for the calculateLevel logic and the timezone calculation in the Cron.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+VERDICT: State clearly: 'Leveling is multi-jump safe' or 'Leveling is bugged.' 'Timezone is Florida-accurate' or 'Timezone is server-locked.
