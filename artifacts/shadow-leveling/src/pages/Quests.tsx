@@ -30,7 +30,7 @@ import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Sparkles, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -115,7 +115,7 @@ const CATEGORY_PRESETS = Object.values(QuestCategory);
 
 
 const STAT_ICONS: Record<string, LucideIcon> = {
-  strength: Dumbbell, agility: Zap, endurance: Shield, intellect: Brain, discipline: Target,
+  strength: Dumbbell, agility: Sparkles, endurance: Shield, intellect: Brain, discipline: Target,
 };
 const STAT_TEXT_COLORS: Record<string, string> = {
   strength: "text-red-400", agility: "text-cyan-400", endurance: "text-green-400",

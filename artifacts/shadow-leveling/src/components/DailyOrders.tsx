@@ -21,12 +21,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Trash2, Target, Package, Zap, Dumbbell, Brain, Shield, type LucideIcon } from "lucide-react";
+import { Check, Plus, Trash2, Target, Package, Sparkles, Dumbbell, Brain, Shield, type LucideIcon } from "lucide-react";
 
 const STAT_ICONS: Record<StatKey, LucideIcon> = {
   discipline: Target,
   strength: Dumbbell,
-  agility: Zap,
+  agility: Sparkles,
   endurance: Shield,
   intellect: Brain,
 };

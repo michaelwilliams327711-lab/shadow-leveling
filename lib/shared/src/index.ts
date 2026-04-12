@@ -5,7 +5,7 @@ export type StatKey = typeof STAT_KEYS[number];
 
 export const STAT_META: Record<StatKey, { label: string; abbr: string; color: string }> = {
   strength:   { label: "Strength",   abbr: "STR", color: "#f87171" },
-  agility:    { label: "Agility",    abbr: "AGI", color: "#22d3ee" },
+  agility:    { label: "Spirit",     abbr: "SPI", color: "#22d3ee" },
   endurance:  { label: "Endurance",  abbr: "END", color: "#4ade80" },
   intellect:  { label: "Intellect",  abbr: "INT", color: "#60a5fa" },
   discipline: { label: "Discipline", abbr: "DIS", color: "#c084fc" },

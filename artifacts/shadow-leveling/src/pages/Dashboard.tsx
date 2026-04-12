@@ -193,7 +193,7 @@ export default function Dashboard() {
 
   const stats = [
     { name: STAT_META.strength.label,   val: character.strength,   icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
-    { name: STAT_META.agility.label,    val: character.agility,    icon: Zap,      color: "text-cyan-400", barColor: "bg-cyan-400" },
+    { name: STAT_META.agility.label,    val: character.agility,    icon: Sparkles, color: "text-cyan-400", barColor: "bg-cyan-400" },
     { name: STAT_META.endurance.label,  val: character.endurance,  icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
     { name: STAT_META.intellect.label,  val: character.intellect,  icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
     { name: STAT_META.discipline.label, val: character.discipline, icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
@@ -475,10 +475,10 @@ export default function Dashboard() {
                       fn: "Increases when you complete Physical and strength-oriented quests.",
                       usage: "Assign quests in the Strength or Other category to grow this stat.",
                     },
-                    Agility: {
-                      what: "Agility — speed, coordination, and creative reflexes.",
-                      fn: "Increases when you complete Creative or Social quests.",
-                      usage: "Take on Creative and Social missions to boost Agility.",
+                    Spirit: {
+                      what: "Spirit — your inner world. Emotional intelligence, resilience, and mindfulness.",
+                      fn: "Grows when you complete Creative and Social quests. Journaling, meditation, creative hobbies, and emotional regulation all feed Spirit. It measures how centered and self-aware you are.",
+                      usage: "Assign quests to the Creative or Social category to raise Spirit. High Spirit means you stay grounded, react less, and remain aligned with your core self.",
                     },
                     Endurance: {
                       what: "Endurance — stamina and long-term resilience.",
@@ -486,9 +486,9 @@ export default function Dashboard() {
                       usage: "Log workout, wellness, or Health-category quests to grow Endurance.",
                     },
                     Intellect: {
-                      what: "Intellect — mental acuity, knowledge, and problem-solving.",
-                      fn: "Increases when you complete Financial, Productivity, or Study quests.",
-                      usage: "Focus on learning and productivity missions to raise Intellect.",
+                      what: "Intellect — your outer world processor. Knowledge, logic, and practical skill-building.",
+                      fn: "Grows when you complete Financial, Productivity, or Study quests. Reading, coding, researching, and planning all sharpen Intellect. It tracks how capable your mind is in the real world.",
+                      usage: "Assign quests to the Study, Financial, or Productivity category to raise Intellect. High Intellect means faster learning, stronger problem-solving, and sharper execution.",
                     },
                     Discipline: {
                       what: "Discipline — willpower, consistency, and self-control.",
