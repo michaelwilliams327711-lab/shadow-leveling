@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { bossesTable, shadowArmyTable, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { getOrCreateCharacter } from "./character.js";
 import { z } from "zod/v4";
 
@@ -145,7 +145,52 @@ router.get("/shadows", async (_req: Request, res: Response): Promise<void> => {
     .from(shadowArmyTable)
     .where(eq(shadowArmyTable.characterId, char.id));
 
-  res.json({ soldiers });
+  const shadowLimit = 5 + Math.floor(char.intellect / 10);
+
+  res.json({ soldiers, capacity: shadowLimit, current: soldiers.length });
+});
+
+router.delete("/shadows/:id", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid shadow ID" });
+    return;
+  }
+
+  const char = await getOrCreateCharacter();
+
+  const [soldier] = await db
+    .select()
+    .from(shadowArmyTable)
+    .where(eq(shadowArmyTable.id, id))
+    .limit(1);
+
+  if (!soldier) {
+    res.status(404).json({ error: "Soldier not found." });
+    return;
+  }
+
+  if (soldier.characterId !== char.id) {
+    res.status(403).json({ error: "This soldier does not belong to you." });
+    return;
+  }
+
+  await db.delete(shadowArmyTable).where(eq(shadowArmyTable.id, id));
+
+  const [{ value: remaining }] = await db
+    .select({ value: count() })
+    .from(shadowArmyTable)
+    .where(eq(shadowArmyTable.characterId, char.id));
+
+  const shadowLimit = 5 + Math.floor(char.intellect / 10);
+
+  res.json({
+    ok: true,
+    releasedName: soldier.name,
+    current: remaining,
+    capacity: shadowLimit,
+    message: `${soldier.name} has been released from the army.`,
+  });
 });
 
 export default router;
