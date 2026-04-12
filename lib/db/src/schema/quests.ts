@@ -69,7 +69,7 @@ export const questDailyLogTable = pgTable("quest_daily_log", {
 
 export const dailyOrdersTable = pgTable("daily_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
-  characterId: integer("character_id").notNull(),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   statCategory: text("stat_category").notNull().default("discipline"),
   completed: boolean("completed").notNull().default(false),
@@ -84,7 +84,7 @@ export const dailyOrdersTable = pgTable("daily_orders", {
 
 export const dailyHiddenBoxRewardsTable = pgTable("daily_hidden_box_rewards", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull(),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   date: text("date").notNull(),
   type: text("type").notNull(),
   goldBonus: integer("gold_bonus"),

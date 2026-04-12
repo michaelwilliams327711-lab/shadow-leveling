@@ -36,7 +36,15 @@ function PreviewRenderer({
     setError(null);
 
     async function loadComponent(): Promise<void> {
+      if (/[^a-zA-Z0-9/_\-.]/.test(componentPath) || componentPath.includes("..")) {
+        setError(`Invalid component path: ${componentPath}`);
+        return;
+      }
       const key = `./components/mockups/${componentPath}.tsx`;
+      if (!Object.prototype.hasOwnProperty.call(modules, key)) {
+        setError(`No component found at ${componentPath}.tsx`);
+        return;
+      }
       const loader = modules[key];
       if (!loader) {
         setError(`No component found at ${componentPath}.tsx`);
