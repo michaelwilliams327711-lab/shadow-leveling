@@ -25,6 +25,22 @@ name = "Project"
 mode = "parallel"
 author = "agent"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -c 'PORT=8080 pnpm --filter @workspace/api-server run dev & PORT=3000 BASE_PATH=/ pnpm --filter @workspace/shadow-leveling run dev & wait -n; status=$?; kill $(jobs -p) 2>/dev/null; exit $status'"
+waitForPort = 3000
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

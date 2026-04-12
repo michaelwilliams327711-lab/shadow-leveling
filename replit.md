@@ -93,9 +93,9 @@ All at `/api`:
 
 ## Replit Migration Notes
 
-- Registered artifact workflows start the API server on port 8080 and the React frontend on port 3000 with `BASE_PATH=/`.
-- Legacy duplicate workflows were removed after artifact registration because they conflicted on ports 8080/3000 and caused the artifact preview to show an unreachable app screen.
-- The development PostgreSQL schema has been applied with `pnpm --filter @workspace/db run push`.
+- The Replit workflow `Start application` starts the API server on port 8080 and the React frontend on port 3000 with `BASE_PATH=/`.
+- Dependencies are installed from the existing `pnpm-lock.yaml` using pnpm workspaces.
+- The development PostgreSQL database is provisioned and the schema has been applied with `pnpm --filter @workspace/db run push`.
 - The post-merge setup script installs dependencies with the frozen lockfile and reapplies the Drizzle schema push so future merged work keeps the database schema in sync.
 
 ## Database Tables
