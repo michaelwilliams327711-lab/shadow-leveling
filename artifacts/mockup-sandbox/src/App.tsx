@@ -6,7 +6,6 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 
 function _resolveComponent(
   mod: Record<string, unknown>,
-  name: string,
 ): ComponentType | undefined {
   const fns = Object.values(mod).filter(
     (v) => typeof v === "function",
@@ -14,7 +13,6 @@ function _resolveComponent(
   return (
     (mod.default as ComponentType) ||
     (mod.Preview as ComponentType) ||
-    (mod[name] as ComponentType) ||
     fns[fns.length - 1]
   );
 }
@@ -56,8 +54,7 @@ function PreviewRenderer({
         if (cancelled) {
           return;
         }
-        const name = componentPath.split("/").pop()!;
-        const comp = _resolveComponent(mod, name);
+        const comp = _resolveComponent(mod);
         if (!comp) {
           setError(
             `No exported React component found in ${componentPath}.tsx\n\nMake sure the file has at least one exported function component.`,
