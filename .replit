@@ -35,3 +35,6 @@ channel = "stable-25_05"
 [userenv.shared]
 API_SECRET_KEY = "d8a8f3f492216fd97c3d2918c588e8c06ea86cc254b924321e5a01faa96439ca"
 VITE_API_KEY = "d8a8f3f492216fd97c3d2918c588e8c06ea86cc254b924321e5a01faa96439ca"
+VAPID_PUBLIC_KEY = "BPqBrlyWCjJLeoQO2rPsr0bamWWbzo588tk-42ORNF-Dk861JYoBYcPVp-MRxrKaqdT-oqSxzRU995NbTSt0Ark"
+VAPID_PRIVATE_KEY = "zYybn5a3Nuul0MsgKyn-myC6ofHTlBk9RCsUvGDHapk"
+VAPID_SUBJECT = "mailto:admin@shadow-leveling.app"

@@ -4,6 +4,7 @@ import { Settings, RotateCcw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { useVisualSettings, type CorruptionTheme } from "@/context/VisualSettingsContext";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 
 const THEMES: { id: CorruptionTheme; label: string; color: string; ring: string }[] = [
   { id: "amber", label: "Amber",  color: "hsl(45 100% 60%)",  ring: "ring-amber-400" },
@@ -128,6 +129,15 @@ export function SettingsDrawer() {
         </SheetHeader>
 
         <div className="flex-1 px-6 py-6 space-y-8 overflow-y-auto">
+          <div className="space-y-3">
+            <label className="font-display text-xs tracking-[0.35em] uppercase text-primary/70 block">
+              Notifications
+            </label>
+            <NotificationsPanel />
+          </div>
+
+          <div className="w-full h-px bg-amber-900/20" />
+
           <ParticlePreview
             amberGlow={amberGlow}
             amberDensity={amberDensity}

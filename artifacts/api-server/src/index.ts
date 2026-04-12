@@ -4,6 +4,7 @@ import { pool, db, characterTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
+import { sendDailyQuestReminders } from "./routes/push.js";
 
 const rawPort = process.env["PORT"];
 
@@ -94,6 +95,13 @@ cron.schedule("0 * * * *", async () => {
     _memLastProcessedDate = null;
     logger.error({ err, localDate }, "Daily quest auto-refresh: error during overdue processing");
   }
+});
+
+cron.schedule("* * * * *", async () => {
+  await sendDailyQuestReminders({
+    info: (msg) => logger.info(msg),
+    error: (obj, msg) => logger.error(obj, msg),
+  });
 });
 
 const server = app.listen(port, (err) => {

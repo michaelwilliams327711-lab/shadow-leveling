@@ -46,6 +46,8 @@ artifacts-monorepo/
 8. **Boss Arena** - Locked bosses that unlock at XP thresholds. Win/lose with permanent records
 9. **The Awakening** - Vision/Anti-Vision journaling page
 10. **Archive of Shadows Intel** - Centralized System lore strings power Shadow Intel tooltips on boss HP/enrage logic, level/XP boss gates, quest fragment drops, Celestial vice thresholds, and Arise extraction authority.
+11. **Gate Fragments** - 15% drop rate on quest complete. Collect 3 to forge a Gate Key. Pink KeyRound icon counter in Dashboard header. Drop animation component with particle burst.
+12. **Web Push Notifications** - VAPID-based push notifications. Subscribe/unsubscribe via Settings drawer. Daily quest reminder cron (per-minute) fires notifications at user-specified time. Test notification button. Service worker handles push events and notificationclick for deep-linking. `push_subscriptions` table in PostgreSQL stores subscriptions with hour/minute/enabled flags.
 
 ## API Routes
 

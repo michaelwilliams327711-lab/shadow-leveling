@@ -13,6 +13,7 @@ import vocationsRouter from "./vocations.js";
 import plannerRouter from "./planner.js";
 import ascensionRouter from "./ascension.js";
 import shadowsRouter from "./shadows.js";
+import pushRouter from "./push.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(vocationsRouter);
 router.use(plannerRouter);
 router.use(ascensionRouter);
 router.use(shadowsRouter);
+router.use(pushRouter);
 
 export default router;

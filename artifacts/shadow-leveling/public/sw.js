@@ -85,6 +85,42 @@ async function cacheFirst(request) {
   }
 }
 
+// ── Push Notifications ───────────────────────────────────────────────────────
+self.addEventListener("push", (event) => {
+  let data = { title: "⚔️ Shadow System", body: "Your quests await.", url: "/quests" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch { /* ignore */ }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/images/icon-192.png",
+      badge: "/images/icon-192.png",
+      data: { url: data.url },
+      vibrate: [200, 100, 200],
+      requireInteraction: false,
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data?.url) ?? "/quests";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});
+
 // ── Strategy: Network-First ──────────────────────────────────────────────────
 async function networkFirst(request) {
   const cache = await caches.open(API_CACHE);
