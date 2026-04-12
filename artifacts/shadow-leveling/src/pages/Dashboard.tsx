@@ -281,9 +281,8 @@ export default function Dashboard() {
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border border-pink-500/30">
               <KeyRound className="text-pink-400 w-5 h-5" />
               <span className="text-pink-300 font-stat font-bold text-xl">
-                {character.gateFragments} / 3
+                {character.gateFragments} / 3 Key
               </span>
-              <span className="text-pink-400/60 text-xs font-mono uppercase tracking-wide">Frags</span>
             </div>
           </InfoTooltip>
           {failStreak > 0 && (
