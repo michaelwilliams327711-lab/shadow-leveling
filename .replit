@@ -51,3 +51,9 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+API_SECRET_KEY = "d8a8f3f492216fd97c3d2918c588e8c06ea86cc254b924321e5a01faa96439ca"
+VITE_API_KEY = "d8a8f3f492216fd97c3d2918c588e8c06ea86cc254b924321e5a01faa96439ca"
