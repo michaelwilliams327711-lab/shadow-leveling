@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SettingsDrawer } from "@/components/SettingsDrawer";
 import { VisualSettingsProvider } from "@/context/VisualSettingsContext";
+import { PenaltyProvider, usePenalty } from "@/context/PenaltyContext";
 import { PenaltyModal } from "@/components/PenaltyModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
 import BadHabits from "@/pages/BadHabits";
 import CelestialDuel from "@/pages/CelestialDuel";
+import PenaltyZone from "@/pages/PenaltyZone";
 import NotFound from "@/pages/not-found";
 
 const heroBgImg = "/images/hero-bg.png";
@@ -124,8 +126,24 @@ function DayChangeDetector() {
 }
 
 function Router() {
+  const { penaltyActive } = usePenalty();
+  const [location, navigate] = useLocation();
+
+  useEffect(() => {
+    if (penaltyActive && location !== "/penalty-zone") {
+      navigate("/penalty-zone");
+    }
+  }, [penaltyActive, location, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("penalty") === "1" || params.get("type") === "PENALTY_QUEST") {
+    }
+  }, []);
+
   return (
     <Switch>
+      <Route path="/penalty-zone" component={PenaltyZone} />
       <Route path="/" component={Dashboard} />
       <Route path="/quests" component={Quests} />
       <Route path="/shop" component={Shop} />
@@ -152,6 +170,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <PenaltyProvider>
       <VisualSettingsProvider>
       <TooltipProvider>
         <div className="dark min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -190,6 +209,7 @@ function App() {
         <SettingsDrawer />
       </TooltipProvider>
       </VisualSettingsProvider>
+      </PenaltyProvider>
     </QueryClientProvider>
   );
 }

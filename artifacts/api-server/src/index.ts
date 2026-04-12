@@ -1,10 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { pool, db, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { pool, db, characterTable, questsTable } from "@workspace/db";
+import { eq, and, isNull, lt } from "drizzle-orm";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
-import { sendDailyQuestReminders } from "./routes/push.js";
+import { sendDailyQuestReminders, sendOverseerPenaltyNotification } from "./routes/push.js";
 
 const rawPort = process.env["PORT"];
 
@@ -97,11 +97,42 @@ cron.schedule("0 * * * *", async () => {
   }
 });
 
+let _overseerLastAlertDate: string | null = null;
+
 cron.schedule("* * * * *", async () => {
   await sendDailyQuestReminders({
     info: (msg) => logger.info(msg),
     error: (obj, msg) => logger.error(obj, msg),
   });
+
+  const localHour = getLocalHour();
+  const localDate = getLocalDateStr();
+
+  if (localHour < 20) return;
+  if (_overseerLastAlertDate === localDate) return;
+
+  try {
+    const overdueQuests = await db
+      .select({ id: questsTable.id })
+      .from(questsTable)
+      .where(and(
+        eq(questsTable.status, "active"),
+        isNull(questsTable.deletedAt),
+        lt(questsTable.deadline, new Date()),
+      ))
+      .limit(1);
+
+    if (overdueQuests.length === 0) return;
+
+    _overseerLastAlertDate = localDate;
+    logger.warn({ localDate, localHour }, "Overseer: overdue quests detected — firing penalty alert");
+    await sendOverseerPenaltyNotification({
+      info: (msg) => logger.info(msg),
+      error: (obj, msg) => logger.error(obj, msg),
+    });
+  } catch (err) {
+    logger.error({ err }, "Overseer cron: error checking overdue quests");
+  }
 });
 
 const server = app.listen(port, (err) => {

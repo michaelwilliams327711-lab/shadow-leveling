@@ -99,20 +99,37 @@ async function cacheFirst(request) {
 }
 
 // ── Push Notifications ───────────────────────────────────────────────────────
+const PENALTY_VIBRATE = [100, 50, 100, 50, 100, 50, 300, 50, 300, 50, 300, 50, 100, 50, 100, 50, 100];
+
 self.addEventListener("push", (event) => {
-  let data = { title: "⚔️ Shadow System", body: "Your quests await.", url: "/quests" };
+  let data = { title: "⚔️ Shadow System", body: "Your quests await.", url: "/quests", type: null, severity: null, vibrate: null };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch { /* ignore */ }
+
+  const isPenalty = data.type === "PENALTY_QUEST";
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "/images/icon-192.png",
       badge: "/images/icon-192.png",
-      data: { url: data.url },
-      vibrate: [200, 100, 200],
-      requireInteraction: false,
+      data: {
+        url: isPenalty ? "/penalty-zone" : (data.url || "/quests"),
+        type: data.type,
+        severity: data.severity,
+      },
+      vibrate: isPenalty ? PENALTY_VIBRATE : (data.vibrate ?? [200, 100, 200]),
+      requireInteraction: isPenalty,
+      tag: isPenalty ? "penalty-zone" : undefined,
+    }).then(() => {
+      if (isPenalty) {
+        return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+          for (const client of clients) {
+            client.postMessage({ type: "PENALTY_ACTIVE" });
+          }
+        });
+      }
     })
   );
 });
@@ -120,9 +137,15 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = (event.notification.data?.url) ?? "/quests";
+  const isPenalty = event.notification.data?.type === "PENALTY_QUEST";
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      if (isPenalty) {
+        for (const client of clientList) {
+          client.postMessage({ type: "PENALTY_ACTIVE" });
+        }
+      }
       for (const client of clientList) {
         if ("focus" in client) {
           client.navigate(targetUrl);

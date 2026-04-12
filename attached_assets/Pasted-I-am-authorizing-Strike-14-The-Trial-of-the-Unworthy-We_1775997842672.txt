@@ -1,0 +1,51 @@
+I am authorizing Strike 14: The Trial of the Unworthy. We are implementing a server-side penalty system with corresponding 'Cursed' Solo Leveling themed lock-screen notifications and an inescapable crimson-red 'Penalty Zone' UI on the frontend. Execute exactly as specified:
+
+1. Configure 'Overseer' Cron & Push Notification (api-server/src/lib/push.ts):
+
+Configure the server-side cron job to run every minute and check for failed daily quest requirements.
+
+Logic: When failure is detected, trigger a Cursed push notification.
+
+Payload: Define the following JSON payload for the push, designed to mimic a strict Solo Leveling alert (referencing aesthetics from image_4.png, image_5.png, image_6.png).
+
+Title: [ SYSTEM ALERT ]
+
+Body: Penalty Quest initiated: "Trial of the Unworthy." Prepare for extraction.
+
+Vibration Pattern: FRANTIC/ALARMing pulse (defined in the thought below).
+
+Deep Link Data: Ensure the notification includes deep link data: { type: "PENALTY_QUEST", url: "/penalty-zone", severity: "CRITICAL" }.
+
+2. Implement Frontend 'Penalty Zone' page (artifacts/shadow-leveling/src/pages/PenaltyZone.tsx):
+
+Build a new deep-linked page accessible via /penalty-zone.
+
+Aesthetic: Completely shift from the blue/cyan 'Monarch' glow to a bleeding Crimson Red holographic aura, referencing the red text in image_6.png and the red goal lists in image_7.png. The dark background should feel slightly corrupted.
+
+Content:
+
+Title: [ PENALTY QUEST ACTIVE ] - TRIAL OF THE UNWORTHY
+
+Penalty Status: Show a high-stakes readout (referencing image_7.png goal structure). Example: "failure to complete the daily quest will result in an appropriate penalty." with 'penalty' highlighted in red like image_6.png.
+
+Cursed Goal List: Define specific penalty tasks to clear the state. E.g., "clear backlog: [0/5]", "write spirit journal entry [0/1]".
+
+Acknowledge Button: Use a red-framed button matching the reference checkmarks from image_7.png and image_8.png.
+
+3. Implement 'Interface Lock' Protocol:
+
+Create a frontend-level state manager for the Penalty State.
+
+Logic: If the PENALTY_ACTIVE flag is set (triggered by opening the app via deep link), prevent any navigation away from the /penalty-zone page.
+
+Lockout: Disable all sidebar and header navigation links (Boss Arena, Shadow Army, etc.) with a tooltip: "Extraction process in progress. Focus on the Trial." until the Penalty Acknowledge button is pressed and the server confirms the state cleared.
+
+'Sovereign Format' Reporting Protocol (REQUIRED):
+
+NO SUMMARIES: I need the raw code for the refactored push.ts (overseer cron logic/payload) and the complete /penalty-zone page component.
+
+MARKDOWN HEADERS: Every file must begin with a clear ### FILE: [Full/Path/To/File] header.
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick Markdown blocks.
+
+FINAL INVENTORY: Confirm that the Crimson Red holographic theme is active for all penalty UI elements and that the Cursed vibration pattern is included.

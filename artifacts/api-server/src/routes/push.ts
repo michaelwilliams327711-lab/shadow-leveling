@@ -106,6 +106,43 @@ router.post("/push/test", async (req, res) => {
   }
 });
 
+export async function sendOverseerPenaltyNotification(log: { info: (msg: string) => void; error: (obj: object, msg: string) => void }) {
+  if (!vapidConfigured) return;
+
+  try {
+    const subs = await db.select().from(pushSubscriptionsTable);
+
+    const payload = JSON.stringify({
+      title: "[ SYSTEM ALERT ]",
+      body: 'Penalty Quest initiated: "Trial of the Unworthy." Prepare for extraction.',
+      url: "/penalty-zone",
+      type: "PENALTY_QUEST",
+      severity: "CRITICAL",
+      vibrate: [100, 50, 100, 50, 100, 50, 300, 50, 300, 50, 300, 50, 100, 50, 100, 50, 100],
+    });
+
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+        log.info(`Sent overseer penalty alert to subscription ${sub.id}`);
+      } catch (err: unknown) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 410 || status === 404) {
+          await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.id, sub.id));
+          log.info(`Removed expired subscription ${sub.id}`);
+        } else {
+          log.error({ err }, `Failed to send overseer push to subscription ${sub.id}`);
+        }
+      }
+    }
+  } catch (err) {
+    log.error({ err }, "Error in sendOverseerPenaltyNotification");
+  }
+}
+
 export async function sendDailyQuestReminders(log: { info: (msg: string) => void; error: (obj: object, msg: string) => void }) {
   if (!vapidConfigured) return;
 

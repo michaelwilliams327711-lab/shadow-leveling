@@ -114,6 +114,15 @@ All at `/api`:
 XP/Gold scaled by difficulty multiplier:
 F(0.5x) E(0.75x) D(1x) C(1.5x) B(2x) A(3x) S(5x) SS(8x) SSS(15x)
 
+## Strike 14: Trial of the Unworthy (Penalty Zone)
+
+- **Overseer Cron** (`api-server/src/index.ts`): Every-minute cron checks for `active` quests with past deadlines after 20:00 local time. Fires once per day per detected failure window.
+- **`sendOverseerPenaltyNotification`** (`api-server/src/routes/push.ts`): Sends `[ SYSTEM ALERT ]` push to ALL subscriptions with `type: PENALTY_QUEST`, deep link to `/penalty-zone`, and frantic SOS-pattern vibration `[100,50,100,50,100,50,300,50,300,50,300,50,100,50,100,50,100]`.
+- **`PenaltyContext`** (`shadow-leveling/src/context/PenaltyContext.tsx`): React context persisting penalty state to `localStorage`. Listens for SW `postMessage({ type: "PENALTY_ACTIVE" })`.
+- **`PenaltyZone` page** (`shadow-leveling/src/pages/PenaltyZone.tsx`): Crimson red holographic UI with corruption noise, scanlines, glitch-text title, cursed goal list (checkboxes), and acknowledge button. Clears penalty and navigates to `/` on completion.
+- **Interface Lock** (`App.tsx` + `AppSidebar.tsx`): When `penaltyActive`, Router redirects all navigation to `/penalty-zone`. Sidebar shows all nav links locked with tooltip "Extraction process in progress. Focus on the Trial."
+- **Service Worker** (`public/sw.js`): `PENALTY_QUEST` push shows with frantic vibration, `requireInteraction: true`, posts `PENALTY_ACTIVE` message to all clients on both push and notification click.
+
 ## Audit Hardening (Strikes 4-6)
 
 - **Trust proxy**: `app.set("trust proxy", 1)` configured for correct rate limiter behavior behind proxy
