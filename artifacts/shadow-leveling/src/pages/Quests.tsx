@@ -108,6 +108,7 @@ const QuestCategory = {
   Health: "Health",
   Creative: "Creative",
   Social: "Social",
+  Spirit: "Spirit",
   Other: "Other",
 } as const;
 

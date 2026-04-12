@@ -7,6 +7,7 @@ export const CATEGORY_STAT_MAP: Record<string, string> = {
   Health: "endurance",
   Creative: "agility",
   Social: "agility",
+  Spirit: "agility",
   Other: "strength",
 };
 
