@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { bossesTable, shadowArmyTable, characterTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { bossesTable, shadowArmyTable, characterTable, questsTable } from "@workspace/db";
+import { eq, count, and, isNull } from "drizzle-orm";
 import { getOrCreateCharacter } from "./character.js";
 import { z } from "zod/v4";
 
@@ -148,6 +148,66 @@ router.get("/shadows", async (_req: Request, res: Response): Promise<void> => {
   const shadowLimit = 5 + Math.floor(char.intellect / 10);
 
   res.json({ soldiers, capacity: shadowLimit, current: soldiers.length });
+});
+
+const assignBodySchema = z.object({
+  questId: z.number().int().positive(),
+});
+
+router.patch("/shadows/:id/assign", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid shadow ID" }); return; }
+
+  const parsed = assignBodySchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "questId (number) is required" }); return; }
+
+  const char = await getOrCreateCharacter();
+
+  const [soldier] = await db.select().from(shadowArmyTable).where(eq(shadowArmyTable.id, id)).limit(1);
+  if (!soldier) { res.status(404).json({ error: "Soldier not found." }); return; }
+  if (soldier.characterId !== char.id) { res.status(403).json({ error: "This soldier does not belong to you." }); return; }
+
+  const [quest] = await db
+    .select({ id: questsTable.id, name: questsTable.name, status: questsTable.status })
+    .from(questsTable)
+    .where(and(eq(questsTable.id, parsed.data.questId), isNull(questsTable.deletedAt)))
+    .limit(1);
+
+  if (!quest) { res.status(404).json({ error: "Quest not found." }); return; }
+  if (quest.status !== "active") { res.status(400).json({ error: "Only active quests can receive a shadow assignment." }); return; }
+
+  // Unassign any other soldiers already on this quest
+  await db
+    .update(shadowArmyTable)
+    .set({ assignedTaskId: null })
+    .where(and(eq(shadowArmyTable.characterId, char.id), eq(shadowArmyTable.assignedTaskId, parsed.data.questId)));
+
+  const [updated] = await db
+    .update(shadowArmyTable)
+    .set({ assignedTaskId: parsed.data.questId })
+    .where(eq(shadowArmyTable.id, id))
+    .returning();
+
+  res.json({ ok: true, soldier: updated, questName: quest.name });
+});
+
+router.patch("/shadows/:id/unassign", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid shadow ID" }); return; }
+
+  const char = await getOrCreateCharacter();
+
+  const [soldier] = await db.select().from(shadowArmyTable).where(eq(shadowArmyTable.id, id)).limit(1);
+  if (!soldier) { res.status(404).json({ error: "Soldier not found." }); return; }
+  if (soldier.characterId !== char.id) { res.status(403).json({ error: "This soldier does not belong to you." }); return; }
+
+  const [updated] = await db
+    .update(shadowArmyTable)
+    .set({ assignedTaskId: null })
+    .where(eq(shadowArmyTable.id, id))
+    .returning();
+
+  res.json({ ok: true, soldier: updated });
 });
 
 router.delete("/shadows/:id", async (req: Request, res: Response): Promise<void> => {

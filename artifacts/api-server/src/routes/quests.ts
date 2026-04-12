@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable } from "@workspace/db";
+import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable } from "@workspace/db";
 import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
@@ -700,7 +700,15 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const activeEvent = getActiveRngEvent(today);
     const eventBonus = activeEvent ? activeEvent.multiplierBonus : 0;
 
-    const totalMultiplier = char.multiplier * rngMultiplier * (1 + eventBonus);
+    const SHADOW_RANK_BONUS: Record<string, number> = { D: 0.05, C: 0.10, B: 0.15, A: 0.20, S: 0.30 };
+    const [assignedShadow] = await db
+      .select()
+      .from(shadowArmyTable)
+      .where(eq(shadowArmyTable.assignedTaskId, id))
+      .limit(1);
+    const shadowBonus = assignedShadow ? (SHADOW_RANK_BONUS[assignedShadow.rank] ?? 0) : 0;
+
+    const totalMultiplier = char.multiplier * rngMultiplier * (1 + eventBonus) * (1 + shadowBonus);
 
     const xpAwarded = Math.floor(xpReward * totalMultiplier);
     const goldAwarded = Math.floor(goldReward * totalMultiplier);
@@ -760,6 +768,13 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       return [updated, txNewLevel, txLeveledUp] as const;
     });
     invalidateCharacterCache();
+
+    if (assignedShadow) {
+      await db
+        .update(shadowArmyTable)
+        .set({ assignedTaskId: null })
+        .where(eq(shadowArmyTable.id, assignedShadow.id));
+    }
 
     await db.insert(questLogTable).values({
       questName: quest.name,
@@ -849,6 +864,11 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       },
     });
     const responseData: Record<string, unknown> = { ...data };
+    if (assignedShadow) {
+      responseData.shadowBonus = shadowBonus;
+      responseData.shadowName = assignedShadow.name;
+      responseData.shadowRank = assignedShadow.rank;
+    }
     if (gateFragmentDropped) {
       responseData.gateFragmentDropped = true;
     }
