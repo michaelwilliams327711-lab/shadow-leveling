@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useEffect } from "react";
 import { InfoTooltip } from "@/components/InfoTooltip";
-const awakeningImg = "/images/awakening.png";
+const awakeningImg = "/images/awakening.webp";
 
 const schema = z.object({
   vision: z.string().optional(),

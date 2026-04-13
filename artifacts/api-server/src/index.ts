@@ -27,18 +27,39 @@ if (Number.isNaN(port) || port <= 0) {
  * push_subscriptions stores timezone_offset in minutes (e.g. -300 for UTC-5, 60 for UTC+1).
  */
 async function getDynamicTimezoneOffsetHours(): Promise<number> {
+  // Priority 1: device timezone from push subscription record
   try {
     const subs = await db
       .select({ timezoneOffset: pushSubscriptionsTable.timezoneOffset })
       .from(pushSubscriptionsTable)
       .limit(1);
     if (subs.length > 0) {
-      return subs[0].timezoneOffset / 60;
+      const offsetHours = subs[0].timezoneOffset / 60;
+      logger.debug({ offsetHours, source: "push_subscriptions" }, "[SYSTEM] Timezone resolved from push subscription.");
+      return offsetHours;
     }
-  } catch {
-    // push_subscriptions not available, fall through
+  } catch (err) {
+    logger.warn({ err }, "[SYSTEM] Could not read push_subscriptions table for timezone; falling through.");
   }
-  return parseFloat(process.env["LOCAL_TZ_OFFSET"] ?? "0");
+
+  // Priority 2: LOCAL_TZ_OFFSET environment variable
+  const envOffset = process.env["LOCAL_TZ_OFFSET"];
+  if (envOffset !== undefined && envOffset.trim() !== "") {
+    const parsed = parseFloat(envOffset);
+    if (!isNaN(parsed)) {
+      logger.debug({ offsetHours: parsed, source: "LOCAL_TZ_OFFSET" }, "[SYSTEM] Timezone resolved from LOCAL_TZ_OFFSET env var.");
+      return parsed;
+    }
+    logger.warn({ envOffset }, "[SYSTEM] LOCAL_TZ_OFFSET is set but not a valid number; falling back to UTC.");
+  }
+
+  // Priority 3: UTC fallback — emit a critical warning so misconfigured deployments are visible
+  logger.warn(
+    "[SYSTEM] No timezone source found. Defaulting to UTC (0). " +
+    "This may cause early resets in Florida or other non-UTC timezones. " +
+    "Set LOCAL_TZ_OFFSET (e.g. -5 for EST) or enable push notifications to fix this."
+  );
+  return 0;
 }
 
 function computeLocalDateTime(offsetHours: number): { localDate: string; localHour: number } {

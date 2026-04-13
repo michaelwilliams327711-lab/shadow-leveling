@@ -33,16 +33,16 @@ import { ShadowJournal } from "@/components/ShadowJournal";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { motion, AnimatePresence } from "framer-motion";
 
-const bossArenaImg = "/images/boss-arena.png";
+const bossArenaImg = "/images/boss-arena.webp";
 
 const bossImageMap: Record<number, string> = {
-  1: "/images/bosses/boss-1.png",
-  2: "/images/bosses/boss-2.png",
-  3: "/images/bosses/boss-3.png",
-  4: "/images/bosses/boss-4.png",
-  5: "/images/bosses/boss-5.png",
-  6: "/images/bosses/boss-6.png",
-  7: "/images/bosses/boss-7.png",
+  1: "/images/bosses/boss-1.webp",
+  2: "/images/bosses/boss-2.webp",
+  3: "/images/bosses/boss-3.webp",
+  4: "/images/bosses/boss-4.webp",
+  5: "/images/bosses/boss-5.webp",
+  6: "/images/bosses/boss-6.webp",
+  7: "/images/bosses/boss-7.webp",
 };
 
 type RawBoss = {

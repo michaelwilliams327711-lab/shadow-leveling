@@ -33,7 +33,7 @@ import CelestialDuel from "@/pages/CelestialDuel";
 import PenaltyZone from "@/pages/PenaltyZone";
 import NotFound from "@/pages/not-found";
 
-const heroBgImg = "/images/hero-bg.png";
+const heroBgImg = "/images/hero-bg.webp";
 
 const queryClient = new QueryClient({
   defaultOptions: {

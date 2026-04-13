@@ -6,8 +6,8 @@ import { toast } from "@/hooks/use-toast";
 import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
-import sinsImg from "@assets/images/sins-bg.png";
-import virtuesImg from "@assets/images/virtues-bg.png";
+import sinsImg from "@assets/images/sins-bg.webp";
+import virtuesImg from "@assets/images/virtues-bg.webp";
 
 interface CelestialPower {
   id: number;
