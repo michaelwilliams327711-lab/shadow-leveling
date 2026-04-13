@@ -14,6 +14,7 @@ import ascensionRouter from "./ascension.js";
 import shadowsRouter from "./shadows.js";
 import pushRouter from "./push.js";
 import penaltyRouter from "./penalty.js";
+import debugRouter from "./debug.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(ascensionRouter);
 router.use(shadowsRouter);
 router.use(pushRouter);
 router.use(penaltyRouter);
+router.use(debugRouter);
 
 export default router;

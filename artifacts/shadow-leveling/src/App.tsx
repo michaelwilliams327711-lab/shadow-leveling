@@ -100,11 +100,11 @@ function PenaltyChecker({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => v
   return null;
 }
 
-function DayChangeDetector() {
+function DayChangeDetector({ onPenalties }: { onPenalties: (p: PenaltyEvent[]) => void }) {
   const lastViewedDate = useRef<string>(getLocalDateStr());
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
+    const intervalId = setInterval(async () => {
       const today = getLocalDateStr();
       if (today !== lastViewedDate.current) {
         lastViewedDate.current = today;
@@ -117,11 +117,24 @@ function DayChangeDetector() {
           description: "Daily quests have been reset.",
           duration: 6000,
         });
+
+        try {
+          const headers = { "x-local-date": today };
+          const overdueResult = await processOverdueQuests({ headers });
+          const newPenalties: PenaltyEvent[] = overdueResult.penalties ?? [];
+          if (newPenalties.length > 0) {
+            queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+            queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+            onPenalties(newPenalties);
+          }
+        } catch {
+          // silently ignore — cron will handle it server-side
+        }
       }
     }, 60_000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [onPenalties]);
 
   return null;
 }
@@ -217,7 +230,7 @@ function App() {
           </SidebarProvider>
           <Toaster />
           <PenaltyChecker onPenalties={setPenalties} />
-          <DayChangeDetector />
+          <DayChangeDetector onPenalties={setPenalties} />
           {penalties.length > 0 && (
             <PenaltyModal
               penalties={penalties}
