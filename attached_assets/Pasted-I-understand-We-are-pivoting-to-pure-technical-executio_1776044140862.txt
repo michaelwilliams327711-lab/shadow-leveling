@@ -1,0 +1,101 @@
+I understand. We are pivoting to pure technical execution. To resolve the synchronization issues (Ghost State) and the delayed appearance of new quests, we need to implement Optimistic Updates and strict Cache Invalidation.
+
+This ensures the UI reacts the millisecond you click a button, while the server catches up in the background.
+
+1. Implementing Optimistic Updates (Instant Reaction)
+The "Ghost State" (where the Pause button remains after completion) happens because the app is waiting for the server to confirm the action. We will modify the completeQuest mutation to update the UI immediately.
+
+FILE: shadow-leveling/src/hooks/useQuests.ts
+TypeScript
+export function useCompleteQuest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (questId: number) => api.completeQuest(questId),
+    
+    // Step 1: When the user clicks "Complete", update the cache immediately
+    onMutate: async (questId) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['quests'] });
+
+      // Snapshot the previous value
+      const previousQuests = queryClient.getQueryData(['quests']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['quests'], (old: any) => 
+        old?.map((q: any) => q.id === questId ? { ...q, status: 'cleared' } : q)
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousQuests };
+    },
+
+    // Step 2: If the server fails, roll back to the previous state
+    onError: (err, questId, context) => {
+      queryClient.setQueryData(['quests'], context?.previousQuests);
+      toast.error("Failed to sync with server. Reverting...");
+    },
+
+    // Step 3: Always refetch after error or success to ensure we are in sync
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['quests'] });
+      queryClient.invalidateQueries({ queryKey: ['planner-daily'] });
+    },
+  });
+}
+2. Instant Invalidation (New Quest Discovery)
+The reason it is "hard to find" a new quest is because the list isn't refreshing the moment the creation dialog closes. We will force a global refresh on every quest creation.
+
+FILE: shadow-leveling/src/hooks/useQuests.ts (Create Function)
+TypeScript
+export function useCreateQuest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (newQuest: any) => api.createQuest(newQuest),
+    onSuccess: () => {
+      // Force an immediate refresh of all quest-related data
+      queryClient.invalidateQueries({ queryKey: ['quests'] });
+      queryClient.invalidateQueries({ queryKey: ['planner-daily'] });
+      toast.success("New Quest Registered.");
+    },
+  });
+}
+3. UI Logic Guard (Removing the Pause Button)
+To prevent the "Pause" button from staying visible after you hit "Complete," we must strictly bind the button's existence to the quest's active status.
+
+FILE: shadow-leveling/src/components/QuestCard.tsx
+TypeScript
+export function QuestCard({ quest }: { quest: Quest }) {
+  // Guard: If the quest is not active, do not render action buttons
+  const isPending = quest.status === 'active';
+
+  return (
+    <div className="quest-card">
+      <h3>{quest.name}</h3>
+      
+      {isPending && (
+        <div className="flex gap-2">
+          <Button onClick={() => handlePause(quest.id)}>Pause</Button>
+          <Button onClick={() => handleComplete(quest.id)}>Complete</Button>
+        </div>
+      )}
+
+      {quest.status === 'cleared' && (
+        <div className="text-cyan-400 font-bold">CLEARED</div>
+      )}
+    </div>
+  );
+}
+4. The "Discovery" Fix (Registration Flow)
+When you finish creating a quest, the dialog should close, and the UI should automatically shift focus to the "Active" tab to show the new entry.
+
+FILE: shadow-leveling/src/pages/Quests.tsx
+TypeScript
+const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+const handleSuccess = () => {
+  setIsCreateOpen(false); // Close dialog immediately
+  setActiveTab('active');  // Automatically switch to the correct tab
+  window.scrollTo({ top: 0, behavior: 'smooth' }); // Visual confirmation
+};

@@ -20,6 +20,7 @@ import {
   useGetPlannerMonthly,
   useGetPlannerYearly,
   useRescheduleQuest,
+  getPlannerDailyQueryKey,
   getPlannerWeeklyQueryKey,
   type WeeklyPlannerDay,
   type MonthlyPlannerDay,
@@ -1350,12 +1351,18 @@ export default function Quests() {
     queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
   };
 
-  const onComplete = (id: number) => {
+  const onComplete = async (id: number) => {
+    const activeQueryKey = getListQuestsWindowedQueryKey({ windowDays });
+    await queryClient.cancelQueries({ queryKey: activeQueryKey });
+    const previousQuests = queryClient.getQueryData<Quest[]>(activeQueryKey);
+    queryClient.setQueryData<Quest[]>(activeQueryKey, (old) =>
+      old?.map((q) => q.id === id ? { ...q, status: "completed" } : q) ?? []
+    );
+
     completeQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
         setCompletingQuestId(id);
         if (!reduced) playQuestComplete();
-        invalidateQuests();
         toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
         if ((res as Record<string, unknown>).gateFragmentDropped) {
           const fragCount = (res.character as Record<string, number> | undefined)?.gateFragments ?? 1;
@@ -1388,7 +1395,16 @@ export default function Quests() {
             }
           }
         }
-      }
+      },
+      onError: () => {
+        queryClient.setQueryData(activeQueryKey, previousQuests);
+        toast({ title: "Sync Error", description: "Failed to complete quest. Reverting...", variant: "destructive" });
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
     });
   };
 
@@ -1451,10 +1467,14 @@ export default function Quests() {
       }
     }, {
       onSuccess: () => {
-        invalidateQuests();
+        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         setIsCreateOpen(false);
         setShowRecurrence(false);
         createForm.reset();
+        setActiveTab("questlog");
+        window.scrollTo({ top: 0, behavior: "smooth" });
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
       }
     });
