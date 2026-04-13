@@ -240,50 +240,71 @@ router.post("/character/checkin", async (req, res) => {
   }
 });
 
+// F-025: The entire login penalty path is wrapped in a transaction with
+// SELECT FOR UPDATE. This prevents two concurrent login requests from both
+// passing the daysDiff >= 2 guard and writing duplicate penalty_log entries.
 router.post("/character/login", async (req, res) => {
   try {
-    const char = await getOrCreateCharacter();
     const todayStr = getSystemDateFromReq(req);
     const todayStart = new Date(todayStr + "T00:00:00.000Z");
 
-    const penalties: Array<{
-      type: string;
-      description: string;
-      xpDeducted: number;
-      goldDeducted: number;
-      occurredAt: string;
-    }> = [];
+    type LoginResult = {
+      updatedChar: CharacterRow;
+      penalties: Array<{
+        type: string;
+        description: string;
+        xpDeducted: number;
+        goldDeducted: number;
+        occurredAt: string;
+      }>;
+    };
 
-    let updatedChar = char;
+    const result = await db.transaction(async (tx) => {
+      // Advisory lock ensures character row exists before FOR UPDATE.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(9001)`);
+      const rows = await tx.select().from(characterTable).limit(1).for("update");
+      if (!rows.length) {
+        const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();
+        return { updatedChar: created, penalties: [] } as LoginResult;
+      }
+      const char = rows[0];
 
-    if (char.lastLoginDate) {
-      const lastLogin = new Date(char.lastLoginDate);
-      const lastLoginDateStr = lastLogin.toISOString().split("T")[0];
+      const penalties: LoginResult["penalties"] = [];
+
+      if (!char.lastLoginDate) {
+        await tx.update(characterTable)
+          .set({ lastLoginDate: todayStart })
+          .where(eq(characterTable.id, char.id));
+        return { updatedChar: char, penalties } as LoginResult;
+      }
+
+      const lastLoginDateStr = new Date(char.lastLoginDate).toISOString().split("T")[0];
       const lastLoginStart = new Date(lastLoginDateStr + "T00:00:00.000Z");
-
       const daysDiff = Math.floor(
         (todayStart.getTime() - lastLoginStart.getTime()) / (1000 * 60 * 60 * 24)
       );
 
+      // Same-day login — idempotent fast path, no penalty, no duplicate writes.
+      if (daysDiff === 0) {
+        return { updatedChar: char, penalties } as LoginResult;
+      }
+
       if (daysDiff >= 2) {
         const daysMissed = daysDiff - 1;
-        // F-008: Compute penalty amounts for log accuracy, but write via
-        // SQL GREATEST(0, ...) so the update is safe against concurrent edits.
         const xpPenaltyRaw = daysMissed * 50;
         const goldPenaltyRaw = daysMissed * 25;
         const xpPenaltyForLog = Math.min(char.xp, xpPenaltyRaw);
         const goldPenaltyForLog = Math.min(char.gold, goldPenaltyRaw);
-
         const penaltyDesc = `Missed ${daysMissed} day${daysMissed > 1 ? "s" : ""} of login — streak reset`;
 
-        const [penaltyLog] = await db.insert(penaltyLogTable).values({
+        const [penaltyLog] = await tx.insert(penaltyLogTable).values({
           type: "missed_day",
           description: penaltyDesc,
           xpDeducted: xpPenaltyForLog,
           goldDeducted: goldPenaltyForLog,
         }).returning();
 
-        await db.insert(questLogTable).values({
+        await tx.insert(questLogTable).values({
           questName: penaltyDesc,
           category: "Penalty",
           difficulty: "D",
@@ -295,8 +316,7 @@ router.post("/character/login", async (req, res) => {
           statCategory: null,
         });
 
-        // F-008: Atomic SQL write — no stale-cache absolute values.
-        const [updated] = await db.update(characterTable)
+        const [updated] = await tx.update(characterTable)
           .set({
             xp: sql`GREATEST(0, ${characterTable.xp} - ${xpPenaltyRaw})`,
             gold: sql`GREATEST(0, ${characterTable.gold} - ${goldPenaltyRaw})`,
@@ -307,9 +327,6 @@ router.post("/character/login", async (req, res) => {
           .where(eq(characterTable.id, char.id))
           .returning();
 
-        updatedChar = updated;
-        invalidateCharacterCache();
-
         penalties.push({
           type: "missed_day",
           description: penaltyDesc,
@@ -317,25 +334,26 @@ router.post("/character/login", async (req, res) => {
           goldDeducted: goldPenaltyForLog,
           occurredAt: penaltyLog.occurredAt.toISOString(),
         });
-      } else {
-        await db.update(characterTable)
-          .set({ lastLoginDate: todayStart })
-          .where(eq(characterTable.id, char.id));
-        invalidateCharacterCache();
+
+        return { updatedChar: updated, penalties } as LoginResult;
       }
-    } else {
-      await db.update(characterTable)
+
+      // daysDiff === 1 — consecutive day, just update login date.
+      await tx.update(characterTable)
         .set({ lastLoginDate: todayStart })
         .where(eq(characterTable.id, char.id));
-      invalidateCharacterCache();
-    }
+
+      return { updatedChar: char, penalties } as LoginResult;
+    });
+
+    invalidateCharacterCache();
 
     res.json({
-      penalties,
+      penalties: result.penalties,
       character: {
-        ...updatedChar,
-        xpToNextLevel: XP_PER_LEVEL(updatedChar.level),
-        lastCheckin: updatedChar.lastCheckin?.toISOString() ?? null,
+        ...result.updatedChar,
+        xpToNextLevel: XP_PER_LEVEL(result.updatedChar.level),
+        lastCheckin: result.updatedChar.lastCheckin?.toISOString() ?? null,
       },
     });
   } catch (err) {

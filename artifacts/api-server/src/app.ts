@@ -49,6 +49,17 @@ app.use(
 
 const corsOrigin = process.env.CORS_ORIGIN;
 
+if (process.env.NODE_ENV === "production") {
+  if (!corsOrigin || corsOrigin === "*") {
+    logger.error(
+      "FATAL: CORS_ORIGIN must be set to the exact production domain in production mode " +
+      "(e.g. https://yourapp.replit.app). Wildcard '*' and undefined are both rejected. " +
+      "Set CORS_ORIGIN in your deployment environment secrets."
+    );
+    process.exit(1);
+  }
+}
+
 if (corsOrigin === "*") {
   logger.warn(
     "CORS_ORIGIN is set to '*' — credentials will be disabled to comply with browser CORS spec. " +

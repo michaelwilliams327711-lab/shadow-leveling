@@ -385,57 +385,105 @@ router.post("/quests/recalculate-rewards", async (req, res) => {
 });
 
 /**
- * Advance a recurring quest's next-due date until it is >= today.
- * This ensures we find the actual upcoming occurrence, not just one step
- * ahead of (possibly stale) completedAt/createdAt.
+ * Compute the next due date for a recurring quest in O(1) constant time.
+ *
+ * All recurrence types are resolved by direct date-math — no while loops.
+ *
+ * daily   — same O(1) division formula as before.
+ * weekly  — find the nearest listed day-of-week on or after today directly.
+ * monthly — try this month's dayOfMonth; if past, advance one month.
+ * yearly  — try this year's month/day; if past, advance one year.
  */
-function getNextDueFromNow(recurrence: RecurrenceConfig, baseDate: Date, localDate?: string): Date | null {
+function getNextDueFromNow(recurrence: RecurrenceConfig, _baseDate: Date, localDate?: string): Date | null {
   const todayStr = getSystemDate(localDate);
   const today = new Date(todayStr + "T00:00:00.000Z");
+  const todayMs = today.getTime();
 
-  let candidate: Date | null;
+  switch (recurrence.type) {
+    case "daily": {
+      const intervalDays = recurrence.intervalDays ?? 1;
+      if (intervalDays < 1) return null;
 
-  if (recurrence.type === "daily") {
-    const intervalDays = recurrence.intervalDays ?? 1;
-    if (intervalDays >= 1) {
+      // First occurrence is one interval ahead of _baseDate.
       const baseMs = Date.UTC(
-        baseDate.getUTCFullYear(),
-        baseDate.getUTCMonth(),
-        baseDate.getUTCDate()
+        _baseDate.getUTCFullYear(),
+        _baseDate.getUTCMonth(),
+        _baseDate.getUTCDate()
       );
       const firstNextMs = baseMs + intervalDays * 86_400_000;
-      const todayMs = today.getTime();
 
-      if (firstNextMs >= todayMs) {
-        return new Date(firstNextMs);
-      }
+      if (firstNextMs >= todayMs) return new Date(firstNextMs);
 
+      // Jump directly to the next multiple of intervalDays that lands >= today.
       const diffDays = Math.floor((todayMs - firstNextMs) / 86_400_000);
       const stepsNeeded = Math.ceil(diffDays / intervalDays);
-      candidate = new Date(firstNextMs + stepsNeeded * intervalDays * 86_400_000);
-    } else {
-      candidate = getNextOccurrenceDate(recurrence, baseDate);
+      return new Date(firstNextMs + stepsNeeded * intervalDays * 86_400_000);
     }
-  } else {
-    candidate = getNextOccurrenceDate(recurrence, baseDate);
-  }
 
-  if (!candidate) return null;
+    case "weekly": {
+      const days = recurrence.daysOfWeek ?? [];
 
-  const MAX_ITERATIONS = 10_000;
-  let iterations = 0;
-  while (candidate < today) {
-    if (iterations >= MAX_ITERATIONS) {
-      console.warn(`[getNextDueFromNow] Hit MAX_ITERATIONS cap (${MAX_ITERATIONS}). Computing next occurrence from today.`);
-      const recovered = getNextOccurrenceDate(recurrence, today);
-      return recovered;
+      if (days.length === 0) {
+        // No specific days — treat as a 7-day interval from today.
+        return new Date(todayMs + 7 * 86_400_000);
+      }
+
+      // Find the closest listed day-of-week on or after today.
+      // At most 7 array comparisons — O(1).
+      const todayDow = today.getUTCDay(); // 0 = Sunday … 6 = Saturday
+      const sortedDays = [...days].sort((a, b) => a - b);
+
+      const sameOrLater = sortedDays.filter(d => d >= todayDow);
+      if (sameOrLater.length > 0) {
+        // Occurrence is this week (could be today itself).
+        return new Date(todayMs + (sameOrLater[0] - todayDow) * 86_400_000);
+      }
+
+      // No occurrence this week — wrap to the first listed day next week.
+      const daysToNext = 7 - todayDow + sortedDays[0];
+      return new Date(todayMs + daysToNext * 86_400_000);
     }
-    candidate = getNextOccurrenceDate(recurrence, candidate);
-    if (!candidate) return null;
-    iterations++;
-  }
 
-  return candidate;
+    case "monthly": {
+      const dom = recurrence.dayOfMonth ?? 1;
+
+      // Helper: clamp dayOfMonth to the last real day of the given month.
+      const makeDate = (year: number, month: number): Date => {
+        const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        return new Date(Date.UTC(year, month, Math.min(dom, lastDay)));
+      };
+
+      const y = today.getUTCFullYear();
+      const m = today.getUTCMonth();
+
+      const thisMonthDate = makeDate(y, m);
+      if (thisMonthDate >= today) return thisMonthDate;
+
+      // This month's occurrence is in the past — jump to next month directly.
+      const nextM = m === 11 ? 0 : m + 1;
+      const nextY = m === 11 ? y + 1 : y;
+      return makeDate(nextY, nextM);
+    }
+
+    case "yearly": {
+      const month = recurrence.month ?? 1;   // 1-indexed
+      const day = recurrence.day ?? 1;
+
+      const makeDate = (year: number): Date => {
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        return new Date(Date.UTC(year, month - 1, Math.min(day, lastDay)));
+      };
+
+      const y = today.getUTCFullYear();
+      const thisYearDate = makeDate(y);
+      if (thisYearDate >= today) return thisYearDate;
+
+      return makeDate(y + 1);
+    }
+
+    default:
+      return null;
+  }
 }
 
 router.get("/quests", async (req, res) => {

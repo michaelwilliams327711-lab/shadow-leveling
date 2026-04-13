@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { badHabitsTable, badHabitLogTable, characterTable } from "@workspace/db";
-import { eq, desc, and, inArray, gte, lt, isNull } from "drizzle-orm";
+import { eq, desc, and, inArray, gte, lt, isNull, sql } from "drizzle-orm";
 import { CreateBadHabitBody, UpdateBadHabitBody } from "@workspace/api-zod";
 import { corruptionConfig, type HabitSeverity } from "../corruptionConfig.js";
 import { getOrCreateCharacter, XP_PER_LEVEL, invalidateCharacterCache } from "./character.js";
@@ -134,9 +134,9 @@ router.get("/bad-habits", async (req, res) => {
 
     const result = habits.map((habit) => {
       const logs = logsByHabitId.get(habit.id) ?? [];
-      const cleanStreak = computeCleanStreak(logs, localDate);
       const longestStreak = computeLongestStreak(logs, localDate);
-      return { ...habit, cleanStreak, longestStreak };
+      // cleanStreak is served from the cached DB column — no O(365) loop.
+      return { ...habit, cleanStreak: habit.currentStreak, longestStreak };
     });
 
     res.json(result);
@@ -171,7 +171,8 @@ router.patch("/bad-habits/:id", async (req, res) => {
       .where(eq(badHabitLogTable.habitId, id))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-    res.json({ ...updated, cleanStreak: computeCleanStreak(logs, localDate), longestStreak: computeLongestStreak(logs, localDate) });
+    // cleanStreak is served from the cached DB column.
+    res.json({ ...updated, cleanStreak: updated.currentStreak, longestStreak: computeLongestStreak(logs, localDate) });
   } catch (err) {
     req.log.error({ err }, "Error updating bad habit");
     throw err;
@@ -230,6 +231,11 @@ router.post("/bad-habits/:id/relapse", async (req, res) => {
         type: "relapse",
         corruptionDelta,
       });
+
+      // Cache reset: streak is broken on relapse.
+      await tx.update(badHabitsTable)
+        .set({ currentStreak: 0, lastCleanDate: null })
+        .where(eq(badHabitsTable.id, id));
     });
     invalidateCharacterCache();
 
@@ -287,23 +293,30 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
       }
     }
 
+    const toInsertIds = new Set(toInsert.map(r => r.habitId));
+
     if (toInsert.length > 0) {
       await db.insert(badHabitLogTable).values(toInsert);
-      for (const row of toInsert) {
-        const existing = logsByHabitId.get(row.habitId) ?? [];
-        existing.unshift({ date: row.date, type: row.type, occurredAt: new Date() });
-        logsByHabitId.set(row.habitId, existing);
-      }
+      // Cache increment: advance currentStreak by 1 and record lastCleanDate
+      // for every habit that received a clean log in this pass.
+      await db.update(badHabitsTable)
+        .set({
+          currentStreak: sql`${badHabitsTable.currentStreak} + 1`,
+          lastCleanDate: todayStr,
+        })
+        .where(inArray(badHabitsTable.id, [...toInsertIds]));
     }
 
     const purificationThreshold = corruptionConfig.purificationStreakDays;
     let allPurified = true;
 
     for (const habit of activeHabits) {
-      const logs = logsByHabitId.get(habit.id) ?? [];
-      const byDate = buildDateMap(logs);
-      const streak = computeCleanStreakFromMap(byDate, todayStr);
-      if (streak < purificationThreshold) {
+      // Habits that just received a clean log have a projected streak of
+      // currentStreak + 1. Habits already logged today are unchanged.
+      const projectedStreak = toInsertIds.has(habit.id)
+        ? habit.currentStreak + 1
+        : habit.currentStreak;
+      if (projectedStreak < purificationThreshold) {
         allPurified = false;
         break;
       }
