@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable, shadowJournalTable } from "@workspace/db";
-import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc } from "drizzle-orm";
+import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc, desc } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
 import {
@@ -1059,14 +1059,14 @@ router.get("/quest-log", async (req, res) => {
       .select()
       .from(questLogTable)
       .where(gte(questLogTable.occurredAt, windowStart))
-      .orderBy(questLogTable.occurredAt)
+      .orderBy(desc(questLogTable.occurredAt))
       .limit(limit)
       .offset(offset);
 
     const mapped = log.map((e) => ({
       ...e,
       occurredAt: e.occurredAt.toISOString(),
-    })).reverse();
+    }));
     res.json(mapped);
   } catch (err) {
     req.log.error({ err }, "Error getting quest log");
