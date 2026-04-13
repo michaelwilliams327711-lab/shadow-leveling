@@ -1,5 +1,9 @@
 export { CATEGORY_STAT_MAP } from "./economy.js";
 
+// Shared PostgreSQL advisory lock key — used by both the login route and
+// the cron job to serialize character initialization.
+export const ADVISORY_LOCK_ID = 9001;
+
 export const STAT_KEYS = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
 export type StatKey = typeof STAT_KEYS[number];
 

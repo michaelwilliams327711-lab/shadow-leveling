@@ -21,7 +21,37 @@ import {
 } from "@/components/ui/form";
 import { useEffect } from "react";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 const awakeningImg = "/images/awakening.webp";
+
+function AwakeningSkeleton() {
+  return (
+    <div className="min-h-screen relative pb-12">
+      <div className="relative z-10 p-6 md:p-8 max-w-5xl mx-auto space-y-8">
+        <div className="text-center space-y-4 mb-12">
+          <Skeleton className="w-12 h-12 rounded-full mx-auto" />
+          <Skeleton className="h-14 w-80 rounded-xl mx-auto" />
+          <Skeleton className="h-4 w-96 rounded mx-auto" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {[0, 1].map((i) => (
+            <div key={i} className="glass-panel p-6 rounded-2xl border-white/10 space-y-4">
+              <Skeleton className="h-5 w-28 rounded" />
+              <Skeleton className="h-40 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+        <div className="glass-panel p-6 rounded-2xl border-white/10 space-y-4">
+          <Skeleton className="h-5 w-28 rounded" />
+          <Skeleton className="h-36 w-full rounded-lg" />
+        </div>
+        <div className="flex justify-center pt-8">
+          <Skeleton className="h-14 w-56 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const schema = z.object({
   vision: z.string().optional(),
@@ -67,7 +97,7 @@ export default function Awakening() {
     });
   };
 
-  if (isLoading) return <div className="p-8">Accessing memory core...</div>;
+  if (isLoading) return <AwakeningSkeleton />;
 
   return (
     <div className="min-h-screen relative pb-12">

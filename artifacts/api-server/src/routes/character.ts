@@ -8,7 +8,7 @@ import {
   UpdateCharacterResponse,
   DailyCheckinResponse,
 } from "@workspace/api-zod";
-import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate } from "@workspace/shared";
+import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate, ADVISORY_LOCK_ID } from "@workspace/shared";
 
 const router: IRouter = Router();
 
@@ -20,11 +20,11 @@ export function invalidateCharacterCache(): void {
 }
 
 // F-004: Serialize character init with a PostgreSQL advisory lock to prevent
-// concurrent INSERT races on the very first request. Key 9001 is an arbitrary
-// stable application-level mutex — any fixed bigint works.
+// concurrent INSERT races on the very first request. ADVISORY_LOCK_ID is the
+// single shared application-level mutex defined in @workspace/shared.
 export async function getOrCreateCharacter(): Promise<CharacterRow> {
   const char = await db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(9001)`);
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
     const rows = await tx.select().from(characterTable).limit(1);
     if (rows.length > 0) return rows[0];
     const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();
@@ -261,7 +261,7 @@ router.post("/character/login", async (req, res) => {
 
     const result = await db.transaction(async (tx) => {
       // Advisory lock ensures character row exists before FOR UPDATE.
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(9001)`);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
       const rows = await tx.select().from(characterTable).limit(1).for("update");
       if (!rows.length) {
         const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();

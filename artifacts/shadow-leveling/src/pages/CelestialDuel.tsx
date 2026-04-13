@@ -4,6 +4,7 @@ import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import sinsImg from "@assets/images/sins-bg.webp";
@@ -428,7 +429,11 @@ export default function CelestialDuel() {
               Scale of Souls — Domain Balance
             </h3>
             {isLoading ? (
-              <div className="text-center text-muted-foreground text-sm py-12">Consulting the Archive...</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {DOMAIN_PAIRS.map(dp => {

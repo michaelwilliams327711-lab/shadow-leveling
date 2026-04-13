@@ -6,6 +6,7 @@ import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, Plus, Trash2, Flame, Trophy, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -315,8 +316,32 @@ export default function BadHabits() {
 
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-purple-500" />
+      <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-52 rounded-xl" />
+            <Skeleton className="h-4 w-64 rounded" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="glass-panel rounded-2xl border border-white/10 p-5 space-y-4">
+              <div className="flex justify-between items-start">
+                <Skeleton className="h-6 w-40 rounded" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32 rounded" />
+                <Skeleton className="h-4 w-24 rounded" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Skeleton className="h-9 w-28 rounded-lg" />
+                <Skeleton className="h-9 w-24 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

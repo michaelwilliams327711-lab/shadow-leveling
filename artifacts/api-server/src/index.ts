@@ -72,8 +72,6 @@ function computeLocalDateTime(offsetHours: number): { localDate: string; localHo
 
 let _memLastProcessedDate: string | null = null;
 
-const ADVISORY_LOCK_CRON = 9001;
-
 cron.schedule("0 * * * *", async () => {
   const offsetHours = await getDynamicTimezoneOffsetHours();
   const { localDate, localHour } = computeLocalDateTime(offsetHours);
