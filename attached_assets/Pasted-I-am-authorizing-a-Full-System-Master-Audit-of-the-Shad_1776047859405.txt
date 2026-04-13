@@ -1,0 +1,47 @@
+I am authorizing a Full System Master Audit of the 'Shadow Leveling' application. This is the final check before mobile deployment. You must perform a deep-scan of the entire monorepo and generate a comprehensive report. Focus on the following 'S-Rank' criteria:
+
+1. Security & Authentication Audit:
+
+Verify that crypto.timingSafeEqual is used for all token comparisons.
+
+Confirm API_SECRET_KEY is strictly enforced and a fatal error is thrown if missing in production.
+
+Audit CORS settings to ensure they are prepared for the specific production domain, not just *.
+
+2. Race Condition & Logic Integrity:
+
+Login Lock: Scan api-server/src/routes/character.ts for the login/check-in path. Verify that the character row is fetched using .for('update') within a transaction to prevent double-penalty/reward glitches.
+
+Cron Atomicity: Ensure the lastCronDate update is atomic with the quest processing logic. If one fails, both must fail.
+
+Date Math: Audit the getNextDueFromNow loop in lib/shared/src/time.ts. If it uses a linear while loop, refactor it to use constant-time date-diffing to prevent mobile hangs.
+
+3. Performance & Scaling (O-Complexity):
+
+Streak Caching: Audit the habit streak calculation. If it calculates O(N) on every request, implement a cached currentStreak column in the bad_habits table.
+
+Relational Fetching: Audit the Quest Board fetch logic. Ensure it uses a single SQL JOIN or Drizzle Relational query instead of merging multiple db.select() calls in JavaScript.
+
+Layout Shifts: Identify all major data-fetching components. Flag any that do not currently have a Loading Skeleton or defined height/width to prevent mobile layout "popping."
+
+4. The 'Ghost Content' Purge:
+
+Scan the Sidebar/Navigation for placeholder routes (/analytics, /vocations, /planner). If the logic isn't live, hide these UI entries immediately to maintain a minimalist mobile experience.
+
+Verify all zod versions are unified (v3) to prevent runtime crashes.
+
+5. Database & Integrity:
+
+Confirm all Foreign Key (FK) constraints are live, specifically linking quest_log and bad_habit_logs to the character table.
+
+Verify that GREATEST(0, ...) and LEAST(100, ...) guards are in place for all XP, Gold, and Stat mutations.
+
+REPORTING REQUIREMENTS:
+
+Categorize findings by Severity (CRITICAL, HIGH, MEDIUM, LOW).
+
+Flag any 'Silent Crashes'—logic that won't throw an error but will cause desyncs.
+
+DO NOT apply fixes yet. Generate the report first for my review.
+
+Conclusion: State clearly if the System is 'Mobile Ready' or if a 'High-Rank' intervention is required.
