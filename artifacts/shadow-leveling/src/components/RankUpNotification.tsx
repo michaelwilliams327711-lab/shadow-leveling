@@ -13,11 +13,12 @@ interface RankUpNotificationProps {
 }
 
 const STAT_COLORS: Record<string, { text: string; glow: string }> = {
-  strength: { text: "text-red-400", glow: "rgba(248,113,113,0.5)" },
-  agility: { text: "text-pink-400", glow: "rgba(244,114,182,0.5)" },
-  endurance: { text: "text-green-400", glow: "rgba(74,222,128,0.5)" },
-  intellect: { text: "text-blue-400", glow: "rgba(96,165,250,0.5)" },
-  discipline: { text: "text-purple-400", glow: "rgba(192,132,252,0.5)" },
+  strength:   { text: "text-red-400",    glow: "rgba(248,113,113,0.5)"  },
+  spirit:     { text: "text-pink-400",   glow: "rgba(244,114,182,0.5)"  },
+  endurance:  { text: "text-green-400",  glow: "rgba(74,222,128,0.5)"   },
+  intellect:  { text: "text-blue-400",   glow: "rgba(96,165,250,0.5)"   },
+  agility:    { text: "text-cyan-400",   glow: "rgba(34,211,238,0.5)"   },
+  discipline: { text: "text-purple-400", glow: "rgba(192,132,252,0.5)"  },
 };
 
 export function RankUpNotification({ open, statName, statValue, onDismiss }: RankUpNotificationProps) {

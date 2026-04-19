@@ -37,7 +37,7 @@ artifacts-monorepo/
 ## Features
 
 1. **Planner** - Control room page with 4 views (Daily/Weekly/Monthly/Yearly). Daily shows today's quests, daily orders, bad habit check-ins, XP summary. Weekly shows 7-column grid with drag-to-reschedule. Monthly shows calendar with completion dots and day detail popover. Yearly shows activity heatmap + key events.
-2. **Character Dashboard** - Level, XP progress, Gold, streak counter, stats (STR/INT/END/AGI/DIS), Radar chart, GitHub-style activity heatmap, daily check-in button, RNG event banner
+2. **Character Dashboard** - Level, XP progress, Gold, streak counter, stats (STR/SPI/END/INT/AGI/DIS), 6-point hexagonal Radar chart, GitHub-style activity heatmap, daily check-in button, RNG event banner
 3. **Daily Orders** - Lightweight quick-add tasks on Dashboard. Type name, pick stat, press Enter. Awards E-rank XP (25) + 1 stat point. X/5 counter; at 5/5 a Hidden Box triggers with Gold or stat boost reward revealed via Solo Leveling-style animation. Orders vanish at midnight with zero penalty.
 4. **Quest System** - CRUD quests with Rank (F-SSS), category, duration. Complete/Fail with XP+Gold rewards/penalties scaled to difficulty. Quest log history.
 5. **Streak System** - Daily check-in builds streak, multipliers (1x-3x), milestone bonuses at 7/14/30/60/100 days
@@ -136,9 +136,27 @@ F(0.5x) E(0.75x) D(1x) C(1.5x) B(2x) A(3x) S(5x) SS(8x) SSS(15x)
 
 ## Stat System
 
+Six stats: STR (Strength), SPI (Spirit), END (Endurance), INT (Intellect), AGI (Agility), DIS (Discipline).
+
 Stats gain based on quest category:
 - Financial → Discipline
 - Productivity/Study → Intellect
 - Health → Endurance
-- Creative/Social → Agility
+- Creative/Social → Spirit
 - Other → Strength
+
+## Leveling Formula
+
+`Level = floor(sqrt(TotalXP / 10)) + 1`
+
+Equivalently: `XP_PER_LEVEL(n) = (2n - 1) × 10`
+- Level 1→2: 10 XP | Level 2→3: 30 XP | Level 3→4: 50 XP | Level n→n+1: (2n-1)×10 XP
+
+`totalXpEarned(xp, level) = xp + 10 × (level-1)²`
+
+## Security Hardening
+
+- **Auth**: HMAC-SHA256 normalization in `verifyToken` — both token and key hashed to 32-byte digests before `timingSafeEqual`, eliminating all timing side-channels
+- **CORS**: `process.exit(1)` if `CORS_ORIGIN` missing or `*` in production
+- **DB Integrity**: `characterId` required in all `quest_log` and `penalty_log` inserts
+- **Concurrency**: All XP/gold/stat mutations wrapped in transactions with `.for("update")` row locks

@@ -18,6 +18,7 @@ export interface Character {
   gold: number;
   gateFragments: number;
   strength: number;
+  spirit: number;
   intellect: number;
   endurance: number;
   agility: number;
@@ -54,6 +55,7 @@ export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
 
 export const StatBoost = {
   strength: "strength",
+  spirit: "spirit",
   intellect: "intellect",
   endurance: "endurance",
   agility: "agility",
@@ -194,6 +196,7 @@ export interface UpsertQuestDailyLogRequest {
 
 export type QuestCompletionResultStatGains = {
   strength: number;
+  spirit: number;
   intellect: number;
   endurance: number;
   agility: number;
@@ -214,6 +217,7 @@ export interface QuestCompletionResult {
 
 export type QuestFailResultStatPenalties = {
   strength: number;
+  spirit: number;
   intellect: number;
   endurance: number;
   agility: number;

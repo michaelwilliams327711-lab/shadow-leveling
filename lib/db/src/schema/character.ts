@@ -9,6 +9,7 @@ export const characterTable = pgTable("character", {
   xp: integer("xp").notNull().default(0),
   gold: integer("gold").notNull().default(0),
   strength: integer("strength").notNull().default(10),
+  spirit: integer("spirit").notNull().default(10),
   intellect: integer("intellect").notNull().default(10),
   endurance: integer("endurance").notNull().default(10),
   agility: integer("agility").notNull().default(10),

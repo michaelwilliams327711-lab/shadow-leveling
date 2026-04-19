@@ -247,11 +247,12 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { name: STAT_META.strength.label,   val: character.strength,   icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
-    { name: STAT_META.agility.label,    val: character.agility,    icon: Sparkles, color: "text-pink-400", barColor: "bg-pink-400" },
-    { name: STAT_META.endurance.label,  val: character.endurance,  icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
-    { name: STAT_META.intellect.label,  val: character.intellect,  icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
-    { name: STAT_META.discipline.label, val: character.discipline, icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
+    { name: STAT_META.strength.label,   val: character.strength,                      icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
+    { name: STAT_META.spirit.label,     val: (character as Record<string, unknown>).spirit as number ?? 0, icon: Sparkles, color: "text-pink-400",   barColor: "bg-pink-400"   },
+    { name: STAT_META.endurance.label,  val: character.endurance,                     icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
+    { name: STAT_META.intellect.label,  val: character.intellect,                     icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
+    { name: STAT_META.agility.label,    val: character.agility,                       icon: Zap,      color: "text-cyan-400",   barColor: "bg-cyan-400"   },
+    { name: STAT_META.discipline.label, val: character.discipline,                    icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
   ];
 
   const corruption = character.corruption ?? 0;
@@ -566,13 +567,18 @@ export default function Dashboard() {
                       fn: "Grows when you complete Financial, Productivity, or Study quests. Reading, coding, researching, and planning all sharpen Intellect. It tracks how capable your mind is in the real world.",
                       usage: "Assign quests to the Study, Financial, or Productivity category to raise Intellect. High Intellect means faster learning, stronger problem-solving, and sharper execution.",
                     },
+                    Agility: {
+                      what: "Agility — speed, adaptability, and physical coordination.",
+                      fn: "Increases when you complete quests that require quick execution or physical movement.",
+                      usage: "Assign fast-turnaround or movement-based quests to grow Agility.",
+                    },
                     Discipline: {
                       what: "Discipline — willpower, consistency, and self-control.",
                       fn: "Grows passively with your check-in streak and completed quest volume.",
                       usage: "Maintain a daily streak and clear quests consistently to raise Discipline.",
                     },
                   };
-                  const tip = statTooltips[stat.name];
+                  const tip = statTooltips[stat.name] ?? { what: stat.name, fn: "", usage: "" };
                   return (
                     <InfoTooltip key={stat.name} what={tip.what} fn={tip.fn} usage={tip.usage}>
                       <div className="flex items-center gap-3 cursor-default">

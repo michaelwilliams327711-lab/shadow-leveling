@@ -53,13 +53,12 @@ async function getDynamicTimezoneOffsetHours(): Promise<number> {
     logger.warn({ envOffset }, "[SYSTEM] LOCAL_TZ_OFFSET is set but not a valid number; falling back to UTC.");
   }
 
-  // Priority 3: UTC fallback — emit a critical warning so misconfigured deployments are visible
+  // Priority 3: EST fallback (-5) per spec default — emit a warning so the source is visible in logs
   logger.warn(
-    "[SYSTEM] No timezone source found. Defaulting to UTC (0). " +
-    "This may cause early resets in Florida or other non-UTC timezones. " +
-    "Set LOCAL_TZ_OFFSET (e.g. -5 for EST) or enable push notifications to fix this."
+    "[SYSTEM] No timezone source found. Defaulting to EST (-5). " +
+    "Set LOCAL_TZ_OFFSET (e.g. -5 for EST) or enable push notifications to override."
   );
-  return 0;
+  return -5;
 }
 
 function computeLocalDateTime(offsetHours: number): { localDate: string; localHour: number } {

@@ -26,6 +26,7 @@ export const GetCharacterResponse = zod.object({
   gold: zod.number(),
   gateFragments: zod.number(),
   strength: zod.number(),
+  spirit: zod.number(),
   intellect: zod.number(),
   endurance: zod.number(),
   agility: zod.number(),
@@ -57,6 +58,7 @@ export const UpdateCharacterResponse = zod.object({
   gold: zod.number(),
   gateFragments: zod.number(),
   strength: zod.number(),
+  spirit: zod.number(),
   intellect: zod.number(),
   endurance: zod.number(),
   agility: zod.number(),
@@ -110,6 +112,7 @@ export const CharacterLoginResponse = zod.object({
     gold: zod.number(),
     gateFragments: zod.number(),
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -142,7 +145,7 @@ export const ListQuestsResponseItem = zod.object({
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
-    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
   targetAmount: zod.number().nullish(),
   amountUnit: zod.string().nullish(),
@@ -171,7 +174,7 @@ export const CreateQuestBody = zod.object({
   description: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
-    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
   targetAmount: zod.number().nullish(),
   amountUnit: zod.string().nullish(),
@@ -208,7 +211,7 @@ export const GetQuestResponse = zod.object({
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
-    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
   targetAmount: zod.number().nullish(),
   amountUnit: zod.string().nullish(),
@@ -242,7 +245,7 @@ export const UpdateQuestBody = zod.object({
   isPaused: zod.boolean().optional(),
   description: zod.string().nullish(),
   statBoost: zod
-    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
   targetAmount: zod.number().nullish(),
   amountUnit: zod.string().nullish(),
@@ -272,7 +275,7 @@ export const UpdateQuestResponse = zod.object({
   completedAt: zod.string().nullish(),
   deadline: zod.string().nullish(),
   statBoost: zod
-    .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+    .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
     .nullish(),
   targetAmount: zod.number().nullish(),
   amountUnit: zod.string().nullish(),
@@ -355,6 +358,7 @@ export const CompleteQuestResponse = zod.object({
   leveledUp: zod.boolean(),
   statGains: zod.object({
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -369,6 +373,7 @@ export const CompleteQuestResponse = zod.object({
     gold: zod.number(),
     gateFragments: zod.number(),
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -398,6 +403,7 @@ export const FailQuestResponse = zod.object({
   goldDeducted: zod.number(),
   statPenalties: zod.object({
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -412,6 +418,7 @@ export const FailQuestResponse = zod.object({
     gold: zod.number(),
     gateFragments: zod.number(),
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -472,7 +479,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
       completedAt: zod.string().nullish(),
       deadline: zod.string().nullish(),
       statBoost: zod
-        .enum(["strength", "intellect", "endurance", "agility", "discipline"])
+        .enum(["strength", "spirit", "intellect", "endurance", "agility", "discipline"])
         .nullish(),
       targetAmount: zod.number().nullish(),
       amountUnit: zod.string().nullish(),
@@ -498,6 +505,7 @@ export const ProcessOverdueQuestsResponse = zod.object({
     gold: zod.number(),
     gateFragments: zod.number(),
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),
@@ -615,6 +623,7 @@ export const ChallengeBossResponse = zod.object({
     gold: zod.number(),
     gateFragments: zod.number(),
     strength: zod.number(),
+    spirit: zod.number(),
     intellect: zod.number(),
     endurance: zod.number(),
     agility: zod.number(),

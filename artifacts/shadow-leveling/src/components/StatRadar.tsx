@@ -7,10 +7,11 @@ interface StatRadarProps {
 
 const DOMAIN_POINTS = [
   { subject: "STR", key: "strength"   as const, color: "#f87171" },
-  { subject: "SPI", key: "agility"    as const, color: "#f472b6" },
+  { subject: "SPI", key: "spirit"     as const, color: "#f472b6" },
   { subject: "END", key: "endurance"  as const, color: "#4ade80" },
-  { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
   { subject: "INT", key: "intellect"  as const, color: "#60a5fa" },
+  { subject: "AGI", key: "agility"    as const, color: "#22d3ee" },
+  { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
 ];
 
 function ColoredTick({ x, y, payload, textAnchor }: { x: number; y: number; payload: { value: string }; textAnchor: string }) {
@@ -36,7 +37,7 @@ export function StatRadar({ character }: StatRadarProps) {
 
   const data = DOMAIN_POINTS.map((p) => ({
     subject: p.subject,
-    A: character[p.key],
+    A: (character as Record<string, unknown>)[p.key] as number ?? 0,
     fullMark,
   }));
 

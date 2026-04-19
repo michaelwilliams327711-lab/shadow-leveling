@@ -232,10 +232,11 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
     let totalGoldDeducted = 0;
     let runningFailStreak = char.failStreak;
     const statAccum: Record<string, number> = {
-      strength: char.strength,
-      intellect: char.intellect,
-      endurance: char.endurance,
-      agility: char.agility,
+      strength:   char.strength,
+      spirit:     char.spirit,
+      intellect:  char.intellect,
+      endurance:  char.endurance,
+      agility:    char.agility,
       discipline: char.discipline,
     };
 
@@ -329,10 +330,11 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       .set({
         xp: sql`GREATEST(0, ${characterTable.xp} - ${totalXpDeducted})`,
         gold: sql`GREATEST(0, ${characterTable.gold} - ${totalGoldDeducted})`,
-        strength: statAccum.strength,
-        intellect: statAccum.intellect,
-        endurance: statAccum.endurance,
-        agility: statAccum.agility,
+        strength:   statAccum.strength,
+        spirit:     statAccum.spirit,
+        intellect:  statAccum.intellect,
+        endurance:  statAccum.endurance,
+        agility:    statAccum.agility,
         discipline: statAccum.discipline,
         totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
         failStreak: runningFailStreak,
@@ -761,10 +763,11 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       ? 0
       : Math.max(1, Math.floor(statGain * 0.25));
 
-    const strengthGain = statField === "strength" ? statGain : 0;
-    const intellectGain = statField === "intellect" ? statGain : 0;
-    const enduranceGain = statField === "endurance" ? statGain : 0;
-    const agilityGain = statField === "agility" ? statGain : 0;
+    const strengthGain   = statField === "strength"   ? statGain : 0;
+    const spiritGain     = statField === "spirit"     ? statGain : 0;
+    const intellectGain  = statField === "intellect"  ? statGain : 0;
+    const enduranceGain  = statField === "endurance"  ? statGain : 0;
+    const agilityGain    = statField === "agility"    ? statGain : 0;
     const disciplineTotal = (statField === "discipline" ? statGain : 0) + disciplineGain;
 
     const localMidnight = new Date(today + "T00:00:00.000Z");
@@ -793,10 +796,11 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
           xp: Math.min(999_999_999, newXp),
           level: txNewLevel,
           gold: sql`LEAST(999999, ${characterTable.gold} + ${goldAwarded})`,
-          strength: sql`LEAST(99999, ${characterTable.strength} + ${strengthGain})`,
-          intellect: sql`LEAST(99999, ${characterTable.intellect} + ${intellectGain})`,
-          endurance: sql`LEAST(99999, ${characterTable.endurance} + ${enduranceGain})`,
-          agility: sql`LEAST(99999, ${characterTable.agility} + ${agilityGain})`,
+          strength:   sql`LEAST(99999, ${characterTable.strength}   + ${strengthGain})`,
+          spirit:     sql`LEAST(99999, ${characterTable.spirit}     + ${spiritGain})`,
+          intellect:  sql`LEAST(99999, ${characterTable.intellect}  + ${intellectGain})`,
+          endurance:  sql`LEAST(99999, ${characterTable.endurance}  + ${enduranceGain})`,
+          agility:    sql`LEAST(99999, ${characterTable.agility}    + ${agilityGain})`,
           discipline: sql`LEAST(99999, ${characterTable.discipline} + ${disciplineTotal})`,
           totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           failStreak: 0,
@@ -895,10 +899,11 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     }
 
     const statGains = {
-      strength: statField === "strength" ? statGain : 0,
-      intellect: statField === "intellect" ? statGain : 0,
-      endurance: statField === "endurance" ? statGain : 0,
-      agility: statField === "agility" ? statGain : 0,
+      strength:   statField === "strength"   ? statGain : 0,
+      spirit:     statField === "spirit"     ? statGain : 0,
+      intellect:  statField === "intellect"  ? statGain : 0,
+      endurance:  statField === "endurance"  ? statGain : 0,
+      agility:    statField === "agility"    ? statGain : 0,
       discipline: (statField === "discipline" ? statGain : 0) + disciplineGain,
     };
 
@@ -961,10 +966,11 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
     const catStatPenalty = Math.floor(baseStatPenalty * attrMult);
     const discPenalty = Math.floor(baseStatPenalty * xpGoldMult);
 
-    const strengthPenalty = statField === "strength" ? catStatPenalty : 0;
-    const intellectPenalty = statField === "intellect" ? catStatPenalty : 0;
-    const endurancePenalty = statField === "endurance" ? catStatPenalty : 0;
-    const agilityPenalty = statField === "agility" ? catStatPenalty : 0;
+    const strengthPenalty   = statField === "strength"   ? catStatPenalty : 0;
+    const spiritPenalty     = statField === "spirit"     ? catStatPenalty : 0;
+    const intellectPenalty  = statField === "intellect"  ? catStatPenalty : 0;
+    const endurancePenalty  = statField === "endurance"  ? catStatPenalty : 0;
+    const agilityPenalty    = statField === "agility"    ? catStatPenalty : 0;
     const disciplinePenalty = (statField === "discipline" ? catStatPenalty : 0) + discPenalty;
 
     const [updatedChar] = await db.transaction(async (tx) => {
@@ -981,10 +987,11 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
         .set({
           xp: sql`GREATEST(0, ${characterTable.xp} - ${xpDeducted})`,
           gold: sql`GREATEST(0, ${characterTable.gold} - ${goldDeducted})`,
-          strength: sql`GREATEST(1, ${characterTable.strength} - ${strengthPenalty})`,
-          intellect: sql`GREATEST(1, ${characterTable.intellect} - ${intellectPenalty})`,
-          endurance: sql`GREATEST(1, ${characterTable.endurance} - ${endurancePenalty})`,
-          agility: sql`GREATEST(1, ${characterTable.agility} - ${agilityPenalty})`,
+          strength:   sql`GREATEST(1, ${characterTable.strength}   - ${strengthPenalty})`,
+          spirit:     sql`GREATEST(1, ${characterTable.spirit}     - ${spiritPenalty})`,
+          intellect:  sql`GREATEST(1, ${characterTable.intellect}  - ${intellectPenalty})`,
+          endurance:  sql`GREATEST(1, ${characterTable.endurance}  - ${endurancePenalty})`,
+          agility:    sql`GREATEST(1, ${characterTable.agility}    - ${agilityPenalty})`,
           discipline: sql`GREATEST(1, ${characterTable.discipline} - ${disciplinePenalty})`,
           totalQuestsFailed: sql`${characterTable.totalQuestsFailed} + 1`,
           failStreak: newFailStreak,
@@ -1018,10 +1025,11 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
     await upsertActivity(today);
 
     const statPenalties = {
-      strength: statField === "strength" ? catStatPenalty : 0,
-      intellect: statField === "intellect" ? catStatPenalty : 0,
-      endurance: statField === "endurance" ? catStatPenalty : 0,
-      agility: statField === "agility" ? catStatPenalty : 0,
+      strength:   statField === "strength"   ? catStatPenalty : 0,
+      spirit:     statField === "spirit"     ? catStatPenalty : 0,
+      intellect:  statField === "intellect"  ? catStatPenalty : 0,
+      endurance:  statField === "endurance"  ? catStatPenalty : 0,
+      agility:    statField === "agility"    ? catStatPenalty : 0,
       discipline: (statField === "discipline" ? catStatPenalty : 0) + discPenalty,
     };
 
