@@ -298,6 +298,7 @@ router.post("/character/login", async (req, res) => {
         const penaltyDesc = `Missed ${daysMissed} day${daysMissed > 1 ? "s" : ""} of login — streak reset`;
 
         const [penaltyLog] = await tx.insert(penaltyLogTable).values({
+          characterId: char.id,
           type: "missed_day",
           description: penaltyDesc,
           xpDeducted: xpPenaltyForLog,
@@ -305,6 +306,7 @@ router.post("/character/login", async (req, res) => {
         }).returning();
 
         await tx.insert(questLogTable).values({
+          characterId: char.id,
           questName: penaltyDesc,
           category: "Penalty",
           difficulty: "D",

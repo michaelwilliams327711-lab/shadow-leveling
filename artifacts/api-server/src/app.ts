@@ -104,11 +104,13 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
 
   let authorized = false;
   try {
-    const tokenBuf = Buffer.from(token);
-    const keyBuf = Buffer.from(effectiveApiSecretKey);
-    if (tokenBuf.length === keyBuf.length) {
-      authorized = crypto.timingSafeEqual(tokenBuf, keyBuf);
-    }
+    // Hash both values with HMAC-SHA256 so the resulting buffers are always
+    // 32 bytes regardless of input length. This allows timingSafeEqual to run
+    // unconditionally and prevents timing leaks caused by early-exit length checks.
+    const hmacKey = "shadow-leveling-auth-hmac";
+    const tokenHmac = crypto.createHmac("sha256", hmacKey).update(token).digest();
+    const keyHmac = crypto.createHmac("sha256", hmacKey).update(effectiveApiSecretKey).digest();
+    authorized = crypto.timingSafeEqual(tokenHmac, keyHmac);
   } catch {
     authorized = false;
   }

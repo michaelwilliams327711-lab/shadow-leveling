@@ -517,6 +517,12 @@ router.get("/quests", async (req, res) => {
                 eq(questsTable.status, "active"),
                 isNotNull(questsTable.recurrence),
               ),
+              // One-off quests: active with no deadline and no recurrence
+              and(
+                eq(questsTable.status, "active"),
+                isNull(questsTable.deadline),
+                isNull(questsTable.recurrence),
+              ),
             ),
           ),
         )
@@ -535,7 +541,8 @@ router.get("/quests", async (req, res) => {
 
         if (q.deadline) return true;
 
-        return false;
+        // One-off quests (no deadline, no recurrence) are always active
+        return true;
       });
 
       return res.json(filtered.map(serializeQuest));
