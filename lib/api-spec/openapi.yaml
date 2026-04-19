@@ -644,7 +644,7 @@ components:
           type: integer
         endurance:
           type: integer
-        agility:
+        spirit:
           type: integer
         discipline:
           type: integer
@@ -670,7 +670,7 @@ components:
         corruption:
           type: integer
       required:
-        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, intellect, endurance, agility, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
+        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, spirit, intellect, endurance, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
 
     UpdateCharacterRequest:
       type: object
@@ -706,7 +706,7 @@ components:
 
     StatBoost:
       type: string
-      enum: [strength, intellect, endurance, agility, discipline]
+      enum: [strength, spirit, intellect, endurance, discipline]
 
     RecurrenceConfig:
       type: object
@@ -899,11 +899,11 @@ components:
               type: integer
             endurance:
               type: integer
-            agility:
+            spirit:
               type: integer
             discipline:
               type: integer
-          required: [strength, intellect, endurance, agility, discipline]
+          required: [strength, spirit, intellect, endurance, discipline]
         character:
           $ref: "#/components/schemas/Character"
       required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character]
@@ -926,11 +926,11 @@ components:
               type: integer
             endurance:
               type: integer
-            agility:
+            spirit:
               type: integer
             discipline:
               type: integer
-          required: [strength, intellect, endurance, agility, discipline]
+          required: [strength, spirit, intellect, endurance, discipline]
         character:
           $ref: "#/components/schemas/Character"
       required: [success, xpDeducted, goldDeducted, statPenalties, character]

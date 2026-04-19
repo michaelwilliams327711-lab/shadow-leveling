@@ -10,6 +10,6 @@ export type QuestCompletionResultStatGains = {
   strength: number;
   intellect: number;
   endurance: number;
-  agility: number;
+  spirit: number;
   discipline: number;
 };

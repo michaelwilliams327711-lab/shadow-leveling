@@ -10,8 +10,8 @@ export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
 
 export const StatBoost = {
   strength: "strength",
+  spirit: "spirit",
   intellect: "intellect",
   endurance: "endurance",
-  agility: "agility",
   discipline: "discipline",
 } as const;

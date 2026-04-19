@@ -17,7 +17,7 @@ export interface Character {
   strength: number;
   intellect: number;
   endurance: number;
-  agility: number;
+  spirit: number;
   discipline: number;
   streak: number;
   longestStreak: number;

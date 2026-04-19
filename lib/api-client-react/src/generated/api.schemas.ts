@@ -20,7 +20,7 @@ export interface Character {
   strength: number;
   intellect: number;
   endurance: number;
-  agility: number;
+  spirit: number;
   discipline: number;
   streak: number;
   longestStreak: number;
@@ -54,9 +54,9 @@ export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
 
 export const StatBoost = {
   strength: "strength",
+  spirit: "spirit",
   intellect: "intellect",
   endurance: "endurance",
-  agility: "agility",
   discipline: "discipline",
 } as const;
 
@@ -197,7 +197,7 @@ export type QuestCompletionResultStatGains = {
   strength: number;
   intellect: number;
   endurance: number;
-  agility: number;
+  spirit: number;
   discipline: number;
 };
 
@@ -217,7 +217,7 @@ export type QuestFailResultStatPenalties = {
   strength: number;
   intellect: number;
   endurance: number;
-  agility: number;
+  spirit: number;
   discipline: number;
 };
 

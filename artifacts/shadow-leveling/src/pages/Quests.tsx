@@ -2267,7 +2267,7 @@ export default function Quests() {
                             {deadlineLabel && deadlineTone && (
                               <span className={cn("flex items-center gap-1.5", deadlineTone)}>
                                 <CalendarIcon className="w-4 h-4" />
-                                <span>Due: {deadlineLabel}</span>
+                                <span>{deadlineLabel === "FAILED: TIME EXPIRED" ? deadlineLabel : `Due: ${deadlineLabel}`}</span>
                               </span>
                             )}
                             <span className="flex items-center gap-1.5 text-primary">
