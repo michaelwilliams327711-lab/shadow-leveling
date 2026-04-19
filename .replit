@@ -34,11 +34,12 @@ name = "Start application"
 author = "agent"
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"▸ API:    port 8080  (artifacts/api-server: API Server)\" && echo \"▸ Web UI: port 3000  (artifacts/shadow-leveling: web)\" && sleep infinity"
+args = "bash -lc 'set -e; PORT=8080 pnpm --filter @workspace/api-server run dev & API_PID=$!; PORT=3000 BASE_PATH=/ pnpm --filter @workspace/shadow-leveling run dev & WEB_PID=$!; trap \"kill $API_PID $WEB_PID 2>/dev/null || true\" EXIT; wait -n $API_PID $WEB_PID; STATUS=$?; kill $API_PID $WEB_PID 2>/dev/null || true; exit $STATUS'"
+waitForPort = 3000
 
 [agent]
 stack = "PNPM_WORKSPACE"
