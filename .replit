@@ -33,13 +33,12 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8080 pnpm --filter @workspace/api-server run dev & PORT=3000 BASE_PATH=/ pnpm --filter @workspace/shadow-leveling run dev"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "webview"
+args = "echo \"▸ API:    port 8080  (artifacts/api-server: API Server)\" && echo \"▸ Web UI: port 3000  (artifacts/shadow-leveling: web)\" && sleep infinity"
 
 [agent]
 stack = "PNPM_WORKSPACE"

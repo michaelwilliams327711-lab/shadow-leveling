@@ -134,7 +134,20 @@ router.get("/bad-habits", async (req, res) => {
 
     const result = habits.map((habit) => {
       const logs = logsByHabitId.get(habit.id) ?? [];
-      const longestStreak = computeLongestStreak(logs, localDate);
+      let longestStreak = habit.longestStreak;
+
+      // Backfill: first read after migration — longestStreak is 0 but logs exist.
+      // Compute from history once and cache it asynchronously (fire-and-forget).
+      if (longestStreak === 0 && logs.length > 0) {
+        longestStreak = computeLongestStreak(logs, localDate);
+        if (longestStreak > 0) {
+          db.update(badHabitsTable)
+            .set({ longestStreak })
+            .where(eq(badHabitsTable.id, habit.id))
+            .catch(() => {});
+        }
+      }
+
       // cleanStreak is served from the cached DB column — no O(365) loop.
       return { ...habit, cleanStreak: habit.currentStreak, longestStreak };
     });
@@ -171,8 +184,15 @@ router.patch("/bad-habits/:id", async (req, res) => {
       .where(eq(badHabitLogTable.habitId, id))
       .orderBy(desc(badHabitLogTable.date), desc(badHabitLogTable.occurredAt));
 
-    // cleanStreak is served from the cached DB column.
-    res.json({ ...updated, cleanStreak: updated.currentStreak, longestStreak: computeLongestStreak(logs, localDate) });
+    // Use cached longestStreak; backfill once if needed (habit has logs but column is still 0).
+    let longestStreak = updated.longestStreak;
+    if (longestStreak === 0 && logs.length > 0) {
+      longestStreak = computeLongestStreak(logs, localDate);
+      if (longestStreak > 0) {
+        await db.update(badHabitsTable).set({ longestStreak }).where(eq(badHabitsTable.id, id));
+      }
+    }
+    res.json({ ...updated, cleanStreak: updated.currentStreak, longestStreak });
   } catch (err) {
     req.log.error({ err }, "Error updating bad habit");
     throw err;
@@ -297,12 +317,13 @@ router.post("/bad-habits/record-clean-day", async (req, res) => {
 
     if (toInsert.length > 0) {
       await db.insert(badHabitLogTable).values(toInsert);
-      // Cache increment: advance currentStreak by 1 and record lastCleanDate
-      // for every habit that received a clean log in this pass.
+      // Cache increment: advance currentStreak by 1, record lastCleanDate,
+      // and bump longestStreak whenever the new streak exceeds the stored peak.
       await db.update(badHabitsTable)
         .set({
           currentStreak: sql`${badHabitsTable.currentStreak} + 1`,
           lastCleanDate: todayStr,
+          longestStreak: sql`GREATEST(${badHabitsTable.longestStreak}, ${badHabitsTable.currentStreak} + 1)`,
         })
         .where(inArray(badHabitsTable.id, [...toInsertIds]));
     }
