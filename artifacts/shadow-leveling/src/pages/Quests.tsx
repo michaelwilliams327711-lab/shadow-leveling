@@ -83,7 +83,7 @@ import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
-import { playQuestComplete } from "@/lib/sounds";
+import { playQuestComplete, playSystemWarning } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 import {
@@ -1435,6 +1435,23 @@ export default function Quests() {
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
+  const [deadlineTick, setDeadlineTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setDeadlineTick(t => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "MISSION_WARNING_ALARM") {
+        playSystemWarning();
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, []);
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -1486,6 +1503,12 @@ export default function Quests() {
       setShowEditRecurrence(!!(rec && rec.type !== "none"));
     }
   }, [editingQuest?.id]);
+
+  const isNearDeadline = (deadline: string | null | undefined): boolean => {
+    if (!deadline || deadlineTick < 0) return false;
+    const ms = new Date(deadline).getTime() - Date.now();
+    return ms > 0 && ms <= 30 * 60 * 1000;
+  };
 
   const invalidateQuests = () => {
     queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
@@ -2198,7 +2221,7 @@ export default function Quests() {
                   const deadlineLabel = formatDeadlineLabel(quest.deadline, quest.status);
                   const deadlineTone = getDeadlineTone(quest.deadline, quest.status);
                   return (
-                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60")}>
+                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60", status === "active" && isNearDeadline(quest.deadline) && "animate-warning-flash")}>
                       <QuestCompleteEffect
                         active={completingQuestId === quest.id}
                         onDone={() => setCompletingQuestId(null)}

@@ -937,3 +937,13 @@
   animation: ariseBurst 1.2s ease-out forwards;
   z-index: 0;
 }
+
+@keyframes warning-flash {
+  0%, 100% { border-color: rgba(168, 85, 247, 0.35); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+  50%       { border-color: rgba(168, 85, 247, 0.85); box-shadow: 0 0 18px 3px rgba(168, 85, 247, 0.45); }
+}
+.animate-warning-flash {
+  animation: warning-flash 1.2s ease-in-out infinite;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+

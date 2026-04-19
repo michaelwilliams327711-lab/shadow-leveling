@@ -566,11 +566,6 @@ export default function Dashboard() {
                       fn: "Grows when you complete Financial, Productivity, or Study quests. Reading, coding, researching, and planning all sharpen Intellect. It tracks how capable your mind is in the real world.",
                       usage: "Assign quests to the Study, Financial, or Productivity category to raise Intellect. High Intellect means faster learning, stronger problem-solving, and sharper execution.",
                     },
-                    Agility: {
-                      what: "Agility — speed, adaptability, and physical coordination.",
-                      fn: "Increases when you complete quests that require quick execution or physical movement.",
-                      usage: "Assign fast-turnaround or movement-based quests to grow Agility.",
-                    },
                     Discipline: {
                       what: "Discipline — willpower, consistency, and self-control.",
                       fn: "Grows passively with your check-in streak and completed quest volume.",

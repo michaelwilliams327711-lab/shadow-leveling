@@ -100,6 +100,7 @@ async function cacheFirst(request) {
 
 // ── Push Notifications ───────────────────────────────────────────────────────
 const PENALTY_VIBRATE = [100, 50, 100, 50, 100, 50, 300, 50, 300, 50, 300, 50, 100, 50, 100, 50, 100];
+const WARNING_VIBRATE = [200, 100, 200, 100, 400];
 
 self.addEventListener("push", (event) => {
   let data = { title: "⚔️ Shadow System", body: "Your quests await.", url: "/quests", type: null, severity: null, vibrate: null };
@@ -108,6 +109,7 @@ self.addEventListener("push", (event) => {
   } catch { /* ignore */ }
 
   const isPenalty = data.type === "PENALTY_QUEST";
+  const isWarning = data.type === "MISSION_WARNING";
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
@@ -119,14 +121,21 @@ self.addEventListener("push", (event) => {
         type: data.type,
         severity: data.severity,
       },
-      vibrate: isPenalty ? PENALTY_VIBRATE : (data.vibrate ?? [200, 100, 200]),
-      requireInteraction: isPenalty,
-      tag: isPenalty ? "penalty-zone" : undefined,
+      vibrate: isPenalty ? PENALTY_VIBRATE : isWarning ? WARNING_VIBRATE : (data.vibrate ?? [200, 100, 200]),
+      requireInteraction: isPenalty || isWarning,
+      tag: isPenalty ? "penalty-zone" : isWarning ? `mission-warning-${data.questId || ""}` : undefined,
     }).then(() => {
       if (isPenalty) {
         return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
           for (const client of clients) {
             client.postMessage({ type: "PENALTY_ACTIVE" });
+          }
+        });
+      }
+      if (isWarning) {
+        return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+          for (const client of clients) {
+            client.postMessage({ type: "MISSION_WARNING_ALARM", questId: data.questId });
           }
         });
       }
