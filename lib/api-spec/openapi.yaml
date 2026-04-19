@@ -832,6 +832,9 @@ components:
         description:
           type: string
           nullable: true
+        deadline:
+          type: string
+          nullable: true
         statBoost:
           $ref: "#/components/schemas/StatBoost"
           nullable: true

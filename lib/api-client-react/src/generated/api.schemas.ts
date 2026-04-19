@@ -18,9 +18,9 @@ export interface Character {
   gold: number;
   gateFragments: number;
   strength: number;
-  spirit: number;
   intellect: number;
   endurance: number;
+  agility: number;
   discipline: number;
   streak: number;
   longestStreak: number;
@@ -54,9 +54,9 @@ export type StatBoost = (typeof StatBoost)[keyof typeof StatBoost];
 
 export const StatBoost = {
   strength: "strength",
-  spirit: "spirit",
   intellect: "intellect",
   endurance: "endurance",
+  agility: "agility",
   discipline: "discipline",
 } as const;
 
@@ -173,6 +173,7 @@ export interface UpdateQuestRequest {
   durationMinutes?: number;
   isPaused?: boolean;
   description?: string | null;
+  deadline?: string | null;
   statBoost?: StatBoost | null;
   targetAmount?: number | null;
   amountUnit?: string | null;
@@ -194,9 +195,9 @@ export interface UpsertQuestDailyLogRequest {
 
 export type QuestCompletionResultStatGains = {
   strength: number;
-  spirit: number;
   intellect: number;
   endurance: number;
+  agility: number;
   discipline: number;
 };
 
@@ -214,9 +215,9 @@ export interface QuestCompletionResult {
 
 export type QuestFailResultStatPenalties = {
   strength: number;
-  spirit: number;
   intellect: number;
   endurance: number;
+  agility: number;
   discipline: number;
 };
 

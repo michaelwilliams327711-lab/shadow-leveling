@@ -282,6 +282,7 @@ const editSchema = z.object({
   statBoost: z.nativeEnum(StatBoost).optional().nullable(),
   difficulty: z.nativeEnum(QuestDifficulty).optional(),
   durationMinutes: z.coerce.number().int().min(1).optional(),
+  deadline: z.string().optional().nullable(),
   targetAmount: z.coerce.number().int().min(1).optional().nullable(),
   amountUnit: z.string().optional().nullable(),
   recurrence: recurrenceSchema.optional().nullable(),
@@ -289,6 +290,144 @@ const editSchema = z.object({
 
 type CreateFormValues = z.infer<typeof createSchema>;
 type EditFormValues = z.infer<typeof editSchema>;
+
+const DATE_ONLY_DEADLINE_TIME = "23:59";
+
+function getLocalDatePart(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalTimePart(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const time = `${hours}:${minutes}`;
+  return time === DATE_ONLY_DEADLINE_TIME ? "" : time;
+}
+
+function buildDeadlineIso(datePart: string, timePart: string): string | null {
+  if (!datePart) return null;
+  const [year, month, day] = datePart.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const hasTime = !!timePart;
+  const [hours, minutes] = (hasTime ? timePart : DATE_ONLY_DEADLINE_TIME).split(":").map(Number);
+  const deadline = new Date(
+    year,
+    month - 1,
+    day,
+    hours ?? 23,
+    minutes ?? 59,
+    hasTime ? 0 : 59,
+    hasTime ? 0 : 999,
+  );
+  return Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
+}
+
+function normalizeDeadlineIso(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function hasSpecificDeadlineTime(date: Date): boolean {
+  return !(date.getHours() === 23 && date.getMinutes() === 59);
+}
+
+function formatDeadlineLabel(value?: string | null, status?: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  if (status !== "completed" && Date.now() > date.getTime()) return "FAILED: TIME EXPIRED";
+
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  const dateLabel = sameDay(date, today)
+    ? "Today"
+    : sameDay(date, tomorrow)
+      ? "Tomorrow"
+      : date.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+  if (!hasSpecificDeadlineTime(date)) return dateLabel;
+  return `${dateLabel} @ ${date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function getDeadlineTone(value?: string | null, status?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const msUntilDeadline = date.getTime() - Date.now();
+  if (status !== "completed" && msUntilDeadline < 0) {
+    return "text-red-400 font-bold drop-shadow-[0_0_8px_rgba(248,113,113,0.45)]";
+  }
+  if (status !== "completed" && msUntilDeadline <= 2 * 60 * 60 * 1000) {
+    return "text-red-300 drop-shadow-[0_0_8px_rgba(248,113,113,0.35)]";
+  }
+  return "text-purple-300/80";
+}
+
+function DeadlineInputs({
+  value,
+  onChange,
+}: {
+  value?: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  const datePart = getLocalDatePart(value);
+  const timePart = getLocalTimePart(value);
+
+  return (
+    <div className="rounded-xl border border-purple-500/20 bg-[#111118]/80 p-3 shadow-[inset_0_0_18px_rgba(139,92,246,0.06)]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <FormLabel className="text-xs text-purple-200/80 uppercase tracking-[0.2em]">Due Date</FormLabel>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+            <Input
+              type="date"
+              value={datePart}
+              onChange={(event) => onChange(buildDeadlineIso(event.target.value, timePart))}
+              className="bg-[#0b0b12] border-purple-500/25 pl-9 text-purple-50 [color-scheme:dark] focus-visible:ring-purple-500"
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <FormLabel className="text-xs text-purple-200/80 uppercase tracking-[0.2em]">Due Time <span className="text-muted-foreground">(optional)</span></FormLabel>
+          <div className="relative">
+            <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+            <Input
+              type="time"
+              value={timePart}
+              disabled={!datePart}
+              onChange={(event) => onChange(buildDeadlineIso(datePart, event.target.value))}
+              className="bg-[#0b0b12] border-purple-500/25 pl-9 text-purple-50 [color-scheme:dark] focus-visible:ring-purple-500 disabled:opacity-40"
+            />
+          </div>
+        </div>
+      </div>
+      {datePart && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="mt-2 text-xs text-purple-300/70 hover:text-red-300 transition-colors"
+        >
+          Clear deadline
+        </button>
+      )}
+    </div>
+  );
+}
 
 function RecurrenceFieldsCreate({
   control,
@@ -1322,6 +1461,7 @@ export default function Quests() {
       statBoost: undefined,
       difficulty: QuestDifficulty.E,
       durationMinutes: 30,
+      deadline: "",
       targetAmount: undefined,
       amountUnit: "",
       recurrence: { type: "none" },
@@ -1338,6 +1478,7 @@ export default function Quests() {
         statBoost: (editingQuest.statBoost as z.infer<typeof editSchema>["statBoost"]) ?? undefined,
         difficulty: editingQuest.difficulty as QuestDifficulty,
         durationMinutes: editingQuest.durationMinutes,
+        deadline: editingQuest.deadline ?? "",
         targetAmount: editingQuest.targetAmount ?? undefined,
         amountUnit: editingQuest.amountUnit ?? "",
         recurrence: rec ?? { type: "none" },
@@ -1348,6 +1489,11 @@ export default function Quests() {
 
   const invalidateQuests = () => {
     queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey({ windowDays }) });
+    queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getPlannerWeeklyQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getPlannerMonthlyQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getPlannerYearlyQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
   };
 
@@ -1447,10 +1593,7 @@ export default function Quests() {
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
-    const deadlineDate = data.deadline ? new Date(data.deadline) : null;
-    const deadlineIso = (deadlineDate && !isNaN(deadlineDate.getTime()))
-      ? deadlineDate.toISOString()
-      : null;
+    const deadlineIso = normalizeDeadlineIso(data.deadline);
     createQuest.mutate({
       data: {
         name: data.name,
@@ -1482,6 +1625,7 @@ export default function Quests() {
 
   const onEditSubmit = (data: z.infer<typeof editSchema>) => {
     if (!editingQuest) return;
+    const deadlineIso = normalizeDeadlineIso(data.deadline);
     updateQuest.mutate(
       {
         id: editingQuest.id,
@@ -1491,6 +1635,7 @@ export default function Quests() {
           difficulty: data.difficulty,
           durationMinutes: data.durationMinutes,
           description: data.description || null,
+          deadline: deadlineIso,
           statBoost: data.statBoost ?? null,
           targetAmount: data.targetAmount ?? null,
           amountUnit: data.amountUnit || null,
@@ -1499,7 +1644,10 @@ export default function Quests() {
         }
       },
       {
-        onSuccess: () => {
+        onSuccess: (updatedQuest) => {
+          queryClient.setQueryData<Quest[]>(getListQuestsWindowedQueryKey({ windowDays }), (old) =>
+            old?.map((quest) => quest.id === updatedQuest.id ? updatedQuest : quest) ?? old
+          );
           invalidateQuests();
           setEditingQuest(null);
           toast({ title: "Quest Updated", description: "Mission parameters have been updated." });
@@ -1802,18 +1950,13 @@ export default function Quests() {
 
                 <FormField control={createForm.control} name="deadline" render={({ field }) => (
                   <FormItem>
-                    <InfoTooltip what="A hard cutoff date and time for this quest." fn="When the deadline passes, the quest is automatically marked as Failed, deducting XP and Gold as a penalty." usage="Only set a deadline if the task genuinely must be done by that time. Deadlines add real stakes — don't set them casually.">
+                    <InfoTooltip what="A hard cutoff date and optional time for this quest." fn="When the deadline passes, the quest is automatically marked as Failed, deducting XP and Gold as a penalty." usage="Set a date for real due dates. Add a time only when the mission has a specific cutoff hour.">
                       <FormLabel>
                         Deadline <span className="text-muted-foreground">(optional)</span>
                       </FormLabel>
                     </InfoTooltip>
                     <FormControl>
-                      <Input
-                        type="datetime-local"
-                        {...field}
-                        max={`${new Date().getFullYear() + 30}-12-31T23:59`}
-                        className="bg-background/50 [color-scheme:dark]"
-                      />
+                      <DeadlineInputs value={field.value} onChange={field.onChange} />
                     </FormControl>
                     <p className="text-xs text-destructive/70">If set, the quest auto-fails when the deadline passes.</p>
                     <FormMessage />
@@ -1965,6 +2108,21 @@ export default function Quests() {
                 )} />
               </div>
 
+              <FormField control={editForm.control} name="deadline" render={({ field }) => (
+                <FormItem>
+                  <InfoTooltip what="A hard cutoff date and optional time for this quest." fn="When the deadline passes, the quest is automatically marked as Failed, deducting XP and Gold as a penalty." usage="Set a date for real due dates. Add a time only when the mission has a specific cutoff hour.">
+                    <FormLabel>
+                      Deadline <span className="text-muted-foreground">(optional)</span>
+                    </FormLabel>
+                  </InfoTooltip>
+                  <FormControl>
+                    <DeadlineInputs value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <p className="text-xs text-destructive/70">If set, the quest auto-fails when the deadline passes.</p>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
               <button
                 type="button"
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-white transition-colors w-full"
@@ -2037,6 +2195,8 @@ export default function Quests() {
               <div className="grid gap-4">
                 {quests.filter(q => q.status === status).map(quest => {
                   const recLabel = getRecurrenceLabel(quest.recurrence as RecurrenceConfig | null);
+                  const deadlineLabel = formatDeadlineLabel(quest.deadline, quest.status);
+                  const deadlineTone = getDeadlineTone(quest.deadline, quest.status);
                   return (
                     <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60")}>
                       <QuestCompleteEffect
@@ -2104,6 +2264,12 @@ export default function Quests() {
                           )}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
                             <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {quest.durationMinutes}m</span>
+                            {deadlineLabel && deadlineTone && (
+                              <span className={cn("flex items-center gap-1.5", deadlineTone)}>
+                                <CalendarIcon className="w-4 h-4" />
+                                <span>Due: {deadlineLabel}</span>
+                              </span>
+                            )}
                             <span className="flex items-center gap-1.5 text-primary">
                               <Trophy className="w-4 h-4" />
                               {Math.floor((RANK_BASE_REWARDS[quest.difficulty]?.xp ?? 50) + quest.durationMinutes * DURATION_BONUS_PER_MINUTE.xp)} XP

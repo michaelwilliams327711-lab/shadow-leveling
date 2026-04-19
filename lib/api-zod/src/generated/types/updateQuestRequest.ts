@@ -16,6 +16,7 @@ export interface UpdateQuestRequest {
   durationMinutes?: number;
   isPaused?: boolean;
   description?: string | null;
+  deadline?: string | null;
   statBoost?: StatBoost | null;
   targetAmount?: number | null;
   amountUnit?: string | null;
