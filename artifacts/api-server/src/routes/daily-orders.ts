@@ -26,7 +26,7 @@ const HIDDEN_BOX_GOLD_MIN = 50;
 const HIDDEN_BOX_GOLD_MAX = 150;
 const HIDDEN_BOX_STAT_BOOST = 3;
 
-const CHARACTER_STAT_FIELDS = ["strength", "agility", "endurance", "intellect", "discipline"] as const;
+const CHARACTER_STAT_FIELDS = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
 type StatField = typeof CHARACTER_STAT_FIELDS[number];
 
 function isValidStatField(s: string): s is StatField {
@@ -200,9 +200,9 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
           xp: newXp,
           level: newLevel,
           strength:   sql`${characterTable.strength}   + ${statCategory === "strength"   ? DAILY_ORDER_STAT_GAIN : 0}`,
+          spirit:     sql`${characterTable.spirit}     + ${statCategory === "spirit"     ? DAILY_ORDER_STAT_GAIN : 0}`,
           intellect:  sql`${characterTable.intellect}  + ${statCategory === "intellect"  ? DAILY_ORDER_STAT_GAIN : 0}`,
           endurance:  sql`${characterTable.endurance}  + ${statCategory === "endurance"  ? DAILY_ORDER_STAT_GAIN : 0}`,
-          agility:    sql`${characterTable.agility}    + ${statCategory === "agility"    ? DAILY_ORDER_STAT_GAIN : 0}`,
           discipline: sql`${characterTable.discipline} + ${statCategory === "discipline" ? DAILY_ORDER_STAT_GAIN : 0}`,
           totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           ...streakResetFields,
@@ -362,9 +362,9 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
         .update(characterTable)
         .set({
           strength:   sql`${characterTable.strength}   + ${stat === "strength"   ? boost : 0}`,
+          spirit:     sql`${characterTable.spirit}     + ${stat === "spirit"     ? boost : 0}`,
           intellect:  sql`${characterTable.intellect}  + ${stat === "intellect"  ? boost : 0}`,
           endurance:  sql`${characterTable.endurance}  + ${stat === "endurance"  ? boost : 0}`,
-          agility:    sql`${characterTable.agility}    + ${stat === "agility"    ? boost : 0}`,
           discipline: sql`${characterTable.discipline} + ${stat === "discipline" ? boost : 0}`,
         })
         .where(eq(characterTable.id, char.id))
@@ -428,7 +428,7 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
 
     const statDeductions: Record<string, number> = {
       strength: 0,
-      agility: 0,
+      spirit: 0,
       endurance: 0,
       intellect: 0,
       discipline: 0,
@@ -464,7 +464,7 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
         .set({
           xp:         sql`GREATEST(0, ${characterTable.xp}         - ${totalXpDeducted})`,
           strength:   sql`GREATEST(1, ${characterTable.strength}   - ${statDeductions.strength})`,
-          agility:    sql`GREATEST(1, ${characterTable.agility}    - ${statDeductions.agility})`,
+          spirit:     sql`GREATEST(1, ${characterTable.spirit}     - ${statDeductions.spirit})`,
           endurance:  sql`GREATEST(1, ${characterTable.endurance}  - ${statDeductions.endurance})`,
           intellect:  sql`GREATEST(1, ${characterTable.intellect}  - ${statDeductions.intellect})`,
           discipline: sql`GREATEST(1, ${characterTable.discipline} - ${statDeductions.discipline})`,

@@ -57,7 +57,6 @@ export interface CompleteDailyOrderResult {
     strength: number;
     intellect: number;
     endurance: number;
-    agility: number;
     discipline: number;
     streak: number;
     longestStreak: number;

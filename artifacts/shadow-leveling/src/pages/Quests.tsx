@@ -117,11 +117,11 @@ const CATEGORY_PRESETS = Object.values(QuestCategory);
 
 
 const STAT_ICONS: Record<string, LucideIcon> = {
-  strength: Dumbbell, spirit: Sparkles, endurance: Shield, intellect: Brain, agility: Zap, discipline: Target,
+  strength: Dumbbell, spirit: Sparkles, endurance: Shield, intellect: Brain, discipline: Target,
 };
 const STAT_TEXT_COLORS: Record<string, string> = {
   strength: "text-red-400", spirit: "text-pink-400", endurance: "text-green-400",
-  intellect: "text-blue-400", agility: "text-cyan-400", discipline: "text-purple-400",
+  intellect: "text-blue-400", discipline: "text-purple-400",
 };
 const STAT_DISPLAY: Record<string, { label: string; icon: LucideIcon; color: string }> = Object.fromEntries(
   Object.keys(STAT_META).map((key) => [
@@ -1369,7 +1369,7 @@ export default function Quests() {
           setTimeout(() => setFragmentDropData({ count: Math.min(fragCount, 3) }), 700);
         }
         if (res.leveledUp && res.newLevel) {
-          const statNames = ["strength", "spirit", "endurance", "intellect", "agility", "discipline"] as const;
+          const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
           const statDeltas: Array<{ name: string; value: number }> = [];
           if (res.statGains) {
             for (const stat of statNames) {
@@ -1382,7 +1382,7 @@ export default function Quests() {
           setTimeout(() => setLevelUpData({ newLevel: res.newLevel!, statDeltas }), 600);
         }
         if (res.statGains && res.character) {
-          const statNames = ["strength", "spirit", "endurance", "intellect", "agility", "discipline"] as const;
+          const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
           for (const stat of statNames) {
             const gain = (res.statGains as Record<string, number>)[stat] ?? 0;
             const newVal = (res.character as Record<string, number>)[stat] ?? 0;

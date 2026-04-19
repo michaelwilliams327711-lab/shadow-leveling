@@ -21,7 +21,6 @@ const STAT_TO_VIRTUE: Record<string, string> = {
   intellect:  "focus",
   endurance:  "resilience",
   strength:   "resilience",
-  agility:    "focus",
 };
 
 function fireCelestialVice(characterId: number, statField: string): void {
@@ -236,7 +235,6 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       spirit:     char.spirit,
       intellect:  char.intellect,
       endurance:  char.endurance,
-      agility:    char.agility,
       discipline: char.discipline,
     };
 
@@ -334,7 +332,6 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
         spirit:     statAccum.spirit,
         intellect:  statAccum.intellect,
         endurance:  statAccum.endurance,
-        agility:    statAccum.agility,
         discipline: statAccum.discipline,
         totalQuestsFailed: char.totalQuestsFailed + overdueQuests.length,
         failStreak: runningFailStreak,
@@ -767,7 +764,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const spiritGain     = statField === "spirit"     ? statGain : 0;
     const intellectGain  = statField === "intellect"  ? statGain : 0;
     const enduranceGain  = statField === "endurance"  ? statGain : 0;
-    const agilityGain    = statField === "agility"    ? statGain : 0;
     const disciplineTotal = (statField === "discipline" ? statGain : 0) + disciplineGain;
 
     const localMidnight = new Date(today + "T00:00:00.000Z");
@@ -800,7 +796,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
           spirit:     sql`LEAST(99999, ${characterTable.spirit}     + ${spiritGain})`,
           intellect:  sql`LEAST(99999, ${characterTable.intellect}  + ${intellectGain})`,
           endurance:  sql`LEAST(99999, ${characterTable.endurance}  + ${enduranceGain})`,
-          agility:    sql`LEAST(99999, ${characterTable.agility}    + ${agilityGain})`,
           discipline: sql`LEAST(99999, ${characterTable.discipline} + ${disciplineTotal})`,
           totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           failStreak: 0,
@@ -903,7 +898,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       spirit:     statField === "spirit"     ? statGain : 0,
       intellect:  statField === "intellect"  ? statGain : 0,
       endurance:  statField === "endurance"  ? statGain : 0,
-      agility:    statField === "agility"    ? statGain : 0,
       discipline: (statField === "discipline" ? statGain : 0) + disciplineGain,
     };
 
@@ -970,7 +964,6 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
     const spiritPenalty     = statField === "spirit"     ? catStatPenalty : 0;
     const intellectPenalty  = statField === "intellect"  ? catStatPenalty : 0;
     const endurancePenalty  = statField === "endurance"  ? catStatPenalty : 0;
-    const agilityPenalty    = statField === "agility"    ? catStatPenalty : 0;
     const disciplinePenalty = (statField === "discipline" ? catStatPenalty : 0) + discPenalty;
 
     const [updatedChar] = await db.transaction(async (tx) => {
@@ -991,7 +984,6 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
           spirit:     sql`GREATEST(1, ${characterTable.spirit}     - ${spiritPenalty})`,
           intellect:  sql`GREATEST(1, ${characterTable.intellect}  - ${intellectPenalty})`,
           endurance:  sql`GREATEST(1, ${characterTable.endurance}  - ${endurancePenalty})`,
-          agility:    sql`GREATEST(1, ${characterTable.agility}    - ${agilityPenalty})`,
           discipline: sql`GREATEST(1, ${characterTable.discipline} - ${disciplinePenalty})`,
           totalQuestsFailed: sql`${characterTable.totalQuestsFailed} + 1`,
           failStreak: newFailStreak,
@@ -1029,7 +1021,6 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
       spirit:     statField === "spirit"     ? catStatPenalty : 0,
       intellect:  statField === "intellect"  ? catStatPenalty : 0,
       endurance:  statField === "endurance"  ? catStatPenalty : 0,
-      agility:    statField === "agility"    ? catStatPenalty : 0,
       discipline: (statField === "discipline" ? catStatPenalty : 0) + discPenalty,
     };
 

@@ -10,7 +10,6 @@ const DOMAIN_POINTS = [
   { subject: "SPI", key: "spirit"     as const, color: "#f472b6" },
   { subject: "END", key: "endurance"  as const, color: "#4ade80" },
   { subject: "INT", key: "intellect"  as const, color: "#60a5fa" },
-  { subject: "AGI", key: "agility"    as const, color: "#22d3ee" },
   { subject: "DIS", key: "discipline" as const, color: "#c084fc" },
 ];
 

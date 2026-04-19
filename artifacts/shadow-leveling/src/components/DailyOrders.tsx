@@ -26,7 +26,7 @@ import { Check, Plus, Trash2, Target, Package, Sparkles, Dumbbell, Brain, Shield
 const STAT_ICONS: Record<StatKey, LucideIcon> = {
   discipline: Target,
   strength: Dumbbell,
-  agility: Sparkles,
+  spirit: Sparkles,
   endurance: Shield,
   intellect: Brain,
 };
@@ -34,7 +34,7 @@ const STAT_ICONS: Record<StatKey, LucideIcon> = {
 const STAT_CSS_COLORS: Record<StatKey, string> = {
   discipline: "text-purple-400",
   strength: "text-red-400",
-  agility: "text-pink-400",
+  spirit: "text-pink-400",
   endurance: "text-green-400",
   intellect: "text-blue-400",
 };

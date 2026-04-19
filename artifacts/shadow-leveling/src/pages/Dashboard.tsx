@@ -17,7 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Coins, Shield, Zap, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound } from "lucide-react";
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,7 +251,6 @@ export default function Dashboard() {
     { name: STAT_META.spirit.label,     val: (character as Record<string, unknown>).spirit as number ?? 0, icon: Sparkles, color: "text-pink-400",   barColor: "bg-pink-400"   },
     { name: STAT_META.endurance.label,  val: character.endurance,                     icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
     { name: STAT_META.intellect.label,  val: character.intellect,                     icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
-    { name: STAT_META.agility.label,    val: character.agility,                       icon: Zap,      color: "text-cyan-400",   barColor: "bg-cyan-400"   },
     { name: STAT_META.discipline.label, val: character.discipline,                    icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
   ];
 

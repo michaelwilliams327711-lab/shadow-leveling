@@ -172,7 +172,7 @@ export default function BossArena() {
   }, [ritualBoss]);
 
   const handleChallenge = (id: number) => {
-    const statNames = ["strength", "spirit", "endurance", "intellect", "agility", "discipline"] as const;
+    const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
 
     challengeBoss.mutate({ id }, {
       onSuccess: (res) => {

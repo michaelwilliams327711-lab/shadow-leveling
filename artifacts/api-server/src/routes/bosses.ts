@@ -197,7 +197,7 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     const xpReward = Math.floor(baseXpReward * totalMultiplier);
     const goldRewardFinal = Math.floor(goldReward * totalMultiplier);
 
-    const ALL_STATS = ["strength", "intellect", "endurance", "agility", "discipline"] as const;
+    const ALL_STATS = ["strength", "spirit", "intellect", "endurance", "discipline"] as const;
     type BossStat = typeof ALL_STATS[number];
 
     let statA: BossStat = "strength";
@@ -259,9 +259,9 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
                 gold: newGold,
                 level: txNewLevel,
                 strength:   sql`${characterTable.strength}   + ${statDelta("strength")}`,
+                spirit:     sql`${characterTable.spirit}     + ${statDelta("spirit")}`,
                 intellect:  sql`${characterTable.intellect}  + ${statDelta("intellect")}`,
                 endurance:  sql`${characterTable.endurance}  + ${statDelta("endurance")}`,
-                agility:    sql`${characterTable.agility}    + ${statDelta("agility")}`,
                 discipline: sql`${characterTable.discipline} + ${statDelta("discipline")}`,
               }
             : {

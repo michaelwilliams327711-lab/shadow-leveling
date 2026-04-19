@@ -12,7 +12,6 @@ export const characterTable = pgTable("character", {
   spirit: integer("spirit").notNull().default(10),
   intellect: integer("intellect").notNull().default(10),
   endurance: integer("endurance").notNull().default(10),
-  agility: integer("agility").notNull().default(10),
   discipline: integer("discipline").notNull().default(10),
   streak: integer("streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),

@@ -85,7 +85,6 @@ router.post("/ascension/quick-log", async (req, res) => {
               strength:   sql`GREATEST(1, ${characterTable.strength}   - 50)`,
               intellect:  sql`GREATEST(1, ${characterTable.intellect}  - 50)`,
               endurance:  sql`GREATEST(1, ${characterTable.endurance}  - 50)`,
-              agility:    sql`GREATEST(1, ${characterTable.agility}    - 50)`,
               discipline: sql`GREATEST(1, ${characterTable.discipline} - 50)`,
             }).where(eq(characterTable.id, char.id));
 
