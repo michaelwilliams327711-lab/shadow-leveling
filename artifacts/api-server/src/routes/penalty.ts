@@ -47,6 +47,7 @@ router.post("/penalty/acknowledge", async (req, res) => {
 
     await Promise.all([
       db.insert(questLogTable).values({
+        characterId: char.id,
         questName: "[ SYSTEM: TRIAL SURVIVED ]",
         category: "Other",
         difficulty: "SSS",

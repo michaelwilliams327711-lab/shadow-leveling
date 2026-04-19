@@ -228,6 +228,7 @@ router.post("/daily-orders/:id/complete", async (req, res) => {
     invalidateCharacterCache();
 
     await db.insert(questLogTable).values({
+      characterId: char.id,
       questName: `Daily Order: ${order.name}`,
       category: "Daily",
       difficulty: "E",
@@ -342,6 +343,7 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
       finalChar = withGold;
 
       await db.insert(questLogTable).values({
+        characterId: char.id,
         questName: "Daily Orders: Hidden Box (Gold Bonus)",
         category: "Daily",
         difficulty: "E",
@@ -372,6 +374,7 @@ router.post("/daily-orders/claim-hidden-box", async (req, res) => {
       finalChar = withBoost;
 
       await db.insert(questLogTable).values({
+        characterId: char.id,
         questName: `Daily Orders: Hidden Box (${stat} +${pendingBox.statBoost})`,
         category: "Daily",
         difficulty: "E",
@@ -483,6 +486,7 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     }
 
     const questLogEntries = staleOrders.map((order) => ({
+      characterId: char.id,
       questName: `Daily Order: ${order.name}`,
       category: "Daily",
       difficulty: "E",
@@ -497,6 +501,7 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
     await db.insert(questLogTable).values(questLogEntries);
 
     await db.insert(penaltyLogTable).values({
+      characterId: char.id,
       type: "daily_order_expired",
       description: `${staleOrders.length} uncompleted daily order(s) expired`,
       xpDeducted: totalXpDeducted,

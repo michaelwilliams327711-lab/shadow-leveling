@@ -274,6 +274,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
       overdueIds.push(quest.id);
 
       questLogBatch.push({
+        characterId: char.id,
         questName: quest.name,
         category: quest.category,
         difficulty: quest.difficulty,
@@ -287,6 +288,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
 
       const penaltyDesc = `Quest deadline missed: "${quest.name}" (Rank ${quest.difficulty})`;
       penaltyLogBatch.push({
+        characterId: char.id,
         type: "quest_overdue",
         description: penaltyDesc,
         xpDeducted,
@@ -830,6 +832,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     }
 
     await db.insert(questLogTable).values({
+      characterId: char.id,
       questName: quest.name,
       category: quest.category,
       difficulty: quest.difficulty,
@@ -1003,6 +1006,7 @@ router.post("/quests/:id/fail", strictLimiter, async (req, res) => {
     }
 
     await db.insert(questLogTable).values({
+      characterId: char.id,
       questName: quest.name,
       category: quest.category,
       difficulty: quest.difficulty,

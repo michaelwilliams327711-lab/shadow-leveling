@@ -276,6 +276,7 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
     invalidateCharacterCache();
 
     await db.insert(questLogTable).values({
+      characterId: char.id,
       questName: boss.name,
       category: "Boss",
       difficulty: boss.rank,

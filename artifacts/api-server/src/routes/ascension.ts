@@ -89,6 +89,7 @@ router.post("/ascension/quick-log", async (req, res) => {
             }).where(eq(characterTable.id, char.id));
 
             await tx.insert(penaltyLogTable).values({
+              characterId: char.id,
               type: "GREAT_FALL",
               description: `Domain ${pair} has fallen. Ascension lost, stats decayed, wealth seized.`,
               xpDeducted: 0,

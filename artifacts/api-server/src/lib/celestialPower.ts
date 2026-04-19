@@ -109,6 +109,7 @@ export async function applyViceRetaliation(
       .where(eq(characterTable.id, characterId));
 
     await db.insert(penaltyLogTable).values({
+      characterId,
       type: "GREAT_FALL",
       description: `Domain ${domainPair} has fallen. Ascension lost, stats decayed, wealth seized.`,
       xpDeducted: 0,
