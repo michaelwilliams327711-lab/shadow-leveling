@@ -30,6 +30,7 @@ export const characterTable = pgTable("character", {
   survivorBuffExpiresAt: timestamp("survivor_buff_expires_at"),
   vocationId: text("vocation_id"),
   virtueCategory: text("virtue_category"),
+  vocationXp: integer("vocation_xp").notNull().default(0),
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

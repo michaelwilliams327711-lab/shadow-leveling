@@ -649,18 +649,39 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
-                <div>
-                  <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Vocation Path</p>
+              <div className="p-3 rounded-lg bg-white/3 border border-primary/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Vocation Path</p>
+                    {character.vocationId
+                      ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.vocationId}</p>
+                      : <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                    }
+                  </div>
                   {character.vocationId
-                    ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.vocationId}</p>
-                    : <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                    ? <Sparkles className="w-4 h-4" style={{ color: "#a855f7" }} />
+                    : <Lock className="w-4 h-4 text-primary/30" />
                   }
                 </div>
-                {character.vocationId
-                  ? <Sparkles className="w-4 h-4" style={{ color: "#a855f7" }} />
-                  : <Lock className="w-4 h-4 text-primary/30" />
-                }
+                {character.vocationId && (() => {
+                  const VOCATION_XP_THRESHOLD = 1000;
+                  const vXp = character.vocationXp ?? 0;
+                  const vPct = Math.min(100, Math.floor((vXp / VOCATION_XP_THRESHOLD) * 100));
+                  return (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] tracking-widest uppercase" style={{ color: "#a855f7" }}>Class XP</span>
+                        <span className="text-[10px] font-mono" style={{ color: "#a855f7" }}>{vXp} / {VOCATION_XP_THRESHOLD}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${vPct}%`, background: "linear-gradient(90deg, #7c3aed, #a855f7)" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
                 <div>

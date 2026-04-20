@@ -572,10 +572,16 @@ router.get("/quests", async (req, res) => {
   }
 });
 
+const VOCATION_CATEGORY_MAP: Record<string, string> = {
+  Productivity: "TECH_MONARCH",
+  Dev: "TECH_MONARCH",
+};
+
 router.post("/quests", async (req, res) => {
   try {
     const body = CreateQuestBody.parse(req.body);
-    const vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
+    const autoVocation = VOCATION_CATEGORY_MAP[body.category] ?? null;
+    const vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : autoVocation;
     const char = await getOrCreateCharacter();
     const [quest] = await db
       .insert(questsTable)
@@ -735,7 +741,12 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
     const char = await getOrCreateCharacter();
     const today = getSystemDateFromReq(req);
 
-    const { xpReward, goldReward } = calculateRewards(quest.difficulty, quest.durationMinutes);
+    const { xpReward: baseXpReward, goldReward: baseGoldReward } = calculateRewards(quest.difficulty, quest.durationMinutes);
+
+    const isVocationMatch = !!quest.vocationId && quest.vocationId === char.vocationId;
+    const vocationBonus = isVocationMatch ? 1.2 : 1.0;
+    const xpReward = Math.floor(baseXpReward * vocationBonus);
+    const goldReward = Math.floor(baseGoldReward * vocationBonus);
 
     const rngRoll = Math.random();
     const rngBonus = rngRoll < 0.1;
@@ -759,6 +770,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 
     const xpAwarded = Math.floor(xpReward * totalMultiplier);
     const goldAwarded = Math.floor(goldReward * totalMultiplier);
+    const vocationXpAwarded = isVocationMatch ? xpAwarded : 0;
 
     const statField = quest.statBoost ?? CATEGORY_STAT_MAP[quest.category] ?? "strength";
     const baseDifficultyGain = quest.difficulty === "S" || quest.difficulty === "SS" || quest.difficulty === "SSS" ? 3 : quest.difficulty === "A" || quest.difficulty === "B" ? 2 : 1;
@@ -808,6 +820,7 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
           totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           failStreak: 0,
           penaltyMultiplier: 1.0,
+          vocationXp: sql`${characterTable.vocationXp} + ${vocationXpAwarded}`,
         })
         .where(eq(characterTable.id, char.id))
         .returning();

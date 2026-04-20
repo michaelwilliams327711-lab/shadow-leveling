@@ -36,7 +36,7 @@ function isRecurringDueOnDate(recurrence: RecurrenceConfig, date: Date, createdA
       const baseStr = dateToStr(completedAt ?? createdAt);
       const base = new Date(baseStr + "T00:00:00.000Z");
       const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
-      return diffDays > 0 && diffDays % interval === 0;
+      return diffDays >= 0 && diffDays % interval === 0;
     }
     case "weekly": {
       const days = recurrence.daysOfWeek ?? [];
@@ -317,7 +317,7 @@ router.get("/planner/monthly", async (req, res) => {
             for (let d = 1; d <= daysInMonth; d++) {
               const target = new Date(Date.UTC(year, month, d));
               const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
-              if (diffDays > 0 && diffDays % interval === 0) {
+              if (diffDays >= 0 && diffDays % interval === 0) {
                 addToUpcoming(dateToStr(target), q);
               }
             }
