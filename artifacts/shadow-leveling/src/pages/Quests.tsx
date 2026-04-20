@@ -1676,9 +1676,10 @@ export default function Quests() {
   const onEditSubmit = (data: z.infer<typeof editSchema>) => {
     if (!editingQuest) return;
     const deadlineIso = normalizeDeadlineIso(data.deadline);
+    const questId = editingQuest.id;
     updateQuest.mutate(
       {
-        id: editingQuest.id,
+        id: questId,
         data: {
           name: data.name,
           category: data.category,
@@ -1695,13 +1696,26 @@ export default function Quests() {
       },
       {
         onSuccess: (updatedQuest) => {
-          queryClient.setQueryData<Quest[]>(getListQuestsWindowedQueryKey({ windowDays }), (old) =>
-            old?.map((quest) => quest.id === updatedQuest.id ? updatedQuest : quest) ?? old
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey({ windowDays }),
+            (old) => old?.map((q) => q.id === updatedQuest.id ? updatedQuest : q) ?? old
+          );
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey(),
+            (old) => old?.map((q) => q.id === updatedQuest.id ? updatedQuest : q) ?? old
           );
           invalidateQuests();
           setEditingQuest(null);
           toast({ title: "Quest Updated", description: "Mission parameters have been updated." });
-        }
+        },
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "Unknown error.";
+          toast({
+            title: "Update Failed",
+            description: `Could not save quest changes. ${msg}`,
+            className: "border-destructive bg-destructive/20 text-destructive-foreground",
+          });
+        },
       }
     );
   };

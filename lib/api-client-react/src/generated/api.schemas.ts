@@ -12,6 +12,8 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
+  age?: number | null;
+  residency?: string | null;
   level: number;
   xp: number;
   xpToNextLevel: number;

@@ -20,6 +20,8 @@ export const HealthCheckResponse = zod.object({
 export const GetCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  age: zod.number().nullish(),
+  residency: zod.string().nullish(),
   level: zod.number(),
   xp: zod.number(),
   xpToNextLevel: zod.number(),
@@ -51,6 +53,8 @@ export const UpdateCharacterBody = zod.object({
 export const UpdateCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  age: zod.number().nullish(),
+  residency: zod.string().nullish(),
   level: zod.number(),
   xp: zod.number(),
   xpToNextLevel: zod.number(),

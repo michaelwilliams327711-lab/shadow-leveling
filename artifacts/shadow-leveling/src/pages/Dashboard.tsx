@@ -617,13 +617,19 @@ export default function Dashboard() {
                 <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
                   Age
                 </span>
-                <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                {character.age != null
+                  ? <span className="text-sm font-mono font-semibold text-white tracking-wider">{character.age}</span>
+                  : <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                }
               </div>
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> Residency
                 </span>
-                <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                {character.residency
+                  ? <span className="text-sm font-mono font-semibold text-white tracking-wider">{character.residency}</span>
+                  : <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                }
               </div>
             </CardContent>
           </Card>

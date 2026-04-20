@@ -5,6 +5,8 @@ import { z } from "zod";
 export const characterTable = pgTable("character", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default("Hunter"),
+  age: integer("age"),
+  residency: text("residency"),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   gold: integer("gold").notNull().default(0),
