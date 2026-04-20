@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const STATIC_CACHE  = `shadow-static-${CACHE_VERSION}`;
 const API_CACHE     = `shadow-api-${CACHE_VERSION}`;
 
@@ -9,21 +9,6 @@ const STATIC_PRECACHE = [
   "/favicon.svg",
   "/images/icon-192.png",
   "/images/icon-512.png",
-];
-
-const API_ROUTES = [
-  "/api/quests",
-  "/api/character",
-  "/api/ascension/powers",
-  "/api/daily-orders",
-  "/api/skills",
-  "/api/inventory",
-  "/api/dungeon/gates",
-  "/api/quest-log",
-  "/api/bad-habits",
-  "/api/activity",
-  "/api/planner",
-  "/api/rng",
 ];
 
 function isViteDevPath(url) {
@@ -71,13 +56,11 @@ self.addEventListener("fetch", (event) => {
   // Never intercept Vite dev-server module requests — let HMR work freely
   if (isViteDevPath(url)) return;
 
-  const isApiCall = API_ROUTES.some((r) => url.pathname.startsWith(r));
-
-  if (isApiCall) {
-    // Network-First for API: try network, fall back to cache
+  // All /api/* routes → Network-First (no whitelist needed — regex catches every future endpoint)
+  if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirst(request));
   } else if (url.origin === self.location.origin) {
-    // Cache-First for static assets (icons, manifest, fonts)
+    // Cache-First for static assets (icons, manifest, fonts, app shell)
     event.respondWith(cacheFirst(request));
   }
 });

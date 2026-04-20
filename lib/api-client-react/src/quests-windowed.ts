@@ -58,6 +58,8 @@ export function useListQuestsWindowed<
   const query = useQuery<Quest[], TError, TData>({
     queryKey,
     queryFn,
+    staleTime: 0,
+    refetchOnMount: "always",
     ...queryOptions,
   }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

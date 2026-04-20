@@ -1,0 +1,44 @@
+MISSION: Implement the 6-point Hardening Protocol to ensure "Quests & Chronicle" is bulletproof and performance-optimized.
+
+[TASK 1: SERVICE WORKER REGEX (sw.js)]
+
+Action: Replace the manual API_ROUTES whitelist with a single Network-First rule for all same-origin requests starting with /api/.
+
+Logic: Use url.pathname.startsWith('/api/') to ensure any new API endpoint is automatically handled correctly without manual registration.
+
+[TASK 2: INVALDIATE QUESTS RESILIENCE (Quests.tsx)]
+
+Action: Refactor invalidateQuests. Wrap each queryClient.invalidateQueries call in a try/catch block or use Promise.allSettled.
+
+Goal: Ensure a failure in one query key (like the Monthly or Yearly planner) does not block the refresh of the core Quest list.
+
+[TASK 3: HOOK OPTIMIZATION (useListQuestsWindowed)]
+
+Action: Update the useListQuestsWindowed hook settings.
+
+Settings: Set staleTime: 0 and refetchOnMount: "always".
+
+Goal: Force the system to re-validate the quest list every time the component is mounted, ensuring zero stale data.
+
+[TASK 4: CACHE-CONTROL HEADERS (api-server)]
+
+Action: In the main API server middleware, add a Cache-Control: no-store, max-age=0 header to all responses starting with /api/.
+
+Goal: Create a defense-in-depth backstop that tells the browser and Service Worker never to store API responses as static files.
+
+[TASK 5: MUTATION REORDERING (Quests.tsx)]
+
+Action: In the onCreateSubmit and onSuccess handlers, move the setQueryData (Optimistic Update) calls to the top of the function, before any cache invalidations occur.
+
+Sovereign Reporting Protocol (REQUIRED):
+Upon completion, you MUST provide a report in the following format:
+
+NO SUMMARIES: Provide the raw, line-by-line source code for the modified logic.
+
+MARKDOWN HEADERS: Every file must begin with ### FILE: [Full/Path/To/File].
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick blocks.
+
+THE CHUNK RULE: If the output exceeds 500 lines, stop and ask the user to say 'CONTINUE'.
+
+FINAL INVENTORY: End with a brief 'Inventory Check' confirming all files delivered

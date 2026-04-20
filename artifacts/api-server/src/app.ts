@@ -132,6 +132,12 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   authMiddleware(req, res, next);
 });
 
+// Defense-in-depth: tell every cache layer (browser, SW, CDN) never to store API responses.
+app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  next();
+});
+
 app.use("/api", router);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction): void => {

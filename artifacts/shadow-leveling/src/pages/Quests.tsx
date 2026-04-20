@@ -1513,13 +1513,25 @@ export default function Quests() {
   };
 
   const invalidateQuests = () => {
-    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey({ windowDays }) });
-    queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerWeeklyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerMonthlyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerYearlyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+    // Each key is computed inside its own try/catch so a single bad import or
+    // undefined function can never block the rest of the invalidations.
+    // Promise.allSettled fires every invalidation regardless of individual failures.
+    const safeInvalidate = (getKey: () => readonly unknown[]) => {
+      try {
+        return queryClient.invalidateQueries({ queryKey: getKey() });
+      } catch {
+        return Promise.resolve();
+      }
+    };
+    void Promise.allSettled([
+      safeInvalidate(() => getListQuestsWindowedQueryKey()),
+      safeInvalidate(() => getListQuestsWindowedQueryKey({ windowDays })),
+      safeInvalidate(() => getPlannerDailyQueryKey()),
+      safeInvalidate(() => getPlannerWeeklyQueryKey()),
+      safeInvalidate(() => getPlannerMonthlyQueryKey()),
+      safeInvalidate(() => getPlannerYearlyQueryKey()),
+      safeInvalidate(() => getGetCharacterQueryKey()),
+    ]);
   };
 
   const onComplete = async (id: number) => {
@@ -1635,9 +1647,9 @@ export default function Quests() {
       }
     }, {
       onSuccess: (newQuest) => {
-        // Immediately inject into both possible cache shapes so the
-        // quest appears in the Active tab before the background refetch
-        // arrives — prevents the "ghost quest" disappearing window.
+        // ── Phase 1: Instant cache injection ─────────────────────────────
+        // Write the new quest into both cache shapes immediately so it
+        // appears in the Active tab before the background refetch arrives.
         queryClient.setQueryData<Quest[]>(
           getListQuestsWindowedQueryKey({ windowDays }),
           (old) => (old ? [...old, newQuest] : [newQuest]),
@@ -1646,14 +1658,17 @@ export default function Quests() {
           getListQuestsWindowedQueryKey(),
           (old) => (old ? [...old, newQuest] : [newQuest]),
         );
-        // Invalidate everything so background refetch reconciles state.
-        invalidateQuests();
+        // ── Phase 2: UI state — runs immediately, never blocked ───────────
         setIsCreateOpen(false);
         setShowRecurrence(false);
         createForm.reset();
         setActiveTab("questlog");
         window.scrollTo({ top: 0, behavior: "smooth" });
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
+        // ── Phase 3: Background reconciliation (fire-and-forget) ──────────
+        // invalidateQuests uses Promise.allSettled — a failure in any single
+        // planner key will never prevent the quest list from being refreshed.
+        invalidateQuests();
       }
     });
   };
