@@ -57,7 +57,7 @@ function isRecurringDueOnDate(recurrence: RecurrenceConfig, date: Date, createdA
   }
 }
 
-function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date): boolean {
+function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date, todayDate?: Date): boolean {
   const recurrence = quest.recurrence as RecurrenceConfig | null;
 
   if (recurrence && recurrence.type !== "none") {
@@ -68,6 +68,11 @@ function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date): b
     const dStr = dateToStr(date);
     const deadlineStr = dateToStr(new Date(quest.deadline));
     return deadlineStr === dStr;
+  }
+
+  // One-off quests (no recurrence, no deadline) show as due on "today" only
+  if (todayDate) {
+    return dateToStr(date) === dateToStr(todayDate);
   }
 
   return false;
@@ -91,6 +96,8 @@ router.get("/planner/daily", async (req, res) => {
           and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, dayWindowStart), lte(questsTable.deadline, dayWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, dayWindowStart), lte(questsTable.completedAt, dayWindowEnd)),
+          // One-off active quests (no deadline, no recurrence) — always show as due today
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -132,7 +139,7 @@ router.get("/planner/daily", async (req, res) => {
     }
 
     const activeQuests = allQuests.filter((q) => q.status === "active" && !q.isPaused);
-    const todayQuests = activeQuests.filter((q) => isQuestDueOnDate(q, todayDate));
+    const todayQuests = activeQuests.filter((q) => isQuestDueOnDate(q, todayDate, todayDate));
 
     const totalXpAvailable = todayQuests.reduce((sum, q) => {
       const base = RANK_BASE_REWARDS[q.difficulty]?.xp ?? 50;
@@ -182,6 +189,8 @@ router.get("/planner/weekly", async (req, res) => {
           and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, weekWindowStart), lte(questsTable.deadline, weekWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, weekWindowStart), lte(questsTable.completedAt, weekWindowEnd)),
+          // One-off active quests (no deadline, no recurrence) — show on today's column
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -200,7 +209,7 @@ router.get("/planner/weekly", async (req, res) => {
       const day = addDays(weekStart, i);
       const dayStr = dateToStr(day);
       const dayQuests = activeQuests.filter((q) => {
-        if (q.status === "active") return isQuestDueOnDate(q, day);
+        if (q.status === "active") return isQuestDueOnDate(q, day, todayDate);
         if (q.status === "completed" && q.completedAt) {
           return dateToStr(new Date(q.completedAt)) === dayStr;
         }
@@ -252,6 +261,8 @@ router.get("/planner/monthly", async (req, res) => {
           and(eq(questsTable.status, "active"), isNotNull(questsTable.recurrence)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, monthWindowStart), lte(questsTable.deadline, monthWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, monthWindowStart), lte(questsTable.completedAt, monthWindowEnd)),
+          // One-off active quests — pin them to today's date in the monthly view
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -356,6 +367,11 @@ router.get("/planner/monthly", async (req, res) => {
         const deadlineDate = new Date(q.deadline);
         if (deadlineDate.getUTCFullYear() === year && deadlineDate.getUTCMonth() === month) {
           addToUpcoming(deadlineStr, q);
+        }
+      } else {
+        // One-off quest: pin to today if today falls within this month
+        if (todayDate.getUTCFullYear() === year && todayDate.getUTCMonth() === month) {
+          addToUpcoming(today, q);
         }
       }
     }
