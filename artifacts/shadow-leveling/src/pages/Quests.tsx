@@ -22,6 +22,8 @@ import {
   useRescheduleQuest,
   getPlannerDailyQueryKey,
   getPlannerWeeklyQueryKey,
+  getPlannerMonthlyQueryKey,
+  getPlannerYearlyQueryKey,
   type WeeklyPlannerDay,
   type MonthlyPlannerDay,
   type YearlyHeatmapDay,

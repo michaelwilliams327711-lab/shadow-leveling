@@ -5,6 +5,7 @@ import { characterTable } from "./character";
 
 export const questsTable = pgTable("quests", {
   id: serial("id").primaryKey(),
+  characterId: integer("character_id").notNull().default(1).references(() => characterTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   category: text("category").notNull().default("Other"),
   difficulty: text("difficulty").notNull().default("D"),
@@ -24,6 +25,7 @@ export const questsTable = pgTable("quests", {
   virtueCategory: text("virtue_category"),
 }, (table) => [
   index("quests_status_deleted_at_created_at_idx").on(table.status, table.deletedAt, table.createdAt),
+  index("quests_character_id_idx").on(table.characterId),
 ]);
 
 export const questLogTable = pgTable("quest_log", {

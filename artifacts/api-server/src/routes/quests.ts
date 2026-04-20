@@ -576,9 +576,11 @@ router.post("/quests", async (req, res) => {
   try {
     const body = CreateQuestBody.parse(req.body);
     const vocationId = typeof req.body.vocationId === "string" ? req.body.vocationId : null;
+    const char = await getOrCreateCharacter();
     const [quest] = await db
       .insert(questsTable)
       .values({
+        characterId: char.id,
         name: body.name,
         category: body.category,
         difficulty: body.difficulty,
