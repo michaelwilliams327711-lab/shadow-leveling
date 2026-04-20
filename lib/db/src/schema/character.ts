@@ -28,6 +28,8 @@ export const characterTable = pgTable("character", {
   lastCronDate: text("last_cron_date"),
   gateFragments: integer("gate_fragments").notNull().default(0),
   survivorBuffExpiresAt: timestamp("survivor_buff_expires_at"),
+  vocationId: text("vocation_id"),
+  virtueCategory: text("virtue_category"),
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

@@ -41,6 +41,8 @@ export const GetCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+  vocationId: zod.string().nullish(),
+  virtueCategory: zod.string().nullish(),
 });
 
 /**
@@ -74,6 +76,8 @@ export const UpdateCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+  vocationId: zod.string().nullish(),
+  virtueCategory: zod.string().nullish(),
 });
 
 /**

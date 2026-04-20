@@ -652,20 +652,34 @@ export default function Dashboard() {
               <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
                 <div>
                   <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Vocation Path</p>
-                  <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                  {character.vocationId
+                    ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.vocationId}</p>
+                    : <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                  }
                 </div>
-                <Lock className="w-4 h-4 text-primary/30" />
+                {character.vocationId
+                  ? <Sparkles className="w-4 h-4" style={{ color: "#a855f7" }} />
+                  : <Lock className="w-4 h-4 text-primary/30" />
+                }
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
                 <div>
                   <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Virtue Category</p>
-                  <p className="text-sm font-display font-bold text-muted-foreground/40 tracking-wider">LOCKED</p>
+                  {character.virtueCategory
+                    ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.virtueCategory}</p>
+                    : <p className="text-sm font-display font-bold text-muted-foreground/40 tracking-wider">LOCKED</p>
+                  }
                 </div>
-                <Lock className="w-4 h-4 text-muted-foreground/20" />
+                {character.virtueCategory
+                  ? <Zap className="w-4 h-4" style={{ color: "#a855f7" }} />
+                  : <Lock className="w-4 h-4 text-muted-foreground/20" />
+                }
               </div>
-              <p className="text-[10px] text-muted-foreground/40 text-center tracking-widest pt-1">
-                Awaken your Vocation to unlock this system.
-              </p>
+              {!character.vocationId && (
+                <p className="text-[10px] text-muted-foreground/40 text-center tracking-widest pt-1">
+                  Awaken your Vocation to unlock this system.
+                </p>
+              )}
             </CardContent>
           </Card>
 

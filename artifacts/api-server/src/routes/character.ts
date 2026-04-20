@@ -27,7 +27,7 @@ export async function getOrCreateCharacter(): Promise<CharacterRow> {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
     const rows = await tx.select().from(characterTable).limit(1);
     if (rows.length > 0) return rows[0];
-    const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();
+    const [created] = await tx.insert(characterTable).values({ name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" }).returning();
     return created;
   });
   return char;
