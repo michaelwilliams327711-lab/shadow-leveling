@@ -17,7 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound } from "lucide-react";
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Lock, Zap, User, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -409,10 +409,10 @@ export default function Dashboard() {
               
               <InfoTooltip
                 what="XP Progress Bar — how close you are to the next level."
-                fn="Shows current XP as a fraction of the XP required to reach the next level."
+                fn={`XP required for this level = (2×${character.level} − 1) × 10 = ${character.xpToNextLevel} XP. Formula: Level = ⌊√(TotalXP / 10)⌋ + 1.`}
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
-                <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-8 border border-white/5 shadow-inner">
+                <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${xpPercent}%` }}
@@ -421,6 +421,12 @@ export default function Dashboard() {
                   />
                 </div>
               </InfoTooltip>
+              <div className="flex justify-between items-center text-[11px] text-muted-foreground/60 font-mono mb-6">
+                <span>LVL {character.level} → LVL {character.level + 1}</span>
+                <span className="text-primary/70">
+                  {(character.xpToNextLevel - character.xp).toLocaleString()} XP remaining
+                </span>
+              </div>
 
               <div className="relative">
                 <AnimatePresence>
@@ -591,6 +597,69 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Biographic Data */}
+          <Card className="glass-panel" style={{ borderColor: "rgba(168,85,247,0.2)" }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="font-display tracking-widest text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-primary/70" />
+                Biographic Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase">Designation</span>
+                <span className="text-sm font-semibold text-white">{character.name}</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
+                  Age
+                </span>
+                <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> Residency
+                </span>
+                <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vocation & Virtue */}
+          <Card
+            className="glass-panel"
+            style={{
+              borderColor: "rgba(168,85,247,0.25)",
+              boxShadow: "0 0 16px rgba(88,28,135,0.12)",
+            }}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="font-display tracking-widest text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary/70" />
+                Vocation &amp; Virtue
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
+                <div>
+                  <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Vocation Path</p>
+                  <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                </div>
+                <Lock className="w-4 h-4 text-primary/30" />
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
+                <div>
+                  <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Virtue Category</p>
+                  <p className="text-sm font-display font-bold text-muted-foreground/40 tracking-wider">LOCKED</p>
+                </div>
+                <Lock className="w-4 h-4 text-muted-foreground/20" />
+              </div>
+              <p className="text-[10px] text-muted-foreground/40 text-center tracking-widest pt-1">
+                Awaken your Vocation to unlock this system.
+              </p>
             </CardContent>
           </Card>
 
