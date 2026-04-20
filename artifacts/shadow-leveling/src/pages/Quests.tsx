@@ -1632,10 +1632,20 @@ export default function Quests() {
         vocationId: null,
       }
     }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      onSuccess: (newQuest) => {
+        // Immediately inject into both possible cache shapes so the
+        // quest appears in the Active tab before the background refetch
+        // arrives — prevents the "ghost quest" disappearing window.
+        queryClient.setQueryData<Quest[]>(
+          getListQuestsWindowedQueryKey({ windowDays }),
+          (old) => (old ? [...old, newQuest] : [newQuest]),
+        );
+        queryClient.setQueryData<Quest[]>(
+          getListQuestsWindowedQueryKey(),
+          (old) => (old ? [...old, newQuest] : [newQuest]),
+        );
+        // Invalidate everything so background refetch reconciles state.
+        invalidateQuests();
         setIsCreateOpen(false);
         setShowRecurrence(false);
         createForm.reset();

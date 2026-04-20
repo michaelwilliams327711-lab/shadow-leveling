@@ -588,7 +588,11 @@ router.post("/quests", async (req, res) => {
         statBoost: body.statBoost ?? null,
         targetAmount: body.targetAmount ?? null,
         amountUnit: body.amountUnit ?? null,
-        recurrence: (body.recurrence as RecurrenceConfig) ?? null,
+        recurrence: (() => {
+          const rec = body.recurrence as RecurrenceConfig | null | undefined;
+          if (!rec || rec.type === "none") return null;
+          return rec;
+        })(),
         isPaused: false,
         vocationId: vocationId ?? null,
         status: "active",
