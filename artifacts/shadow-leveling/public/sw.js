@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const STATIC_CACHE  = `shadow-static-${CACHE_VERSION}`;
 const API_CACHE     = `shadow-api-${CACHE_VERSION}`;
 
@@ -12,12 +12,18 @@ const STATIC_PRECACHE = [
 ];
 
 const API_ROUTES = [
+  "/api/quests",
   "/api/character",
   "/api/ascension/powers",
   "/api/daily-orders",
   "/api/skills",
   "/api/inventory",
   "/api/dungeon/gates",
+  "/api/quest-log",
+  "/api/bad-habits",
+  "/api/activity",
+  "/api/planner",
+  "/api/rng",
 ];
 
 function isViteDevPath(url) {
