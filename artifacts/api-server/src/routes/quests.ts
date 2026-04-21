@@ -838,9 +838,6 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 
           vocationXp: txNewVocXp,
           vocationLevel: txNewVocLevel,
-
-          vocationXp: sql`${characterTable.vocationXp} + ${vocationXpAwarded}`,
-
         })
         .where(eq(characterTable.id, char.id))
         .returning();

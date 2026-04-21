@@ -44,11 +44,8 @@ export const GetCharacterResponse = zod.object({
 
   vocationXp: zod.number(),
   vocationLevel: zod.number(),
-
   vocationId: zod.string().nullish(),
   virtueCategory: zod.string().nullish(),
-  vocationXp: zod.number().default(0),
-
 });
 
 /**
@@ -85,11 +82,8 @@ export const UpdateCharacterResponse = zod.object({
 
   vocationXp: zod.number(),
   vocationLevel: zod.number(),
-
   vocationId: zod.string().nullish(),
   virtueCategory: zod.string().nullish(),
-  vocationXp: zod.number().default(0),
-
 });
 
 /**

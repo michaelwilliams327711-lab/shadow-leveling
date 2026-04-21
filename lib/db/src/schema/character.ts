@@ -31,11 +31,8 @@ export const characterTable = pgTable("character", {
 
   vocationXp: integer("vocation_xp").notNull().default(0),
   vocationLevel: integer("vocation_level").notNull().default(0),
-
   vocationId: text("vocation_id"),
   virtueCategory: text("virtue_category"),
-  vocationXp: integer("vocation_xp").notNull().default(0),
-
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

@@ -14,11 +14,12 @@ import {
   useRecordCleanDay,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
+  useListQuests,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap } from "lucide-react";
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
 
 
 
@@ -131,6 +132,7 @@ export default function Dashboard() {
   const { data: questLogRaw } = useGetQuestLog({ query: { refetchInterval: 60_000 } });
   const { data: badHabits } = useListBadHabits();
   const { data: corruptionConfigData } = useGetCorruptionConfig();
+  const { data: activeQuests } = useListQuests({ query: { staleTime: 60_000 } });
   const recordCleanDayMutation = useRecordCleanDay();
   const checkinMutation = useDailyCheckin({
     mutation: {
@@ -554,6 +556,178 @@ export default function Dashboard() {
 
         {/* Right Column - Stats */}
         <div className="space-y-8">
+          {/* Fatigue Meter */}
+          {(() => {
+            const now = Date.now();
+            const questsWithDeadlines = (activeQuests ?? []).filter(
+              (q) => q.deadline && q.status === "active"
+            );
+            let nearestMs = Infinity;
+            let nearestName = "";
+            for (const q of questsWithDeadlines) {
+              const ms = new Date(q.deadline!).getTime() - now;
+              if (ms < nearestMs) { nearestMs = ms; nearestName = q.name; }
+            }
+            const hoursLeft = nearestMs / 3_600_000;
+            let fatigue = 0;
+            if (questsWithDeadlines.length === 0 || nearestMs === Infinity) {
+              fatigue = 0;
+            } else if (nearestMs <= 0) {
+              fatigue = 100;
+            } else if (hoursLeft <= 24) {
+              fatigue = Math.round(90 + ((24 - hoursLeft) / 24) * 10);
+            } else if (hoursLeft <= 48) {
+              fatigue = Math.round(70 + ((48 - hoursLeft) / 24) * 20);
+            } else if (hoursLeft <= 72) {
+              fatigue = Math.round(50 + ((72 - hoursLeft) / 24) * 20);
+            } else if (hoursLeft <= 168) {
+              fatigue = Math.round(15 + ((168 - hoursLeft) / 96) * 35);
+            } else {
+              fatigue = Math.round(Math.min(15, (168 / hoursLeft) * 15));
+            }
+            fatigue = Math.min(100, Math.max(0, fatigue));
+
+            const SEGMENTS = 10;
+            const litCount = Math.round((fatigue / 100) * SEGMENTS);
+            const radius = 52;
+            const cx = 70;
+            const cy = 70;
+            const strokeW = 10;
+            const gapDeg = 8;
+            const segDeg = (360 - SEGMENTS * gapDeg) / SEGMENTS;
+
+            function segColor(i: number): string {
+              if (i >= litCount) return "rgba(255,255,255,0.07)";
+              const tier = litCount / SEGMENTS;
+              if (tier <= 0.3) return "#22d3ee";
+              if (tier <= 0.55) return "#a78bfa";
+              if (tier <= 0.75) return "#f97316";
+              return "#ef4444";
+            }
+
+            function describeArc(startDeg: number, endDeg: number): string {
+              const toRad = (d: number) => ((d - 90) * Math.PI) / 180;
+              const x1 = cx + radius * Math.cos(toRad(startDeg));
+              const y1 = cy + radius * Math.sin(toRad(startDeg));
+              const x2 = cx + radius * Math.cos(toRad(endDeg));
+              const y2 = cy + radius * Math.sin(toRad(endDeg));
+              const large = endDeg - startDeg > 180 ? 1 : 0;
+              return `M ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2}`;
+            }
+
+            const fatigueLabel =
+              fatigue >= 90 ? "CRITICAL" :
+              fatigue >= 70 ? "ELEVATED" :
+              fatigue >= 40 ? "MODERATE" :
+              fatigue > 0   ? "LOW" : "NOMINAL";
+
+            const labelColor =
+              fatigue >= 90 ? "#ef4444" :
+              fatigue >= 70 ? "#f97316" :
+              fatigue >= 40 ? "#a78bfa" : "#22d3ee";
+
+            let timeLabel = "";
+            if (questsWithDeadlines.length > 0 && nearestMs !== Infinity && nearestMs > 0) {
+              const h = Math.floor(hoursLeft);
+              const m = Math.floor((hoursLeft - h) * 60);
+              timeLabel = h > 0 ? `${h}h ${m}m` : `${m}m`;
+            } else if (nearestMs <= 0 && questsWithDeadlines.length > 0) {
+              timeLabel = "OVERDUE";
+            }
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card
+                  className="glass-panel"
+                  style={{
+                    borderColor: fatigue >= 70 ? `${labelColor}55` : "rgba(168,85,247,0.2)",
+                    boxShadow: fatigue >= 70 ? `0 0 20px ${labelColor}22` : undefined,
+                  }}
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="font-display tracking-widest text-base flex items-center justify-between">
+                      <span style={{ color: labelColor }}>Fatigue Meter</span>
+                      <span
+                        className="text-xs font-mono px-2 py-0.5 rounded"
+                        style={{ background: `${labelColor}22`, color: labelColor, border: `1px solid ${labelColor}55` }}
+                      >
+                        {fatigueLabel}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center gap-3">
+                    <div className="relative" style={{ width: 140, height: 140 }}>
+                      <svg width={140} height={140} viewBox="0 0 140 140">
+                        <defs>
+                          <filter id="seg-glow">
+                            <feGaussianBlur stdDeviation="2.5" result="blur" />
+                            <feMerge>
+                              <feMergeNode in="blur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        {Array.from({ length: SEGMENTS }).map((_, i) => {
+                          const startDeg = i * (segDeg + gapDeg);
+                          const endDeg = startDeg + segDeg;
+                          const color = segColor(i);
+                          const isLit = i < litCount;
+                          return (
+                            <path
+                              key={i}
+                              d={describeArc(startDeg, endDeg)}
+                              fill="none"
+                              stroke={color}
+                              strokeWidth={strokeW}
+                              strokeLinecap="round"
+                              filter={isLit ? "url(#seg-glow)" : undefined}
+                              style={{ transition: "stroke 0.4s ease" }}
+                            />
+                          );
+                        })}
+                        <text
+                          x={cx}
+                          y={cy - 6}
+                          textAnchor="middle"
+                          fontSize="20"
+                          fontWeight="bold"
+                          fontFamily="Rajdhani, sans-serif"
+                          fill={fatigue === 0 ? "#4b5563" : labelColor}
+                          style={{ filter: fatigue > 0 ? `drop-shadow(0 0 6px ${labelColor}aa)` : undefined }}
+                        >
+                          {fatigue}%
+                        </text>
+                        <text
+                          x={cx}
+                          y={cy + 10}
+                          textAnchor="middle"
+                          fontSize="8"
+                          fontFamily="Rajdhani, sans-serif"
+                          fill="#6b7280"
+                          letterSpacing="2"
+                        >
+                          FATIGUE
+                        </text>
+                      </svg>
+                    </div>
+                    {timeLabel && nearestName ? (
+                      <div className="text-center space-y-0.5">
+                        <p className="text-xs text-muted-foreground truncate max-w-[160px]" title={nearestName}>
+                          {nearestName}
+                        </p>
+                        <p className="text-xs font-mono font-bold" style={{ color: labelColor }}>
+                          {nearestMs <= 0 ? "OVERDUE" : `${timeLabel} remaining`}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/50 text-center">No active deadlines</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })()}
+
           <Card className="glass-panel">
             <CardHeader className="pb-2">
               <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">
