@@ -20,6 +20,8 @@ export const HealthCheckResponse = zod.object({
 export const GetCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  age: zod.number().nullish(),
+  residency: zod.string().nullish(),
   level: zod.number(),
   xp: zod.number(),
   xpToNextLevel: zod.number(),
@@ -39,8 +41,14 @@ export const GetCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+
   vocationXp: zod.number(),
   vocationLevel: zod.number(),
+
+  vocationId: zod.string().nullish(),
+  virtueCategory: zod.string().nullish(),
+  vocationXp: zod.number().default(0),
+
 });
 
 /**
@@ -53,6 +61,8 @@ export const UpdateCharacterBody = zod.object({
 export const UpdateCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  age: zod.number().nullish(),
+  residency: zod.string().nullish(),
   level: zod.number(),
   xp: zod.number(),
   xpToNextLevel: zod.number(),
@@ -72,8 +82,14 @@ export const UpdateCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+
   vocationXp: zod.number(),
   vocationLevel: zod.number(),
+
+  vocationId: zod.string().nullish(),
+  virtueCategory: zod.string().nullish(),
+  vocationXp: zod.number().default(0),
+
 });
 
 /**

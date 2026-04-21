@@ -1,9 +1,11 @@
 import { pgTable, text, integer, timestamp, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { characterTable } from "./character";
 
 export const badHabitsTable = pgTable("bad_habits", {
   id: uuid("id").primaryKey().defaultRandom(),
+  characterId: integer("character_id").references(() => characterTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   category: text("category").notNull().default("Other"),
   severity: text("severity").notNull().default("Medium"),

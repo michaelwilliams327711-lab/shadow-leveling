@@ -1,8 +1,8 @@
 import { Router } from "express";
 import webpush from "web-push";
 import { db } from "@workspace/db";
-import { pushSubscriptionsTable } from "@workspace/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { pushSubscriptionsTable, questsTable } from "@workspace/db/schema";
+import { eq, and, sql, isNull, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -185,6 +185,77 @@ export async function sendDailyQuestReminders(log: { info: (msg: string) => void
     }
   } catch (err) {
     log.error({ err }, "Error in sendDailyQuestReminders");
+  }
+}
+
+// In-memory tracking to avoid sending duplicate 30-min warnings per quest per day.
+const _warnedQuestIds = new Set<number>();
+let _warnedDate = new Date().toISOString().split("T")[0];
+
+export async function sendDeadlineWarningNotifications(log: { info: (msg: string) => void; error: (obj: object, msg: string) => void }) {
+  if (!vapidConfigured) return;
+
+  // Reset the tracking set daily (UTC midnight).
+  const todayUtc = new Date().toISOString().split("T")[0];
+  if (todayUtc !== _warnedDate) {
+    _warnedQuestIds.clear();
+    _warnedDate = todayUtc;
+  }
+
+  const now = new Date();
+  const windowStart = new Date(now.getTime() + 25 * 60 * 1000);
+  const windowEnd   = new Date(now.getTime() + 35 * 60 * 1000);
+
+  try {
+    const approachingQuests = await db
+      .select({ id: questsTable.id, name: questsTable.name })
+      .from(questsTable)
+      .where(
+        and(
+          eq(questsTable.status, "active"),
+          isNull(questsTable.deletedAt),
+          gte(questsTable.deadline, windowStart),
+          lte(questsTable.deadline, windowEnd),
+        )
+      );
+
+    const newQuests = approachingQuests.filter(q => !_warnedQuestIds.has(q.id));
+    if (newQuests.length === 0) return;
+
+    const subs = await db.select().from(pushSubscriptionsTable);
+    if (subs.length === 0) return;
+
+    for (const quest of newQuests) {
+      _warnedQuestIds.add(quest.id);
+
+      const payload = JSON.stringify({
+        title: "[ MISSION WARNING ]",
+        body: `30 minutes until failure: "${quest.name}"`,
+        url: "/quests",
+        type: "MISSION_WARNING",
+        questId: quest.id,
+      });
+
+      for (const sub of subs) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload
+          );
+          log.info(`Sent 30-min deadline warning for quest ${quest.id} to subscription ${sub.id}`);
+        } catch (err: unknown) {
+          const status = (err as { statusCode?: number }).statusCode;
+          if (status === 410 || status === 404) {
+            await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.id, sub.id));
+            log.info(`Removed expired subscription ${sub.id}`);
+          } else {
+            log.error({ err }, `Failed to send warning push to subscription ${sub.id}`);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    log.error({ err }, "Error in sendDeadlineWarningNotifications");
   }
 }
 

@@ -5,6 +5,8 @@ import { z } from "zod";
 export const characterTable = pgTable("character", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default("Hunter"),
+  age: integer("age"),
+  residency: text("residency"),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   gold: integer("gold").notNull().default(0),
@@ -26,8 +28,14 @@ export const characterTable = pgTable("character", {
   lastCronDate: text("last_cron_date"),
   gateFragments: integer("gate_fragments").notNull().default(0),
   survivorBuffExpiresAt: timestamp("survivor_buff_expires_at"),
+
   vocationXp: integer("vocation_xp").notNull().default(0),
   vocationLevel: integer("vocation_level").notNull().default(0),
+
+  vocationId: text("vocation_id"),
+  virtueCategory: text("virtue_category"),
+  vocationXp: integer("vocation_xp").notNull().default(0),
+
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

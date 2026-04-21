@@ -22,6 +22,8 @@ import {
   useRescheduleQuest,
   getPlannerDailyQueryKey,
   getPlannerWeeklyQueryKey,
+  getPlannerMonthlyQueryKey,
+  getPlannerYearlyQueryKey,
   type WeeklyPlannerDay,
   type MonthlyPlannerDay,
   type YearlyHeatmapDay,
@@ -84,7 +86,7 @@ import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
-import { playQuestComplete } from "@/lib/sounds";
+import { playQuestComplete, playSystemWarning } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 import {
@@ -1436,7 +1438,27 @@ export default function Quests() {
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
+
   const [awakeningOpen, setAwakeningOpen] = useState(false);
+
+  const [deadlineTick, setDeadlineTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setDeadlineTick(t => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "MISSION_WARNING_ALARM") {
+        playSystemWarning();
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, []);
+
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -1489,14 +1511,32 @@ export default function Quests() {
     }
   }, [editingQuest?.id]);
 
+  const isNearDeadline = (deadline: string | null | undefined): boolean => {
+    if (!deadline || deadlineTick < 0) return false;
+    const ms = new Date(deadline).getTime() - Date.now();
+    return ms > 0 && ms <= 30 * 60 * 1000;
+  };
+
   const invalidateQuests = () => {
-    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey({ windowDays }) });
-    queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerWeeklyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerMonthlyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getPlannerYearlyQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+    // Each key is computed inside its own try/catch so a single bad import or
+    // undefined function can never block the rest of the invalidations.
+    // Promise.allSettled fires every invalidation regardless of individual failures.
+    const safeInvalidate = (getKey: () => readonly unknown[]) => {
+      try {
+        return queryClient.invalidateQueries({ queryKey: getKey() });
+      } catch {
+        return Promise.resolve();
+      }
+    };
+    void Promise.allSettled([
+      safeInvalidate(() => getListQuestsWindowedQueryKey()),
+      safeInvalidate(() => getListQuestsWindowedQueryKey({ windowDays })),
+      safeInvalidate(() => getPlannerDailyQueryKey()),
+      safeInvalidate(() => getPlannerWeeklyQueryKey()),
+      safeInvalidate(() => getPlannerMonthlyQueryKey()),
+      safeInvalidate(() => getPlannerYearlyQueryKey()),
+      safeInvalidate(() => getGetCharacterQueryKey()),
+    ]);
   };
 
   const onComplete = async (id: number) => {
@@ -1614,16 +1654,29 @@ export default function Quests() {
         vocationId: null,
       }
     }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      onSuccess: (newQuest) => {
+        // ── Phase 1: Instant cache injection ─────────────────────────────
+        // Write the new quest into both cache shapes immediately so it
+        // appears in the Active tab before the background refetch arrives.
+        queryClient.setQueryData<Quest[]>(
+          getListQuestsWindowedQueryKey({ windowDays }),
+          (old) => (old ? [...old, newQuest] : [newQuest]),
+        );
+        queryClient.setQueryData<Quest[]>(
+          getListQuestsWindowedQueryKey(),
+          (old) => (old ? [...old, newQuest] : [newQuest]),
+        );
+        // ── Phase 2: UI state — runs immediately, never blocked ───────────
         setIsCreateOpen(false);
         setShowRecurrence(false);
         createForm.reset();
         setActiveTab("questlog");
         window.scrollTo({ top: 0, behavior: "smooth" });
         toast({ title: "Quest Registered", description: "A new mission has been added to the system." });
+        // ── Phase 3: Background reconciliation (fire-and-forget) ──────────
+        // invalidateQuests uses Promise.allSettled — a failure in any single
+        // planner key will never prevent the quest list from being refreshed.
+        invalidateQuests();
       }
     });
   };
@@ -1631,9 +1684,10 @@ export default function Quests() {
   const onEditSubmit = (data: z.infer<typeof editSchema>) => {
     if (!editingQuest) return;
     const deadlineIso = normalizeDeadlineIso(data.deadline);
+    const questId = editingQuest.id;
     updateQuest.mutate(
       {
-        id: editingQuest.id,
+        id: questId,
         data: {
           name: data.name,
           category: data.category,
@@ -1650,13 +1704,26 @@ export default function Quests() {
       },
       {
         onSuccess: (updatedQuest) => {
-          queryClient.setQueryData<Quest[]>(getListQuestsWindowedQueryKey({ windowDays }), (old) =>
-            old?.map((quest) => quest.id === updatedQuest.id ? updatedQuest : quest) ?? old
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey({ windowDays }),
+            (old) => old?.map((q) => q.id === updatedQuest.id ? updatedQuest : q) ?? old
+          );
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey(),
+            (old) => old?.map((q) => q.id === updatedQuest.id ? updatedQuest : q) ?? old
           );
           invalidateQuests();
           setEditingQuest(null);
           toast({ title: "Quest Updated", description: "Mission parameters have been updated." });
-        }
+        },
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "Unknown error.";
+          toast({
+            title: "Update Failed",
+            description: `Could not save quest changes. ${msg}`,
+            className: "border-destructive bg-destructive/20 text-destructive-foreground",
+          });
+        },
       }
     );
   };
@@ -2203,7 +2270,7 @@ export default function Quests() {
                   const deadlineLabel = formatDeadlineLabel(quest.deadline, quest.status);
                   const deadlineTone = getDeadlineTone(quest.deadline, quest.status);
                   return (
-                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60")}>
+                    <Card key={quest.id} className={cn("glass-panel overflow-hidden group relative", quest.isPaused && "opacity-60", status === "active" && isNearDeadline(quest.deadline) && "animate-warning-flash")}>
                       <QuestCompleteEffect
                         active={completingQuestId === quest.id}
                         onDone={() => setCompletingQuestId(null)}

@@ -5,7 +5,7 @@ import { pushSubscriptionsTable } from "@workspace/db/schema";
 import { eq, and, isNull, lt, inArray } from "drizzle-orm";
 import cron from "node-cron";
 import { processOverdueQuestsLogic } from "./routes/quests.js";
-import { sendDailyQuestReminders, sendOverseerPenaltyNotification } from "./routes/push.js";
+import { sendDailyQuestReminders, sendOverseerPenaltyNotification, sendDeadlineWarningNotifications } from "./routes/push.js";
 
 const rawPort = process.env["PORT"];
 
@@ -124,6 +124,11 @@ let _overseerLastAlertDate: string | null = null;
 
 cron.schedule("* * * * *", async () => {
   await sendDailyQuestReminders({
+    info: (msg) => logger.info(msg),
+    error: (obj, msg) => logger.error(obj, msg),
+  });
+
+  await sendDeadlineWarningNotifications({
     info: (msg) => logger.info(msg),
     error: (obj, msg) => logger.error(obj, msg),
   });

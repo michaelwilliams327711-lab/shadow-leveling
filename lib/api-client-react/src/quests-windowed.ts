@@ -28,9 +28,14 @@ export const listQuestsWindowed = async (
   params?: ListQuestsWindowedParams,
   options?: RequestInit,
 ): Promise<Quest[]> => {
+  const localDate = new Date().toLocaleDateString("en-CA");
   return customFetch<Quest[]>(getListQuestsWindowedUrl(params), {
     ...options,
     method: "GET",
+    headers: {
+      "x-local-date": localDate,
+      ...(options as Record<string, unknown> | undefined)?.["headers"] as Record<string, string> | undefined,
+    },
   });
 };
 
@@ -53,6 +58,8 @@ export function useListQuestsWindowed<
   const query = useQuery<Quest[], TError, TData>({
     queryKey,
     queryFn,
+    staleTime: 0,
+    refetchOnMount: "always",
     ...queryOptions,
   }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

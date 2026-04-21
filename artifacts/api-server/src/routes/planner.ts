@@ -36,7 +36,7 @@ function isRecurringDueOnDate(recurrence: RecurrenceConfig, date: Date, createdA
       const baseStr = dateToStr(completedAt ?? createdAt);
       const base = new Date(baseStr + "T00:00:00.000Z");
       const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
-      return diffDays > 0 && diffDays % interval === 0;
+      return diffDays >= 0 && diffDays % interval === 0;
     }
     case "weekly": {
       const days = recurrence.daysOfWeek ?? [];
@@ -70,7 +70,11 @@ function isQuestDueOnDate(quest: typeof questsTable.$inferSelect, date: Date, to
     return deadlineStr === dStr;
   }
 
+
   // One-off quests (no recurrence, no deadline): show only on today
+
+  // One-off quests (no recurrence, no deadline) show as due on "today" only
+
   if (todayDate) {
     return dateToStr(date) === dateToStr(todayDate);
   }
@@ -97,6 +101,8 @@ router.get("/planner/daily", async (req, res) => {
           and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, dayWindowStart), lte(questsTable.deadline, dayWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, dayWindowStart), lte(questsTable.completedAt, dayWindowEnd)),
+          // One-off active quests (no deadline, no recurrence) — always show as due today
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -189,6 +195,8 @@ router.get("/planner/weekly", async (req, res) => {
           and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, weekWindowStart), lte(questsTable.deadline, weekWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, weekWindowStart), lte(questsTable.completedAt, weekWindowEnd)),
+          // One-off active quests (no deadline, no recurrence) — show on today's column
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -260,6 +268,8 @@ router.get("/planner/monthly", async (req, res) => {
           and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
           and(isNotNull(questsTable.deadline), gte(questsTable.deadline, monthWindowStart), lte(questsTable.deadline, monthWindowEnd)),
           and(isNotNull(questsTable.completedAt), gte(questsTable.completedAt, monthWindowStart), lte(questsTable.completedAt, monthWindowEnd)),
+          // One-off active quests — pin them to today's date in the monthly view
+          and(eq(questsTable.status, "active"), isNull(questsTable.recurrence), isNull(questsTable.deadline)),
         ),
       ),
     );
@@ -325,7 +335,7 @@ router.get("/planner/monthly", async (req, res) => {
             for (let d = 1; d <= daysInMonth; d++) {
               const target = new Date(Date.UTC(year, month, d));
               const diffDays = Math.round((target.getTime() - base.getTime()) / 86400000);
-              if (diffDays > 0 && diffDays % interval === 0) {
+              if (diffDays >= 0 && diffDays % interval === 0) {
                 addToUpcoming(dateToStr(target), q);
               }
             }
@@ -366,7 +376,11 @@ router.get("/planner/monthly", async (req, res) => {
           addToUpcoming(deadlineStr, q);
         }
       } else {
+
         // One-off quests (no recurrence, no deadline): show only on today
+
+        // One-off quest: pin to today if today falls within this month
+
         if (todayDate.getUTCFullYear() === year && todayDate.getUTCMonth() === month) {
           addToUpcoming(today, q);
         }

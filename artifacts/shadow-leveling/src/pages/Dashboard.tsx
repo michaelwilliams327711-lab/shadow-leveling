@@ -17,7 +17,11 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap } from "lucide-react";
+
+
+
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -431,10 +435,10 @@ export default function Dashboard() {
               
               <InfoTooltip
                 what="XP Progress Bar — how close you are to the next level."
-                fn="Shows current XP as a fraction of the XP required to reach the next level."
+                fn={`XP required for this level = (2×${character.level} − 1) × 10 = ${character.xpToNextLevel} XP. Formula: Level = ⌊√(TotalXP / 10)⌋ + 1.`}
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
-                <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-8 border border-white/5 shadow-inner">
+                <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${xpPercent}%` }}
@@ -443,6 +447,12 @@ export default function Dashboard() {
                   />
                 </div>
               </InfoTooltip>
+              <div className="flex justify-between items-center text-[11px] text-muted-foreground/60 font-mono mb-6">
+                <span>LVL {character.level} → LVL {character.level + 1}</span>
+                <span className="text-primary/70">
+                  {(character.xpToNextLevel - character.xp).toLocaleString()} XP remaining
+                </span>
+              </div>
 
               <div className="relative">
                 <AnimatePresence>
@@ -588,11 +598,6 @@ export default function Dashboard() {
                       fn: "Grows when you complete Financial, Productivity, or Study quests. Reading, coding, researching, and planning all sharpen Intellect. It tracks how capable your mind is in the real world.",
                       usage: "Assign quests to the Study, Financial, or Productivity category to raise Intellect. High Intellect means faster learning, stronger problem-solving, and sharper execution.",
                     },
-                    Agility: {
-                      what: "Agility — speed, adaptability, and physical coordination.",
-                      fn: "Increases when you complete quests that require quick execution or physical movement.",
-                      usage: "Assign fast-turnaround or movement-based quests to grow Agility.",
-                    },
                     Discipline: {
                       what: "Discipline — willpower, consistency, and self-control.",
                       fn: "Grows passively with your check-in streak and completed quest volume.",
@@ -620,6 +625,7 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+
 
           {/* Vocation Card */}
           {(() => {
@@ -710,6 +716,111 @@ export default function Dashboard() {
               </motion.div>
             );
           })()}
+
+          {/* Biographic Data */}
+          <Card className="glass-panel" style={{ borderColor: "rgba(168,85,247,0.2)" }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="font-display tracking-widest text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-primary/70" />
+                Biographic Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase">Designation</span>
+                <span className="text-sm font-semibold text-white">{character.name}</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
+                  Age
+                </span>
+                {character.age != null
+                  ? <span className="text-sm font-mono font-semibold text-white tracking-wider">{character.age}</span>
+                  : <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                }
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-xs text-muted-foreground tracking-widest uppercase flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> Residency
+                </span>
+                {character.residency
+                  ? <span className="text-sm font-mono font-semibold text-white tracking-wider">{character.residency}</span>
+                  : <span className="text-xs font-mono text-muted-foreground/50 tracking-widest">— UNKNOWN —</span>
+                }
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vocation & Virtue */}
+          <Card
+            className="glass-panel"
+            style={{
+              borderColor: "rgba(168,85,247,0.25)",
+              boxShadow: "0 0 16px rgba(88,28,135,0.12)",
+            }}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="font-display tracking-widest text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary/70" />
+                Vocation &amp; Virtue
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 rounded-lg bg-white/3 border border-primary/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Vocation Path</p>
+                    {character.vocationId
+                      ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.vocationId}</p>
+                      : <p className="text-sm font-display font-bold text-primary/60 tracking-wider">UNAWAKENED</p>
+                    }
+                  </div>
+                  {character.vocationId
+                    ? <Sparkles className="w-4 h-4" style={{ color: "#a855f7" }} />
+                    : <Lock className="w-4 h-4 text-primary/30" />
+                  }
+                </div>
+                {character.vocationId && (() => {
+                  const VOCATION_XP_THRESHOLD = 1000;
+                  const vXp = character.vocationXp ?? 0;
+                  const vPct = Math.min(100, Math.floor((vXp / VOCATION_XP_THRESHOLD) * 100));
+                  return (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] tracking-widest uppercase" style={{ color: "#a855f7" }}>Class XP</span>
+                        <span className="text-[10px] font-mono" style={{ color: "#a855f7" }}>{vXp} / {VOCATION_XP_THRESHOLD}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${vPct}%`, background: "linear-gradient(90deg, #7c3aed, #a855f7)" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-primary/10">
+                <div>
+                  <p className="text-[10px] text-muted-foreground tracking-widest uppercase mb-0.5">Virtue Category</p>
+                  {character.virtueCategory
+                    ? <p className="text-sm font-display font-bold tracking-wider" style={{ color: "#a855f7" }}>{character.virtueCategory}</p>
+                    : <p className="text-sm font-display font-bold text-muted-foreground/40 tracking-wider">LOCKED</p>
+                  }
+                </div>
+                {character.virtueCategory
+                  ? <Zap className="w-4 h-4" style={{ color: "#a855f7" }} />
+                  : <Lock className="w-4 h-4 text-muted-foreground/20" />
+                }
+              </div>
+              {!character.vocationId && (
+                <p className="text-[10px] text-muted-foreground/40 text-center tracking-widest pt-1">
+                  Awaken your Vocation to unlock this system.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
 
           {corruption > 0 && (
             <motion.div
