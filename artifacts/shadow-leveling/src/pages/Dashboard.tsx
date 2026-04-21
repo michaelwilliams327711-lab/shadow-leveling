@@ -513,9 +513,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Heatmap data={heatmap || []} />
-              {questLog.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">System Log</p>
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">System Log</p>
+                {questLog.length > 0 ? (
                   <div className="max-h-64 overflow-y-auto space-y-1 pr-1 hide-scrollbar">
                     {questLog.map((entry) => {
                       const badge = getOutcomeBadge(entry);
@@ -545,11 +545,10 @@ export default function Dashboard() {
                       );
                     })}
                   </div>
-                </div>
-              )}
-              {questLog.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2 font-sans">No quest activity yet.</p>
-              )}
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2 font-sans">No quest activity yet.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
