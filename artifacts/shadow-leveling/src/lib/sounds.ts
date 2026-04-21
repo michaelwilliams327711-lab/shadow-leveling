@@ -163,6 +163,38 @@ export function playStreakMilestone() {
   });
 }
 
+export function playSystemWarning() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const pitchFactor = 1.2;
+  const freqs = [523.25, 659.25, 783.99, 1046.5].map(f => f * pitchFactor);
+  freqs.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now + i * 0.1);
+    gain.gain.setValueAtTime(0, now + i * 0.1);
+    gain.gain.linearRampToValueAtTime(0.18, now + i * 0.1 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
+    osc.start(now + i * 0.1);
+    osc.stop(now + i * 0.1 + 0.45);
+  });
+  const oscGlitch = ctx.createOscillator();
+  const gainGlitch = ctx.createGain();
+  oscGlitch.connect(gainGlitch);
+  gainGlitch.connect(ctx.destination);
+  oscGlitch.type = "square";
+  oscGlitch.frequency.setValueAtTime(60, now + 0.5);
+  oscGlitch.frequency.linearRampToValueAtTime(120, now + 0.7);
+  gainGlitch.gain.setValueAtTime(0.08, now + 0.5);
+  gainGlitch.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+  oscGlitch.start(now + 0.5);
+  oscGlitch.stop(now + 0.95);
+}
+
 export function playRankUp() {
   const ctx = getAudioContext();
   if (!ctx) return;

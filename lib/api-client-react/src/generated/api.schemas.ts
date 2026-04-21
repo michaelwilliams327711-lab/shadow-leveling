@@ -31,6 +31,8 @@ export interface Character {
   failStreak: number;
   readonly penaltyMultiplier: number;
   corruption: number;
+  vocationXp: number;
+  vocationLevel: number;
 }
 
 export interface UpdateCharacterRequest {
@@ -211,6 +213,8 @@ export interface QuestCompletionResult {
   leveledUp: boolean;
   statGains: QuestCompletionResultStatGains;
   character: Character;
+  vocationLevelUp: boolean;
+  vocationXpGained: number;
 }
 
 export type QuestFailResultStatPenalties = {

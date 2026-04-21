@@ -669,8 +669,12 @@ components:
           readOnly: true
         corruption:
           type: integer
+        vocationXp:
+          type: integer
+        vocationLevel:
+          type: integer
       required:
-        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, spirit, intellect, endurance, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
+        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, spirit, intellect, endurance, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption, vocationXp, vocationLevel]
 
     UpdateCharacterRequest:
       type: object
@@ -906,7 +910,11 @@ components:
           required: [strength, spirit, intellect, endurance, discipline]
         character:
           $ref: "#/components/schemas/Character"
-      required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character]
+        vocationLevelUp:
+          type: boolean
+        vocationXpGained:
+          type: integer
+      required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character, vocationLevelUp, vocationXpGained]
 
     QuestFailResult:
       type: object

@@ -80,6 +80,7 @@ import { ShadowIntel } from "@/components/ShadowIntel";
 import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
+import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
@@ -1435,6 +1436,7 @@ export default function Quests() {
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
+  const [awakeningOpen, setAwakeningOpen] = useState(false);
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -1513,6 +1515,9 @@ export default function Quests() {
         if ((res as Record<string, unknown>).gateFragmentDropped) {
           const fragCount = (res.character as Record<string, number> | undefined)?.gateFragments ?? 1;
           setTimeout(() => setFragmentDropData({ count: Math.min(fragCount, 3) }), 700);
+        }
+        if ((res as Record<string, unknown>).vocationLevelUp === true) {
+          setTimeout(() => setAwakeningOpen(true), 1400);
         }
         if (res.leveledUp && res.newLevel) {
           const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
@@ -2411,6 +2416,11 @@ export default function Quests() {
         active={fragmentDropData !== null}
         fragmentCount={fragmentDropData?.count ?? 0}
         onDone={() => setFragmentDropData(null)}
+      />
+
+      <AwakeningOverlay
+        open={awakeningOpen}
+        onDismiss={() => setAwakeningOpen(false)}
       />
       </div>
       )}

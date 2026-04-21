@@ -18,4 +18,6 @@ export interface QuestCompletionResult {
   leveledUp: boolean;
   statGains: QuestCompletionResultStatGains;
   character: Character;
+  vocationLevelUp: boolean;
+  vocationXpGained: number;
 }

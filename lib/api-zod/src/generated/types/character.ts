@@ -28,4 +28,6 @@ export interface Character {
   failStreak: number;
   readonly penaltyMultiplier: number;
   corruption: number;
+  vocationXp: number;
+  vocationLevel: number;
 }

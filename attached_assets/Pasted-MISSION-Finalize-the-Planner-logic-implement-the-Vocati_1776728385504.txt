@@ -1,0 +1,54 @@
+MISSION: Finalize the Planner logic, implement the Vocation Rank I milestone, and deploy the Fire Streak Tracker.
+
+[PHASE 1: PLANNER LOGIC CONSOLIDATION & VERIFICATION]
+
+Context: Previous fixes addressed a bug where one-off quests (no recurrence, no deadline) were invisible in the planners.
+
+Action: Verify and maintain the OR branch in planner.ts for Daily, Weekly, and Monthly queries: active AND recurrence IS NULL AND deadline IS NULL.
+
+Logic: Ensure isQuestDueOnDate continues to use the todayDate parameter to pin one-off quests to the current date only, preventing them from duplicating across the entire week/month view.
+
+Yearly Heatmap: Maintain the current design where the Yearly tab remains a heatmap purely for completed activity.
+
+[PHASE 2: VOCATION RANK I AWAKENING]
+
+Database Schema: Add a vocationLevel column (integer, default 0) to the character table.
+
+Advancement Logic: Update POST /quests/:id/complete. When vocationXp hits 1000, increment vocationLevel to 1 and trigger the AwakeningOverlay.
+
+The Awakening Ceremony (Frontend): Create a high-fidelity, full-screen AwakeningOverlay component.
+
+Aesthetic: Dark, translucent backdrop with electric purple "glitch" animations.
+
+Text: [ SYSTEM NOTIFICATION: VOCATION RANK INCREASED ] and TECH_MONARCH: RANK I ACHIEVED.
+
+Audio: Trigger the playSystemWarning sequence at a +20% pitch increase (Success Chime).
+
+[PHASE 3: THE FIRE STREAK TRACKER]
+
+Backend Logic: Implement a daily check. A "Streak" is defined as consecutive days where at least one quest was moved to completed status.
+
+Schema: Use the existing streak and longest_streak columns in the character table.
+
+Dashboard UI: Add a Fire Streak Counter to the main Dashboard header or Stat Card.
+
+Icon: Flame (Lucide-react).
+
+Styling: If the streak is > 0, the flame should glow bright orange/red. Display the number of days next to it (e.g., 5 DAY STREAK).
+
+[PHASE 4: DASHBOARD REFINEMENT]
+
+Vocation Card: Update the 'Vocation & Virtue' card in Dashboard.tsx to display the current Rank (e.g., 'RANK I') next to the Vocation ID once the milestone is achieved.
+
+Sovereign Reporting Protocol (REQUIRED):
+Upon completion, you MUST provide a report in the following format:
+
+NO SUMMARIES: Provide the raw, line-by-line source code for the modified logic.
+
+MARKDOWN HEADERS: Every file must begin with ### FILE: [Full/Path/To/File].
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick blocks.
+
+THE CHUNK RULE: If the output exceeds 500 lines, stop and ask the user to say 'CONTINUE'.
+
+FINAL INVENTORY: End with a brief 'Inventory Check' confirming all files delivered.

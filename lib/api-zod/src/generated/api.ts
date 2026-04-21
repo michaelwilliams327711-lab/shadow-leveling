@@ -39,6 +39,8 @@ export const GetCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+  vocationXp: zod.number(),
+  vocationLevel: zod.number(),
 });
 
 /**
@@ -70,6 +72,8 @@ export const UpdateCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
+  vocationXp: zod.number(),
+  vocationLevel: zod.number(),
 });
 
 /**
@@ -123,6 +127,8 @@ export const CharacterLoginResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
@@ -383,7 +389,11 @@ export const CompleteQuestResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
+  vocationLevelUp: zod.boolean(),
+  vocationXpGained: zod.number(),
 });
 
 /**
@@ -426,6 +436,8 @@ export const FailQuestResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
@@ -512,6 +524,8 @@ export const ProcessOverdueQuestsResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
@@ -629,6 +643,8 @@ export const ChallengeBossResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
