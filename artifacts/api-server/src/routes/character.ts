@@ -7,6 +7,7 @@ import {
   UpdateCharacterBody,
   UpdateCharacterResponse,
   DailyCheckinResponse,
+  AcknowledgeAwakeningResponse,
 } from "@workspace/api-zod";
 import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate, ADVISORY_LOCK_ID } from "@workspace/shared";
 
@@ -75,6 +76,20 @@ router.patch("/character", async (req, res) => {
       xpToNextLevel: XP_PER_LEVEL(updated.level),
       lastCheckin: updated.lastCheckin?.toISOString() ?? null,
     });
+    res.json(data);
+  } catch (err) {
+    throw err;
+  }
+});
+
+router.post("/character/acknowledge-awakening", async (req, res) => {
+  try {
+    const char = await getOrCreateCharacter();
+    await db.update(characterTable)
+      .set({ hasSeenAwakening: true })
+      .where(eq(characterTable.id, char.id));
+    invalidateCharacterCache();
+    const data = AcknowledgeAwakeningResponse.parse({ success: true });
     res.json(data);
   } catch (err) {
     throw err;

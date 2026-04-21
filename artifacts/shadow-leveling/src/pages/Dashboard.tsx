@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -15,7 +15,9 @@ import {
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
   useListQuests,
+  useAcknowledgeAwakening,
 } from "@workspace/api-client-react";
+import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -146,6 +148,23 @@ export default function Dashboard() {
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+  const [showAwakening, setShowAwakening] = useState(false);
+  const acknowledgeAwakeningMutation = useAcknowledgeAwakening();
+
+  useEffect(() => {
+    if (character && character.vocationLevel >= 1 && !character.hasSeenAwakening) {
+      setShowAwakening(true);
+    }
+  }, [character?.vocationLevel, character?.hasSeenAwakening]);
+
+  const handleDismissAwakening = () => {
+    setShowAwakening(false);
+    acknowledgeAwakeningMutation.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
+    });
+  };
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
@@ -1114,6 +1133,11 @@ export default function Dashboard() {
         open={levelUpData !== null}
         newLevel={levelUpData?.newLevel ?? 0}
         onDismiss={() => setLevelUpData(null)}
+      />
+
+      <AwakeningOverlay
+        open={showAwakening}
+        onDismiss={handleDismissAwakening}
       />
     </div>
   );

@@ -35,6 +35,11 @@ export interface Character {
   corruption: number;
   vocationXp: number;
   vocationLevel: number;
+  hasSeenAwakening: boolean;
+}
+
+export interface AcknowledgeAwakeningResponse {
+  success: boolean;
 }
 
 export interface UpdateCharacterRequest {

@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AcknowledgeAwakeningResponse,
   ActivityDay,
   Awakening,
   BadHabit,
@@ -455,6 +456,87 @@ export const useCharacterLogin = <
   TContext
 > => {
   return useMutation(getCharacterLoginMutationOptions(options));
+};
+
+/**
+ * @summary Acknowledge the awakening ceremony (one-time)
+ */
+export const getAcknowledgeAwakeningUrl = () => {
+  return `/api/character/acknowledge-awakening`;
+};
+
+export const acknowledgeAwakening = async (
+  options?: RequestInit,
+): Promise<AcknowledgeAwakeningResponse> => {
+  return customFetch<AcknowledgeAwakeningResponse>(getAcknowledgeAwakeningUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcknowledgeAwakeningMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["acknowledgeAwakening"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    void
+  > = () => {
+    return acknowledgeAwakening(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeAwakeningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>
+>;
+
+export type AcknowledgeAwakeningMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Acknowledge the awakening ceremony (one-time)
+ */
+export const useAcknowledgeAwakening = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getAcknowledgeAwakeningMutationOptions(options));
 };
 
 /**

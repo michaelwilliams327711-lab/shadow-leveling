@@ -46,6 +46,14 @@ export const GetCharacterResponse = zod.object({
   vocationLevel: zod.number(),
   vocationId: zod.string().nullish(),
   virtueCategory: zod.string().nullish(),
+  hasSeenAwakening: zod.boolean(),
+});
+
+/**
+ * @summary Acknowledge awakening ceremony
+ */
+export const AcknowledgeAwakeningResponse = zod.object({
+  success: zod.boolean(),
 });
 
 /**
@@ -79,11 +87,11 @@ export const UpdateCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
-
   vocationXp: zod.number(),
   vocationLevel: zod.number(),
   vocationId: zod.string().nullish(),
   virtueCategory: zod.string().nullish(),
+  hasSeenAwakening: zod.boolean(),
 });
 
 /**
