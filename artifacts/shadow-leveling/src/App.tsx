@@ -25,7 +25,6 @@ import {
 import Dashboard from "@/pages/Dashboard";
 import Quests from "@/pages/Quests";
 import Shop from "@/pages/Shop";
-import ShadowShop from "@/pages/ShadowShop";
 import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
@@ -163,7 +162,6 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/quests" component={Quests} />
       <Route path="/shop" component={Shop} />
-      <Route path="/shadow-shop" component={ShadowShop} />
       <Route path="/arena" component={BossArena} />
       <Route path="/awakening" component={Awakening} />
       <Route path="/analytics"><Redirect to="/quests" /></Route>
