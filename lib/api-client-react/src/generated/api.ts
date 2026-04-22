@@ -45,6 +45,8 @@ import type {
   Reward,
   RngEventResponse,
   SaveAwakeningRequest,
+  ShopItem,
+  ShopPurchaseResult,
   UpdateBadHabitRequest,
   UpdateCharacterRequest,
   UpdateQuestRequest,
@@ -378,6 +380,90 @@ export const useDailyCheckin = <
 };
 
 /**
+ * @summary Mark the awakening intro as seen for the current character
+ */
+export const getAcknowledgeAwakeningUrl = () => {
+  return `/api/character/acknowledge-awakening`;
+};
+
+export const acknowledgeAwakening = async (
+  options?: RequestInit,
+): Promise<AcknowledgeAwakeningResponse> => {
+  return customFetch<AcknowledgeAwakeningResponse>(
+    getAcknowledgeAwakeningUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getAcknowledgeAwakeningMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["acknowledgeAwakening"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    void
+  > = () => {
+    return acknowledgeAwakening(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeAwakeningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>
+>;
+
+export type AcknowledgeAwakeningMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark the awakening intro as seen for the current character
+ */
+export const useAcknowledgeAwakening = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeAwakening>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeAwakening>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getAcknowledgeAwakeningMutationOptions(options));
+};
+
+/**
  * @summary Auto login check - detects missed days and applies penalties
  */
 export const getCharacterLoginUrl = () => {
@@ -456,87 +542,6 @@ export const useCharacterLogin = <
   TContext
 > => {
   return useMutation(getCharacterLoginMutationOptions(options));
-};
-
-/**
- * @summary Acknowledge the awakening ceremony (one-time)
- */
-export const getAcknowledgeAwakeningUrl = () => {
-  return `/api/character/acknowledge-awakening`;
-};
-
-export const acknowledgeAwakening = async (
-  options?: RequestInit,
-): Promise<AcknowledgeAwakeningResponse> => {
-  return customFetch<AcknowledgeAwakeningResponse>(getAcknowledgeAwakeningUrl(), {
-    ...options,
-    method: "POST",
-  });
-};
-
-export const getAcknowledgeAwakeningMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof acknowledgeAwakening>>,
-    TError,
-    void,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof acknowledgeAwakening>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = ["acknowledgeAwakening"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof acknowledgeAwakening>>,
-    void
-  > = () => {
-    return acknowledgeAwakening(requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type AcknowledgeAwakeningMutationResult = NonNullable<
-  Awaited<ReturnType<typeof acknowledgeAwakening>>
->;
-
-export type AcknowledgeAwakeningMutationError = ErrorType<unknown>;
-
-/**
- * @summary Acknowledge the awakening ceremony (one-time)
- */
-export const useAcknowledgeAwakening = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof acknowledgeAwakening>>,
-    TError,
-    void,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof acknowledgeAwakening>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(getAcknowledgeAwakeningMutationOptions(options));
 };
 
 /**
@@ -1452,6 +1457,165 @@ export const useProcessOverdueQuests = <
   TContext
 > => {
   return useMutation(getProcessOverdueQuestsMutationOptions(options));
+};
+
+/**
+ * @summary List all Shadow Shop items
+ */
+export const getListShopItemsUrl = () => {
+  return `/api/shop`;
+};
+
+export const listShopItems = async (
+  options?: RequestInit,
+): Promise<ShopItem[]> => {
+  return customFetch<ShopItem[]>(getListShopItemsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListShopItemsQueryKey = () => {
+  return [`/api/shop`] as const;
+};
+
+export const getListShopItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listShopItems>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listShopItems>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListShopItemsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listShopItems>>> = ({
+    signal,
+  }) => listShopItems({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listShopItems>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListShopItemsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listShopItems>>
+>;
+export type ListShopItemsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all Shadow Shop items
+ */
+
+export function useListShopItems<
+  TData = Awaited<ReturnType<typeof listShopItems>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listShopItems>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListShopItemsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Purchase a Shadow Shop item with Gold
+ */
+export const getPurchaseShopItemUrl = (id: string) => {
+  return `/api/shop/purchase/${id}`;
+};
+
+export const purchaseShopItem = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ShopPurchaseResult> => {
+  return customFetch<ShopPurchaseResult>(getPurchaseShopItemUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPurchaseShopItemMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purchaseShopItem>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof purchaseShopItem>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["purchaseShopItem"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof purchaseShopItem>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return purchaseShopItem(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PurchaseShopItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof purchaseShopItem>>
+>;
+
+export type PurchaseShopItemMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Purchase a Shadow Shop item with Gold
+ */
+export const usePurchaseShopItem = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purchaseShopItem>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof purchaseShopItem>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getPurchaseShopItemMutationOptions(options));
 };
 
 /**

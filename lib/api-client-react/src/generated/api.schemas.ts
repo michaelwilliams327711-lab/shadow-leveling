@@ -12,8 +12,6 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
-  age?: number | null;
-  residency?: string | null;
   level: number;
   xp: number;
   xpToNextLevel: number;
@@ -35,11 +33,6 @@ export interface Character {
   corruption: number;
   vocationXp: number;
   vocationLevel: number;
-  hasSeenAwakening: boolean;
-}
-
-export interface AcknowledgeAwakeningResponse {
-  success: boolean;
 }
 
 export interface UpdateCharacterRequest {
@@ -273,6 +266,27 @@ export interface QuestLogEntry {
 
 export interface DeleteResult {
   success: boolean;
+}
+
+export interface AcknowledgeAwakeningResponse {
+  success: boolean;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  category: string;
+  icon: string;
+}
+
+export interface ShopPurchaseResult {
+  success: boolean;
+  message: string;
+  itemName: string;
+  goldSpent: number;
+  goldRemaining: number;
 }
 
 export interface Reward {
