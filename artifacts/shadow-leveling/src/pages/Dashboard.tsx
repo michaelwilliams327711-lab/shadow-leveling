@@ -10,6 +10,7 @@ import {
   getGetCharacterQueryKey,
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
+  type Character,
   useListBadHabits,
   useRecordCleanDay,
   useGetCorruptionConfig,
@@ -134,13 +135,52 @@ export default function Dashboard() {
   const { data: badHabits } = useListBadHabits();
   const { data: corruptionConfigData } = useGetCorruptionConfig();
   const recordCleanDayMutation = useRecordCleanDay();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const checkinMutation = useDailyCheckin({
     mutation: {
       mutationFn: () => dailyCheckin({ headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+      // ── OPTIMISTIC: bump streak + lastCheckin instantly so the
+      //    Status Window reflects the Arise the moment the button is tapped.
+      onMutate: async () => {
+        const charKey = getGetCharacterQueryKey();
+        await queryClient.cancelQueries({ queryKey: charKey });
+        const previousCharacter = queryClient.getQueryData<Character>(charKey);
+        if (previousCharacter) {
+          const nowIso = new Date().toISOString();
+          const optimistic: Character = {
+            ...previousCharacter,
+            streak: previousCharacter.streak + 1,
+            longestStreak: Math.max(
+              previousCharacter.longestStreak ?? 0,
+              previousCharacter.streak + 1,
+            ),
+            lastCheckin: nowIso,
+          };
+          queryClient.setQueryData<Character>(charKey, optimistic);
+        }
+        return { previousCharacter };
+      },
+      onError: (_err, _vars, context) => {
+        // Rollback on failure — server is authoritative.
+        const charKey = getGetCharacterQueryKey();
+        if (context?.previousCharacter) {
+          queryClient.setQueryData<Character>(charKey, context.previousCharacter);
+        }
+        toast({
+          title: "[SYSTEM] Arise failed",
+          description: "Check-in could not be recorded. Reverting.",
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        // Final reconciliation — pull authoritative state regardless of
+        // success/failure so xp / gold / multipliers settle correctly.
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
+      },
     },
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const reduced = useReducedMotion();
   const [ariseAnimating, setAriseAnimating] = useState(false);
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
@@ -228,6 +268,21 @@ export default function Dashboard() {
     });
   };
 
+  // Memoize Level/XP derivations BEFORE any early returns — Rules of Hooks
+  // forbid conditional hook execution. Falls back to safe defaults until the
+  // character query resolves.
+  const { xpPercent, xpRemaining } = useMemo(() => {
+    const total = character?.xpToNextLevel ?? 0;
+    const current = character?.xp ?? 0;
+    const percent = total > 0
+      ? Math.min(100, Math.round((current / total) * 100))
+      : 0;
+    return {
+      xpPercent: percent,
+      xpRemaining: Math.max(0, total - current),
+    };
+  }, [character?.xp, character?.level, character?.xpToNextLevel]);
+
   if (charLoading) {
     return <CharacterStatsSkeleton />;
   }
@@ -243,23 +298,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  // Memoize Level/XP derivations: only recompute when the underlying
-  // character.level / character.xp / character.xpToNextLevel actually change.
-  // Prevents unrelated character mutations (e.g. gold, streak) from
-  // triggering recomputation of the XP progress bar.
-  const { xpPercent, xpRemaining } = useMemo(() => {
-    const total = character.xpToNextLevel;
-    const current = character.xp;
-    const percent = total > 0
-      ? Math.min(100, Math.round((current / total) * 100))
-      : 100;
-    return {
-      xpPercent: percent,
-      xpRemaining: Math.max(0, total - current),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character.xp, character.level, character.xpToNextLevel]);
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -50,14 +52,43 @@ function RouteSuspenseFallback() {
 
 const heroBgImg = "/images/hero-bg.webp";
 
+// Cache TTL for persisted queries — Status Window remains accessible
+// for 24 hours after the last successful sync, even fully offline.
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       staleTime: 1000 * 60 * 5,
+      // Cache must outlive the persistence window so dehydration captures it.
+      gcTime: TWENTY_FOUR_HOURS,
     },
   },
 });
+
+// ── Query Persistence ──────────────────────────────────────────────────────
+// Persist a curated set of queries (character, quests, bad_habits) to
+// localStorage so the Status Window survives full-page reloads and offline
+// sessions for up to 24 hours.
+const PERSIST_KEY_PREFIXES = [
+  "/api/character",
+  "/api/quests",
+  "/api/quests-windowed",
+  "/api/bad-habits",
+];
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "SHADOW_LEVELING_QUERY_CACHE_V1",
+  throttleTime: 1000,
+});
+
+function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
+  const head = queryKey[0];
+  if (typeof head !== "string") return false;
+  return PERSIST_KEY_PREFIXES.some((prefix) => head.startsWith(prefix));
+}
 
 function getLocalDateStr(): string {
   const now = new Date();
@@ -218,7 +249,21 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: localStoragePersister,
+        maxAge: TWENTY_FOUR_HOURS,
+        buster: "v1",
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            // Persist only successful character / quests / bad_habits responses.
+            if (query.state.status !== "success") return false;
+            return shouldPersistQuery(query.queryKey);
+          },
+        },
+      }}
+    >
       <PenaltyProvider>
       <VisualSettingsProvider>
       <TooltipProvider>
@@ -259,7 +304,7 @@ function App() {
       </TooltipProvider>
       </VisualSettingsProvider>
       </PenaltyProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
