@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -20,7 +20,7 @@ function glitchVariants(reduced: boolean) {
   };
 }
 
-export function AwakeningOverlay({ open, onDismiss }: AwakeningOverlayProps) {
+function AwakeningOverlayBase({ open, onDismiss }: AwakeningOverlayProps) {
   const reduced = useReducedMotion();
 
   useEffect(() => {
@@ -218,3 +218,5 @@ export function AwakeningOverlay({ open, onDismiss }: AwakeningOverlayProps) {
     </AnimatePresence>
   );
 }
+
+export const AwakeningOverlay = memo(AwakeningOverlayBase);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -244,9 +244,22 @@ export default function Dashboard() {
     );
   }
 
-  const xpPercent = character.xpToNextLevel > 0
-    ? Math.min(100, Math.round((character.xp / character.xpToNextLevel) * 100))
-    : 100;
+  // Memoize Level/XP derivations: only recompute when the underlying
+  // character.level / character.xp / character.xpToNextLevel actually change.
+  // Prevents unrelated character mutations (e.g. gold, streak) from
+  // triggering recomputation of the XP progress bar.
+  const { xpPercent, xpRemaining } = useMemo(() => {
+    const total = character.xpToNextLevel;
+    const current = character.xp;
+    const percent = total > 0
+      ? Math.min(100, Math.round((current / total) * 100))
+      : 100;
+    return {
+      xpPercent: percent,
+      xpRemaining: Math.max(0, total - current),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character.xp, character.level, character.xpToNextLevel]);
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;
@@ -469,7 +482,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-center text-[11px] text-muted-foreground/60 font-mono mb-6">
                 <span>LVL {character.level} → LVL {character.level + 1}</span>
                 <span className="text-primary/70">
-                  {(character.xpToNextLevel - character.xp).toLocaleString()} XP remaining
+                  {xpRemaining.toLocaleString()} XP remaining
                 </span>
               </div>
 

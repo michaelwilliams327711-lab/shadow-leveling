@@ -3,7 +3,7 @@ import { customFetch } from "@workspace/api-client-react";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { LucideScale, LucideAlertTriangle, LucideShieldCheck } from "lucide-react";
+import { Scale, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
@@ -155,7 +155,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
         </div>
         <div className="absolute inset-0 z-10 bg-black/60" />
         <div className="relative z-20 w-full flex flex-col items-center justify-center gap-2">
-          <LucideScale className="h-8 w-8 text-white/40" />
+          <Scale className="h-8 w-8 text-white/40" />
           <h2 className="font-display text-2xl font-black tracking-widest text-muted-foreground uppercase">
             Tide is Still
           </h2>
@@ -203,7 +203,7 @@ function GlobalBattlefield({ powers, glitching, shimmering, flaring, clashSide }
         <div
           className={["flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.15)]", flaring ? "flare-burst" : ""].join(" ")}
         >
-          <LucideScale className="h-6 w-6 text-white" />
+          <Scale className="h-6 w-6 text-white" />
         </div>
       </div>
 
@@ -462,8 +462,8 @@ export default function CelestialDuel() {
                         {power.isAscended && (
                           <div className={`flex items-center gap-1.5 text-xs tracking-widest font-display ${underSiege ? "text-red-400" : "ct-text-muted"}`}>
                             {underSiege
-                              ? <LucideAlertTriangle className="h-4 w-4 animate-pulse" />
-                              : <LucideShieldCheck className="h-4 w-4" />}
+                              ? <AlertTriangle className="h-4 w-4 animate-pulse" />
+                              : <ShieldCheck className="h-4 w-4" />}
                             <span className="uppercase">{underSiege ? "Siege" : "Ascended"}</span>
                           </div>
                         )}
@@ -541,7 +541,7 @@ export default function CelestialDuel() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 corruption-smoke">
             <section className="ct-panel rounded-2xl border p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
-                <LucideAlertTriangle className="ct-text h-8 w-8 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="ct-text h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <h4 className="ct-text font-display text-sm tracking-widest uppercase flex items-center gap-2">
                     Momentum Overload
@@ -555,7 +555,7 @@ export default function CelestialDuel() {
             </section>
             <section className="ct-panel rounded-2xl border p-6 shadow-inner corruption-smoke">
               <div className="relative z-10 flex items-start gap-4">
-                <LucideAlertTriangle className="ct-text-muted h-8 w-8 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="ct-text-muted h-8 w-8 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <h4 className="ct-text-muted font-display text-sm tracking-widest uppercase flex items-center gap-2">
                     The Great Fall

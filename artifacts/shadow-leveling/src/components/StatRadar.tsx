@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Radar,
   RadarChart,
@@ -49,7 +50,7 @@ function ColoredTick({
   );
 }
 
-export function StatRadar({ character }: StatRadarProps) {
+function StatRadarBase({ character }: StatRadarProps) {
   const fullMark = 110_000;
 
   const data = DOMAIN_POINTS.map((p) => ({
@@ -111,3 +112,5 @@ export function StatRadar({ character }: StatRadarProps) {
     </div>
   );
 }
+
+export const StatRadar = memo(StatRadarBase);

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Flame } from "lucide-react";
 import type { ActivityDay } from "@workspace/api-client-react";
 
@@ -28,7 +28,7 @@ function formatDisplayDate(dateStr: string): string {
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function Heatmap({ data = [] }: HeatmapProps) {
+function HeatmapBase({ data = [] }: HeatmapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredDay, setHoveredDay] = useState<HoveredDay | null>(null);
 
@@ -185,3 +185,5 @@ export function Heatmap({ data = [] }: HeatmapProps) {
     </div>
   );
 }
+
+export const Heatmap = memo(HeatmapBase);

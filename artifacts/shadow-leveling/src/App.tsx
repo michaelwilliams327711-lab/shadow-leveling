@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,17 +21,32 @@ import {
   customFetch,
 } from "@workspace/api-client-react";
 
-// Pages
+// Pages — eager (critical path)
 import Dashboard from "@/pages/Dashboard";
-import Quests from "@/pages/Quests";
-import Shop from "@/pages/Shop";
 import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
-import BadHabits from "@/pages/BadHabits";
 import CelestialDuel from "@/pages/CelestialDuel";
 import PenaltyZone from "@/pages/PenaltyZone";
 import NotFound from "@/pages/not-found";
+
+// Pages — code-split into separate chunks (lazy-loaded on demand)
+const Quests = lazy(() => import("@/pages/Quests"));
+const Shop = lazy(() => import("@/pages/Shop"));
+const BadHabits = lazy(() => import("@/pages/BadHabits"));
+
+function RouteSuspenseFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] w-full">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Loading System Module...
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const heroBgImg = "/images/hero-bg.webp";
 
@@ -157,21 +172,23 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/penalty-zone" component={PenaltyZone} />
-      <Route path="/" component={Dashboard} />
-      <Route path="/quests" component={Quests} />
-      <Route path="/shop" component={Shop} />
-      <Route path="/arena" component={BossArena} />
-      <Route path="/awakening" component={Awakening} />
-      <Route path="/analytics"><Redirect to="/quests" /></Route>
-      <Route path="/shadow" component={ShadowDashboard} />
-      <Route path="/bad-habits" component={BadHabits} />
-      <Route path="/vocations"><Redirect to="/" /></Route>
-      <Route path="/celestial" component={CelestialDuel} />
-      <Route path="/planner"><Redirect to="/quests" /></Route>
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<RouteSuspenseFallback />}>
+      <Switch>
+        <Route path="/penalty-zone" component={PenaltyZone} />
+        <Route path="/" component={Dashboard} />
+        <Route path="/quests" component={Quests} />
+        <Route path="/shop" component={Shop} />
+        <Route path="/arena" component={BossArena} />
+        <Route path="/awakening" component={Awakening} />
+        <Route path="/analytics"><Redirect to="/quests" /></Route>
+        <Route path="/shadow" component={ShadowDashboard} />
+        <Route path="/bad-habits" component={BadHabits} />
+        <Route path="/vocations"><Redirect to="/" /></Route>
+        <Route path="/celestial" component={CelestialDuel} />
+        <Route path="/planner"><Redirect to="/quests" /></Route>
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
