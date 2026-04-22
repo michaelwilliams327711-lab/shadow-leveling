@@ -25,6 +25,8 @@ import type {
   BossChallengeResult,
   Character,
   CheckinResult,
+  ClientLogEntry,
+  ClientLogResult,
   CorruptionConfig,
   CorruptionHistory,
   CreateBadHabitRequest,
@@ -1457,6 +1459,92 @@ export const useProcessOverdueQuests = <
   TContext
 > => {
   return useMutation(getProcessOverdueQuestsMutationOptions(options));
+};
+
+/**
+ * @summary Persist a client-side log entry to system_logs
+ */
+export const getWriteClientLogUrl = () => {
+  return `/api/logs`;
+};
+
+export const writeClientLog = async (
+  clientLogEntry: ClientLogEntry,
+  options?: RequestInit,
+): Promise<ClientLogResult> => {
+  return customFetch<ClientLogResult>(getWriteClientLogUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(clientLogEntry),
+  });
+};
+
+export const getWriteClientLogMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof writeClientLog>>,
+    TError,
+    { data: BodyType<ClientLogEntry> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof writeClientLog>>,
+  TError,
+  { data: BodyType<ClientLogEntry> },
+  TContext
+> => {
+  const mutationKey = ["writeClientLog"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof writeClientLog>>,
+    { data: BodyType<ClientLogEntry> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return writeClientLog(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WriteClientLogMutationResult = NonNullable<
+  Awaited<ReturnType<typeof writeClientLog>>
+>;
+export type WriteClientLogMutationBody = BodyType<ClientLogEntry>;
+export type WriteClientLogMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Persist a client-side log entry to system_logs
+ */
+export const useWriteClientLog = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof writeClientLog>>,
+    TError,
+    { data: BodyType<ClientLogEntry> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof writeClientLog>>,
+  TError,
+  { data: BodyType<ClientLogEntry> },
+  TContext
+> => {
+  return useMutation(getWriteClientLogMutationOptions(options));
 };
 
 /**

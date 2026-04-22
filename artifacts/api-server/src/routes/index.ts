@@ -15,6 +15,7 @@ import shadowsRouter from "./shadows.js";
 import pushRouter from "./push.js";
 import penaltyRouter from "./penalty.js";
 import debugRouter from "./debug.js";
+import logsRouter from "./logs.js";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(shadowsRouter);
 router.use(pushRouter);
 router.use(penaltyRouter);
 router.use(debugRouter);
+router.use(logsRouter);
 
 export default router;

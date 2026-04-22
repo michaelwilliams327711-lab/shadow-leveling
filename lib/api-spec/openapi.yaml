@@ -312,6 +312,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProcessOverdueResult"
 
+  /logs:
+    post:
+      operationId: writeClientLog
+      tags: [logs]
+      summary: Persist a client-side log entry to system_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientLogEntry"
+      responses:
+        "200":
+          description: Log persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLogResult"
+
   /shop:
     get:
       operationId: listShopItems
@@ -1025,6 +1044,27 @@ components:
       required: [success]
 
     AcknowledgeAwakeningResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    ClientLogEntry:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: [info, warn, error]
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required: [level, message]
+
+    ClientLogResult:
       type: object
       properties:
         success:

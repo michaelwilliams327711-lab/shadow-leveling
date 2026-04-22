@@ -272,6 +272,27 @@ export interface AcknowledgeAwakeningResponse {
   success: boolean;
 }
 
+export type ClientLogEntryLevel =
+  (typeof ClientLogEntryLevel)[keyof typeof ClientLogEntryLevel];
+
+export const ClientLogEntryLevel = {
+  info: "info",
+  warn: "warn",
+  error: "error",
+} as const;
+
+export type ClientLogEntryContext = { [key: string]: unknown } | null;
+
+export interface ClientLogEntry {
+  level: ClientLogEntryLevel;
+  message: string;
+  context?: ClientLogEntryContext;
+}
+
+export interface ClientLogResult {
+  success: boolean;
+}
+
 export interface ShopItem {
   id: string;
   name: string;

@@ -1,12 +1,14 @@
 import crypto from "crypto";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { globalLimiter } from "./lib/rate-limiters.js";
 import { validateDateHeader } from "@workspace/shared";
 import { ZodError } from "zod";
+import { writeSystemLog } from "./lib/system-logger.js";
 
 const DEV_SECRET = "shadow-dev-access-key";
 const apiSecretKey = process.env.API_SECRET_KEY;
@@ -77,6 +79,19 @@ app.use(
   }),
 );
 
+// Compress all responses (gzip / deflate). Negotiated automatically via the
+// client's Accept-Encoding header. threshold:1KB skips tiny payloads where
+// compression overhead outweighs the gain.
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) return false;
+      return compression.filter(req, res);
+    },
+  }),
+);
+
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -140,12 +155,24 @@ app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
 
 app.use("/api", router);
 
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction): void => {
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction): void => {
   if (err instanceof ZodError) {
     res.status(400).json({ error: err.flatten() });
     return;
   }
   logger.error({ err }, "Unhandled error");
+
+  // Persist 500-level failures to system_logs for cross-session observability.
+  // Fire-and-forget — never block the response on logging.
+  const errObj = err as { message?: string; stack?: string; name?: string } | null;
+  void writeSystemLog("error", errObj?.message ?? "Unhandled error", {
+    source: "server",
+    name: errObj?.name ?? null,
+    stack: errObj?.stack ?? null,
+    method: req.method,
+    url: req.originalUrl?.split("?")[0] ?? null,
+  });
+
   res.status(500).json({ error: "Internal server error" });
 });
 

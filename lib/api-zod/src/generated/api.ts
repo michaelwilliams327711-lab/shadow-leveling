@@ -537,6 +537,19 @@ export const ProcessOverdueQuestsResponse = zod.object({
 });
 
 /**
+ * @summary Persist a client-side log entry to system_logs
+ */
+export const WriteClientLogBody = zod.object({
+  level: zod.enum(["info", "warn", "error"]),
+  message: zod.string(),
+  context: zod.record(zod.string(), zod.unknown()).nullish(),
+});
+
+export const WriteClientLogResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary List all Shadow Shop items
  */
 export const ListShopItemsResponseItem = zod.object({

@@ -50,10 +50,34 @@ router.get("/character", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
     const xpToNextLevel = XP_PER_LEVEL(char.level);
+    // Explicit projection: only ship fields the dashboard needs.
+    // Internal/operational columns (lastLoginDate, lastCronDate,
+    // survivorBuffExpiresAt, age, residency, vocationId, virtueCategory,
+    // hasSeenAwakening) stay server-side and are never serialized.
     const data = GetCharacterResponse.parse({
-      ...char,
+      id: char.id,
+      name: char.name,
+      level: char.level,
+      xp: char.xp,
       xpToNextLevel,
+      gold: char.gold,
+      gateFragments: char.gateFragments,
+      strength: char.strength,
+      spirit: char.spirit,
+      intellect: char.intellect,
+      endurance: char.endurance,
+      discipline: char.discipline,
+      streak: char.streak,
+      longestStreak: char.longestStreak,
+      multiplier: char.multiplier,
       lastCheckin: char.lastCheckin?.toISOString() ?? null,
+      totalQuestsCompleted: char.totalQuestsCompleted,
+      totalQuestsFailed: char.totalQuestsFailed,
+      failStreak: char.failStreak,
+      penaltyMultiplier: char.penaltyMultiplier,
+      corruption: char.corruption,
+      vocationXp: char.vocationXp,
+      vocationLevel: char.vocationLevel,
     });
     res.json(data);
   } catch (err) {
