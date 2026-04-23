@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const STATIC_CACHE  = `shadow-static-${CACHE_VERSION}`;
 const API_CACHE     = `shadow-api-${CACHE_VERSION}`;
 
@@ -59,11 +59,34 @@ self.addEventListener("fetch", (event) => {
   // All /api/* routes → Network-First (no whitelist needed — regex catches every future endpoint)
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirst(request));
+  } else if (request.mode === "navigate") {
+    // Page navigations (the app shell HTML) → Network-First so the installed PWA
+    // never gets stuck on a stale or broken cached shell.
+    event.respondWith(navigationNetworkFirst(request));
   } else if (url.origin === self.location.origin) {
-    // Cache-First for static assets (icons, manifest, fonts, app shell)
+    // Cache-First for static assets (icons, manifest, fonts)
     event.respondWith(cacheFirst(request));
   }
 });
+
+// ── Strategy: Navigation Network-First (app shell) ───────────────────────────
+async function navigationNetworkFirst(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      cache.put("/index.html", networkResponse.clone());
+    }
+    return networkResponse;
+  } catch {
+    const cached = (await cache.match("/index.html")) || (await cache.match("/"));
+    if (cached) return cached;
+    return new Response("Shadow Leveling — offline. Please reconnect.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+}
 
 // ── Strategy: Cache-First ────────────────────────────────────────────────────
 async function cacheFirst(request) {
