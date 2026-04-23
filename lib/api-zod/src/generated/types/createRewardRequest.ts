@@ -9,6 +9,7 @@
 export interface CreateRewardRequest {
   name: string;
   description?: string | null;
+  /** @minimum 0 */
   goldCost: number;
   category: string;
 }

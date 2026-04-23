@@ -994,6 +994,7 @@ components:
           nullable: true
         goldCost:
           type: integer
+          minimum: 0
         category:
           type: string
         timesRedeemed:
@@ -1012,6 +1013,7 @@ components:
           nullable: true
         goldCost:
           type: integer
+          minimum: 0
         category:
           type: string
       required: [name, goldCost, category]

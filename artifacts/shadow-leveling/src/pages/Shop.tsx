@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,10 +8,12 @@ import {
   usePurchaseReward,
   useGetCharacter,
   getListRewardsQueryKey,
-  getGetCharacterQueryKey
+  getGetCharacterQueryKey,
+  type GetCharacterResponse,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Store, Coins, Plus, ShoppingCart, AlertCircle } from "lucide-react";
+import { motion, useSpring, useTransform } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
@@ -41,9 +43,15 @@ import { Input } from "@/components/ui/input";
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  goldCost: z.coerce.number().min(1),
+  goldCost: z.coerce.number().min(0, "Cost cannot be negative"),
   category: z.string().min(1)
 });
+
+const SOVEREIGN_DEFAULTS = [
+  { name: "Manga / Anime Pass", description: "1 Hour of guilt-free leisure.", goldCost: 1000, category: "Leisure" },
+  { name: "Tech Upgrade", description: "Dedicated budget for your UE5/C++ toolkit.", goldCost: 5000, category: "Tools" },
+  { name: "Cheat Meal", description: "High-protein reward for a successful gym streak.", goldCost: 2500, category: "Reward" },
+];
 
 export default function Shop() {
   const { data: character } = useGetCharacter();
@@ -55,6 +63,25 @@ export default function Shop() {
   const reduced = useReducedMotion();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [purchasingId, setPurchasingId] = useState<number | null>(null);
+  const seededRef = useRef(false);
+
+  const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
+  const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
+  useEffect(() => {
+    goldSpring.set(character?.gold ?? 0);
+  }, [character?.gold, goldSpring]);
+
+  useEffect(() => {
+    if (seededRef.current || isLoading || rewards.length > 0) return;
+    seededRef.current = true;
+    Promise.all(
+      SOVEREIGN_DEFAULTS.map((item) =>
+        createReward.mutateAsync({ data: item }).catch(() => null),
+      ),
+    ).then(() => {
+      queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
+    });
+  }, [isLoading, rewards.length, createReward, queryClient]);
 
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -67,10 +94,16 @@ export default function Shop() {
       return;
     }
 
+    const characterKey = getGetCharacterQueryKey();
+    const previousChar = queryClient.getQueryData<GetCharacterResponse>(characterKey);
+    queryClient.setQueryData<GetCharacterResponse>(characterKey, (old) =>
+      old ? { ...old, gold: Math.max(0, old.gold - cost) } : old,
+    );
+    setPurchasingId(id);
+    if (!reduced) playGoldSpend();
+
     purchaseReward.mutate({ id }, {
       onSuccess: (res) => {
-        setPurchasingId(id);
-        if (!reduced) playGoldSpend();
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
         toast({ 
@@ -81,6 +114,7 @@ export default function Shop() {
         setTimeout(() => setPurchasingId(null), 1000);
       },
       onError: (err) => {
+        if (previousChar) queryClient.setQueryData(characterKey, previousChar);
         setPurchasingId(null);
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 402) {
@@ -141,13 +175,13 @@ export default function Shop() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <InfoTooltip
-            what="System Shop — exchange Gold for real-life rewards."
+            what="Shadow Shop — exchange Gold for real-life rewards."
             fn="A catalog of rewards you define. Each item has a Gold cost. Purchasing deducts Gold from your treasury."
             usage="Add rewards with the + button. Complete quests to earn Gold, then spend it here on treats you've decided to allow yourself."
           >
             <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
               <Store className="w-8 h-8 text-primary" />
-              SYSTEM SHOP
+              SHADOW SHOP
             </h1>
           </InfoTooltip>
           <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">Spend your Gold. Claim what you've earned.</p>
@@ -155,13 +189,15 @@ export default function Shop() {
 
         <div className="flex items-center gap-4">
           <InfoTooltip
-            what="Gold — the in-game currency of the System Shop."
+            what="Gold — the in-game currency of the Shadow Shop."
             fn="Earned by completing quests. Higher-rank quests and streak multipliers yield more Gold."
             usage="Spend it here to purchase real-life rewards you've defined. Add new rewards with the + button."
           >
             <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
               <Coins className="text-gold w-6 h-6" />
-              <span className="text-gold font-stat font-bold text-2xl">{character?.gold?.toLocaleString() || 0}</span>
+              <span className="text-gold font-stat font-bold text-2xl">
+                <motion.span>{goldDisplay}</motion.span>
+              </span>
             </div>
           </InfoTooltip>
 
@@ -188,7 +224,7 @@ export default function Shop() {
                   <FormField control={form.control} name="goldCost" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Price (Gold)</FormLabel>
-                      <FormControl><Input type="number" {...field} className="bg-background/50" /></FormControl>
+                      <FormControl><Input type="number" min={0} {...field} className="bg-background/50" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -234,7 +270,7 @@ export default function Shop() {
                   >
                     <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-lg border border-gold/20">
                       <Coins className="w-4 h-4 text-gold" />
-                      <span className="font-stat font-bold text-gold">{reward.goldCost}</span>
+                      <span className="font-stat font-bold text-gold">{reward.goldCost.toLocaleString()}</span>
                     </div>
                   </InfoTooltip>
                 </div>

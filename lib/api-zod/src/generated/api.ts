@@ -587,11 +587,13 @@ export const ProcessOverdueQuestsResponse = zod.object({
 /**
  * @summary List all shop rewards
  */
+export const listRewardsResponseGoldCostMin = 0;
+
 export const ListRewardsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number(),
+  goldCost: zod.number().min(listRewardsResponseGoldCostMin),
   category: zod.string(),
   timesRedeemed: zod.number(),
   createdAt: zod.string(),
@@ -601,10 +603,12 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem);
 /**
  * @summary Create a custom reward
  */
+export const createRewardBodyGoldCostMin = 0;
+
 export const CreateRewardBody = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number(),
+  goldCost: zod.number().min(createRewardBodyGoldCostMin),
   category: zod.string(),
 });
 
