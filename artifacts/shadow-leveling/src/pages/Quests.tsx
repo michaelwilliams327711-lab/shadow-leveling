@@ -1416,10 +1416,40 @@ export default function Quests() {
   const createQuest = useCreateQuest();
   const updateQuest = useUpdateQuest();
   const deleteQuest = useDeleteQuest();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const completeQuestMutation = useCompleteQuest({
     mutation: {
       mutationFn: ({ id }: { id: number }) =>
         completeQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+      // ── OPTIMISTIC: flip quest → completed in the active windowed list
+      //    immediately, snapshot prior state for rollback.
+      onMutate: async ({ id }: { id: number }) => {
+        const activeQueryKey = getListQuestsWindowedQueryKey({ windowDays });
+        await queryClient.cancelQueries({ queryKey: activeQueryKey });
+        const previousQuests = queryClient.getQueryData<Quest[]>(activeQueryKey);
+        queryClient.setQueryData<Quest[]>(activeQueryKey, (old) =>
+          old?.map((q) => (q.id === id ? { ...q, status: "completed" } : q)) ?? [],
+        );
+        return { previousQuests, activeQueryKey };
+      },
+      onError: (_err, _vars, context) => {
+        // Rollback the windowed list — server completion failed.
+        if (context?.previousQuests && context?.activeQueryKey) {
+          queryClient.setQueryData(context.activeQueryKey, context.previousQuests);
+        }
+        toast({
+          title: "Sync Error",
+          description: "Failed to complete quest. Reverting...",
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        // Reconcile authoritative state across every dependent surface.
+        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
     },
   });
   const failQuestMutation = useFailQuest({
@@ -1428,8 +1458,6 @@ export default function Quests() {
         failQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
     },
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const reduced = useReducedMotion();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
@@ -1540,14 +1568,10 @@ export default function Quests() {
     ]);
   };
 
-  const onComplete = async (id: number) => {
-    const activeQueryKey = getListQuestsWindowedQueryKey({ windowDays });
-    await queryClient.cancelQueries({ queryKey: activeQueryKey });
-    const previousQuests = queryClient.getQueryData<Quest[]>(activeQueryKey);
-    queryClient.setQueryData<Quest[]>(activeQueryKey, (old) =>
-      old?.map((q) => q.id === id ? { ...q, status: "completed" } : q) ?? []
-    );
-
+  const onComplete = (id: number) => {
+    // Optimistic snapshot + rollback live inside the hook config (onMutate /
+    // onError / onSettled). The per-invocation onSuccess below handles the
+    // celebratory side-effects (toasts, animations, level-up overlays).
     completeQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
         setCompletingQuestId(id);
@@ -1587,15 +1611,6 @@ export default function Quests() {
             }
           }
         }
-      },
-      onError: () => {
-        queryClient.setQueryData(activeQueryKey, previousQuests);
-        toast({ title: "Sync Error", description: "Failed to complete quest. Reverting...", variant: "destructive" });
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
       },
     });
   };

@@ -1,6 +1,13 @@
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const STATIC_CACHE  = `shadow-static-${CACHE_VERSION}`;
 const API_CACHE     = `shadow-api-${CACHE_VERSION}`;
+
+// ── Sync Queue (IndexedDB) ───────────────────────────────────────────────────
+// Failed POST requests are persisted here so they can be replayed when the
+// network returns. Survives SW restarts and full app reloads.
+const SYNC_DB_NAME = "shadow-sync-queue";
+const SYNC_STORE   = "pending-mutations";
+const SYNC_TAG     = "shadow-replay-mutations";
 
 const STATIC_PRECACHE = [
   "/",
@@ -32,16 +39,19 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// ── Activate: purge old caches ───────────────────────────────────────────────
+// ── Activate: purge old caches, ensure sync DB exists ───────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k !== STATIC_CACHE && k !== API_CACHE)
-          .map((k) => caches.delete(k))
-      )
-    )
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== STATIC_CACHE && k !== API_CACHE)
+            .map((k) => caches.delete(k))
+        )
+      ),
+      openSyncDb().catch(() => {}),
+    ])
   );
   self.clients.claim();
 });
@@ -51,12 +61,25 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (request.method !== "GET") return;
+  // ── POST/PUT/PATCH/DELETE → enqueue for retry on network failure ─────────
+  if (request.method !== "GET") {
+    if (url.pathname.startsWith("/api/")) {
+      event.respondWith(networkWithSyncQueue(request));
+    }
+    return;
+  }
 
   // Never intercept Vite dev-server module requests — let HMR work freely
   if (isViteDevPath(url)) return;
 
-  // All /api/* routes → Network-First (no whitelist needed — regex catches every future endpoint)
+  // Dedicated /api/character handler — last-known-good fallback for the
+  // Status Window so the UI never goes blank when offline.
+  if (url.pathname === "/api/character" || url.pathname.startsWith("/api/character?")) {
+    event.respondWith(characterNetworkFirst(request));
+    return;
+  }
+
+  // All other /api/* routes → Network-First with cached fallback
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirst(request));
   } else if (url.origin === self.location.origin) {
@@ -85,6 +108,228 @@ async function cacheFirst(request) {
       headers: { "Content-Type": "text/plain" },
     });
   }
+}
+
+// ── Strategy: Network-First ──────────────────────────────────────────────────
+async function networkFirst(request) {
+  const cache = await caches.open(API_CACHE);
+
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    return new Response(JSON.stringify({ offline: true, data: null }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+// ── Strategy: /api/character — Network-First w/ guaranteed last-known-good ──
+// On failure, returns the most recent cached response with an
+// `x-shadow-cache: stale` header so the UI can surface an offline indicator.
+async function characterNetworkFirst(request) {
+  const cache = await caches.open(API_CACHE);
+  try {
+    const fresh = await fetch(request);
+    if (fresh.ok) {
+      cache.put(request, fresh.clone());
+    }
+    return fresh;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) {
+      // Re-issue the cached response with a marker header.
+      const body = await cached.clone().text();
+      const headers = new Headers(cached.headers);
+      headers.set("x-shadow-cache", "stale");
+      headers.set("x-shadow-offline", "1");
+      return new Response(body, {
+        status: 200,
+        statusText: "OK (cached)",
+        headers,
+      });
+    }
+    // No cached version exists — surface a structured offline payload so
+    // the client can render the offline shell instead of crashing.
+    return new Response(
+      JSON.stringify({ offline: true, message: "Status Window unavailable — no cached character." }),
+      { status: 503, headers: { "Content-Type": "application/json", "x-shadow-cache": "miss" } },
+    );
+  }
+}
+
+// ── Strategy: POST/PUT/PATCH/DELETE → network, fall back to Sync Queue ──────
+async function networkWithSyncQueue(request) {
+  try {
+    const response = await fetch(request.clone());
+    return response;
+  } catch (err) {
+    // Network failed — persist the request body so it can be replayed.
+    try {
+      await enqueueMutation(request.clone());
+      // Best-effort Background Sync registration (Chromium-only).
+      if ("sync" in self.registration) {
+        try { await self.registration.sync.register(SYNC_TAG); } catch {}
+      }
+      // Notify clients so they can show "Queued for sync" UI.
+      broadcast({ type: "MUTATION_QUEUED", url: request.url, method: request.method });
+
+      return new Response(
+        JSON.stringify({
+          queued: true,
+          offline: true,
+          message: "Action queued. Will retry when connection returns.",
+        }),
+        { status: 202, headers: { "Content-Type": "application/json", "x-shadow-queued": "1" } },
+      );
+    } catch (queueErr) {
+      throw err;
+    }
+  }
+}
+
+// ── IndexedDB sync queue helpers ─────────────────────────────────────────────
+function openSyncDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(SYNC_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(SYNC_STORE)) {
+        db.createObjectStore(SYNC_STORE, { keyPath: "id", autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function enqueueMutation(request) {
+  const body = await request.text();
+  const headers = {};
+  request.headers.forEach((v, k) => { headers[k] = v; });
+  const record = {
+    url: request.url,
+    method: request.method,
+    headers,
+    body,
+    queuedAt: Date.now(),
+    attempts: 0,
+  };
+  const db = await openSyncDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, "readwrite");
+    tx.objectStore(SYNC_STORE).add(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getQueuedMutations() {
+  const db = await openSyncDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, "readonly");
+    const req = tx.objectStore(SYNC_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteQueuedMutation(id) {
+  const db = await openSyncDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, "readwrite");
+    tx.objectStore(SYNC_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function bumpAttempt(id, attempts) {
+  const db = await openSyncDb();
+  return new Promise((resolve) => {
+    const tx = db.transaction(SYNC_STORE, "readwrite");
+    const store = tx.objectStore(SYNC_STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const rec = getReq.result;
+      if (rec) { rec.attempts = attempts; store.put(rec); }
+      resolve();
+    };
+    getReq.onerror = () => resolve();
+  });
+}
+
+// ── Replay queue: exponential-ish retry, drop after 5 attempts ──────────────
+const MAX_ATTEMPTS = 5;
+
+async function replayQueuedMutations() {
+  const items = await getQueuedMutations();
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const item of items) {
+    try {
+      const res = await fetch(item.url, {
+        method: item.method,
+        headers: item.headers,
+        body: item.body || undefined,
+        credentials: "include",
+      });
+      if (res.ok || (res.status >= 400 && res.status < 500)) {
+        // Success OR client-error (don't retry 4xx — bad payload).
+        await deleteQueuedMutation(item.id);
+        succeeded++;
+      } else {
+        const next = (item.attempts ?? 0) + 1;
+        if (next >= MAX_ATTEMPTS) {
+          await deleteQueuedMutation(item.id);
+        } else {
+          await bumpAttempt(item.id, next);
+        }
+        failed++;
+      }
+    } catch {
+      const next = (item.attempts ?? 0) + 1;
+      if (next >= MAX_ATTEMPTS) {
+        await deleteQueuedMutation(item.id);
+      } else {
+        await bumpAttempt(item.id, next);
+      }
+      failed++;
+    }
+  }
+
+  if (succeeded > 0) {
+    broadcast({ type: "MUTATIONS_REPLAYED", succeeded, failed });
+  }
+}
+
+self.addEventListener("sync", (event) => {
+  if (event.tag === SYNC_TAG) {
+    event.waitUntil(replayQueuedMutations());
+  }
+});
+
+// Manual trigger from clients (used as fallback when Background Sync
+// isn't available — e.g. Safari, Firefox).
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "REPLAY_QUEUE") {
+    event.waitUntil?.(replayQueuedMutations());
+    replayQueuedMutations();
+  }
+});
+
+function broadcast(message) {
+  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    for (const client of clients) client.postMessage(message);
+  });
 }
 
 // ── Push Notifications ───────────────────────────────────────────────────────
@@ -155,23 +400,5 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ── Strategy: Network-First ──────────────────────────────────────────────────
-async function networkFirst(request) {
-  const cache = await caches.open(API_CACHE);
-
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-
-    return new Response(JSON.stringify({ offline: true, data: null }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
+// Trigger a queue replay whenever connectivity is restored.
+self.addEventListener("online", () => { replayQueuedMutations(); });

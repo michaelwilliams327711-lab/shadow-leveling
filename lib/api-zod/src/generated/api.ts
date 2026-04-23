@@ -28,10 +28,17 @@ export const getCharacterResponseGoldMin = 0;
 export const GetCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+
   level: zod.number().min(getCharacterResponseLevelMin),
   xp: zod.number().min(getCharacterResponseXpMin),
   xpToNextLevel: zod.number().min(getCharacterResponseXpToNextLevelMin),
   gold: zod.number().min(getCharacterResponseGoldMin),
+
+  level: zod.number(),
+  xp: zod.number(),
+  xpToNextLevel: zod.number(),
+  gold: zod.number(),
+
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -69,10 +76,17 @@ export const updateCharacterResponseGoldMin = 0;
 export const UpdateCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+
   level: zod.number().min(updateCharacterResponseLevelMin),
   xp: zod.number().min(updateCharacterResponseXpMin),
   xpToNextLevel: zod.number().min(updateCharacterResponseXpToNextLevelMin),
   gold: zod.number().min(updateCharacterResponseGoldMin),
+
+  level: zod.number(),
+  xp: zod.number(),
+  xpToNextLevel: zod.number(),
+  gold: zod.number(),
+
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -106,6 +120,13 @@ export const DailyCheckinResponse = zod.object({
   milestoneBonusGold: zod.number(),
   leveledUp: zod.boolean().optional(),
   newLevel: zod.number().optional(),
+});
+
+/**
+ * @summary Mark the awakening intro as seen for the current character
+ */
+export const AcknowledgeAwakeningResponse = zod.object({
+  success: zod.boolean(),
 });
 
 /**
@@ -582,6 +603,47 @@ export const ProcessOverdueQuestsResponse = zod.object({
     vocationXp: zod.number(),
     vocationLevel: zod.number(),
   }),
+});
+
+/**
+ * @summary Persist a client-side log entry to system_logs
+ */
+export const WriteClientLogBody = zod.object({
+  level: zod.enum(["info", "warn", "error"]),
+  message: zod.string(),
+  context: zod.record(zod.string(), zod.unknown()).nullish(),
+});
+
+export const WriteClientLogResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List all Shadow Shop items
+ */
+export const ListShopItemsResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  description: zod.string(),
+  cost: zod.number(),
+  category: zod.string(),
+  icon: zod.string(),
+});
+export const ListShopItemsResponse = zod.array(ListShopItemsResponseItem);
+
+/**
+ * @summary Purchase a Shadow Shop item with Gold
+ */
+export const PurchaseShopItemParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const PurchaseShopItemResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+  itemName: zod.string(),
+  goldSpent: zod.number(),
+  goldRemaining: zod.number(),
 });
 
 /**

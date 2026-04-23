@@ -1,4 +1,8 @@
+
 import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -10,15 +14,22 @@ import {
   getGetCharacterQueryKey,
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
+  type Character,
   useListBadHabits,
   useRecordCleanDay,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
+  useAcknowledgeAwakening,
 } from "@workspace/api-client-react";
+import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 
+
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin } from "lucide-react";
+
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
+
 
 
 
@@ -132,18 +143,74 @@ export default function Dashboard() {
   const { data: badHabits } = useListBadHabits();
   const { data: corruptionConfigData } = useGetCorruptionConfig();
   const recordCleanDayMutation = useRecordCleanDay();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const checkinMutation = useDailyCheckin({
     mutation: {
       mutationFn: () => dailyCheckin({ headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+      // ── OPTIMISTIC: bump streak + lastCheckin instantly so the
+      //    Status Window reflects the Arise the moment the button is tapped.
+      onMutate: async () => {
+        const charKey = getGetCharacterQueryKey();
+        await queryClient.cancelQueries({ queryKey: charKey });
+        const previousCharacter = queryClient.getQueryData<Character>(charKey);
+        if (previousCharacter) {
+          const nowIso = new Date().toISOString();
+          const optimistic: Character = {
+            ...previousCharacter,
+            streak: previousCharacter.streak + 1,
+            longestStreak: Math.max(
+              previousCharacter.longestStreak ?? 0,
+              previousCharacter.streak + 1,
+            ),
+            lastCheckin: nowIso,
+          };
+          queryClient.setQueryData<Character>(charKey, optimistic);
+        }
+        return { previousCharacter };
+      },
+      onError: (_err, _vars, context) => {
+        // Rollback on failure — server is authoritative.
+        const charKey = getGetCharacterQueryKey();
+        if (context?.previousCharacter) {
+          queryClient.setQueryData<Character>(charKey, context.previousCharacter);
+        }
+        toast({
+          title: "[SYSTEM] Arise failed",
+          description: "Check-in could not be recorded. Reverting.",
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        // Final reconciliation — pull authoritative state regardless of
+        // success/failure so xp / gold / multipliers settle correctly.
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
+      },
     },
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const reduced = useReducedMotion();
   const [ariseAnimating, setAriseAnimating] = useState(false);
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+  const [showAwakening, setShowAwakening] = useState(false);
+  const acknowledgeAwakeningMutation = useAcknowledgeAwakening();
+
+  useEffect(() => {
+    if (character && character.vocationLevel >= 1 && !character.hasSeenAwakening) {
+      setShowAwakening(true);
+    }
+  }, [character?.vocationLevel, character?.hasSeenAwakening]);
+
+  const handleDismissAwakening = () => {
+    setShowAwakening(false);
+    acknowledgeAwakeningMutation.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
+    });
+  };
 
   const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
   const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
@@ -215,6 +282,21 @@ export default function Dashboard() {
     });
   };
 
+  // Memoize Level/XP derivations BEFORE any early returns — Rules of Hooks
+  // forbid conditional hook execution. Falls back to safe defaults until the
+  // character query resolves.
+  const { xpPercent, xpRemaining } = useMemo(() => {
+    const total = character?.xpToNextLevel ?? 0;
+    const current = character?.xp ?? 0;
+    const percent = total > 0
+      ? Math.min(100, Math.round((current / total) * 100))
+      : 0;
+    return {
+      xpPercent: percent,
+      xpRemaining: Math.max(0, total - current),
+    };
+  }, [character?.xp, character?.level, character?.xpToNextLevel]);
+
   if (charLoading) {
     return <CharacterStatsSkeleton />;
   }
@@ -230,10 +312,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const xpPercent = character.xpToNextLevel > 0
-    ? Math.min(100, Math.round((character.xp / character.xpToNextLevel) * 100))
-    : 100;
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;
@@ -458,7 +536,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-center text-[11px] text-muted-foreground/60 font-mono mb-6">
                 <span>LVL {character.level} → LVL {character.level + 1}</span>
                 <span className="text-primary/70">
-                  {(character.xpToNextLevel - character.xp).toLocaleString()} XP remaining
+                  {xpRemaining.toLocaleString()} XP remaining
                 </span>
               </div>
 
@@ -948,6 +1026,11 @@ export default function Dashboard() {
         open={levelUpData !== null}
         newLevel={levelUpData?.newLevel ?? 0}
         onDismiss={() => setLevelUpData(null)}
+      />
+
+      <AwakeningOverlay
+        open={showAwakening}
+        onDismiss={handleDismissAwakening}
       />
     </div>
   );

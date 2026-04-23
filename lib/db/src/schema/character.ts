@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -31,11 +31,9 @@ export const characterTable = pgTable("character", {
 
   vocationXp: integer("vocation_xp").notNull().default(0),
   vocationLevel: integer("vocation_level").notNull().default(0),
-
   vocationId: text("vocation_id"),
   virtueCategory: text("virtue_category"),
-  vocationXp: integer("vocation_xp").notNull().default(0),
-
+  hasSeenAwakening: boolean("has_seen_awakening").notNull().default(false),
 });
 
 export const insertCharacterSchema = createInsertSchema(characterTable).omit({ id: true });

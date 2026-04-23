@@ -78,6 +78,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/CheckinResult"
 
+  /character/acknowledge-awakening:
+    post:
+      operationId: acknowledgeAwakening
+      tags: [character]
+      summary: Mark the awakening intro as seen for the current character
+      responses:
+        "200":
+          description: Acknowledgement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgeAwakeningResponse"
+
   /character/login:
     post:
       operationId: characterLogin
@@ -298,6 +311,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProcessOverdueResult"
+
+  /logs:
+    post:
+      operationId: writeClientLog
+      tags: [logs]
+      summary: Persist a client-side log entry to system_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientLogEntry"
+      responses:
+        "200":
+          description: Log persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLogResult"
+
+  /shop:
+    get:
+      operationId: listShopItems
+      tags: [shop]
+      summary: List all Shadow Shop items
+      responses:
+        "200":
+          description: List of shop items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopItem"
+
+  /shop/purchase/{id}:
+    post:
+      operationId: purchaseShopItem
+      tags: [shop]
+      summary: Purchase a Shadow Shop item with Gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Purchase result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPurchaseResult"
 
   /shop/rewards:
     get:
@@ -981,6 +1047,66 @@ components:
         success:
           type: boolean
       required: [success]
+
+    AcknowledgeAwakeningResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    ClientLogEntry:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: [info, warn, error]
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required: [level, message]
+
+    ClientLogResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        cost:
+          type: integer
+        category:
+          type: string
+        icon:
+          type: string
+      required: [id, name, description, cost, category, icon]
+
+    ShopPurchaseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        itemName:
+          type: string
+        goldSpent:
+          type: integer
+        goldRemaining:
+          type: integer
+      required: [success, message, itemName, goldSpent, goldRemaining]
 
     Reward:
       type: object

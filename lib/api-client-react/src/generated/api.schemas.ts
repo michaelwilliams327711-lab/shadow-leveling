@@ -12,7 +12,9 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
+
   /** @minimum 0 */
+
   level: number;
   /** @minimum 0 */
   xp: number;
@@ -271,6 +273,48 @@ export interface QuestLogEntry {
 
 export interface DeleteResult {
   success: boolean;
+}
+
+export interface AcknowledgeAwakeningResponse {
+  success: boolean;
+}
+
+export type ClientLogEntryLevel =
+  (typeof ClientLogEntryLevel)[keyof typeof ClientLogEntryLevel];
+
+export const ClientLogEntryLevel = {
+  info: "info",
+  warn: "warn",
+  error: "error",
+} as const;
+
+export type ClientLogEntryContext = { [key: string]: unknown } | null;
+
+export interface ClientLogEntry {
+  level: ClientLogEntryLevel;
+  message: string;
+  context?: ClientLogEntryContext;
+}
+
+export interface ClientLogResult {
+  success: boolean;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  category: string;
+  icon: string;
+}
+
+export interface ShopPurchaseResult {
+  success: boolean;
+  message: string;
+  itemName: string;
+  goldSpent: number;
+  goldRemaining: number;
 }
 
 export interface Reward {

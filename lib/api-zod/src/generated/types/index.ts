@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./acknowledgeAwakeningResponse";
 export * from "./activityDay";
 export * from "./awakening";
 export * from "./badHabit";
@@ -15,6 +16,10 @@ export * from "./bossChallengeResult";
 export * from "./bossRank";
 export * from "./character";
 export * from "./checkinResult";
+export * from "./clientLogEntry";
+export * from "./clientLogEntryContext";
+export * from "./clientLogEntryLevel";
+export * from "./clientLogResult";
 export * from "./corruptionConfig";
 export * from "./corruptionConfigCorruptionDelta";
 export * from "./corruptionConfigThresholds";
@@ -54,6 +59,8 @@ export * from "./rngEvent";
 export * from "./rngEventResponse";
 export * from "./rngEventType";
 export * from "./saveAwakeningRequest";
+export * from "./shopItem";
+export * from "./shopPurchaseResult";
 export * from "./statBoost";
 export * from "./updateBadHabitRequest";
 export * from "./updateBadHabitRequestSeverity";
