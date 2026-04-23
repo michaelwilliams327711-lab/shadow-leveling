@@ -104,6 +104,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/LoginCheckResult"
 
+  /character/reset:
+    post:
+      operationId: resetCharacter
+      tags: [character]
+      summary: NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+      responses:
+        "200":
+          description: New character created after purge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetCharacterResponse"
+
   /quests:
     get:
       operationId: listQuests
@@ -1069,6 +1082,17 @@ components:
         success:
           type: boolean
       required: [success]
+
+    ResetCharacterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        characterId:
+          type: integer
+        message:
+          type: string
+      required: [success, characterId, message]
 
     ClientLogEntry:
       type: object

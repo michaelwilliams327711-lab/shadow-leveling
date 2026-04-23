@@ -44,6 +44,7 @@ import type {
   QuestLogEntry,
   RecordCleanDayResult,
   RelapseResult,
+  ResetCharacterResponse,
   Reward,
   RngEventResponse,
   SaveAwakeningRequest,
@@ -545,6 +546,87 @@ export const useCharacterLogin = <
   TContext
 > => {
   return useMutation(getCharacterLoginMutationOptions(options));
+};
+
+/**
+ * @summary NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+ */
+export const getResetCharacterUrl = () => {
+  return `/api/character/reset`;
+};
+
+export const resetCharacter = async (
+  options?: RequestInit,
+): Promise<ResetCharacterResponse> => {
+  return customFetch<ResetCharacterResponse>(getResetCharacterUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResetCharacterMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetCharacter>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetCharacter>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["resetCharacter"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetCharacter>>,
+    void
+  > = () => {
+    return resetCharacter(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetCharacterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetCharacter>>
+>;
+
+export type ResetCharacterMutationError = ErrorType<unknown>;
+
+/**
+ * @summary NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+ */
+export const useResetCharacter = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetCharacter>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resetCharacter>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getResetCharacterMutationOptions(options));
 };
 
 /**

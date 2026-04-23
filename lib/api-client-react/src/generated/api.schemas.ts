@@ -277,6 +277,12 @@ export interface AcknowledgeAwakeningResponse {
   success: boolean;
 }
 
+export interface ResetCharacterResponse {
+  success: boolean;
+  characterId: number;
+  message: string;
+}
+
 export type ClientLogEntryLevel =
   (typeof ClientLogEntryLevel)[keyof typeof ClientLogEntryLevel];
 

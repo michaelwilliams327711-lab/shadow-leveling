@@ -8,6 +8,7 @@ import {
   UpdateCharacterResponse,
   DailyCheckinResponse,
   AcknowledgeAwakeningResponse,
+  ResetCharacterResponse,
 } from "@workspace/api-zod";
 import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate, ADVISORY_LOCK_ID } from "@workspace/shared";
 
@@ -103,6 +104,37 @@ router.patch("/character", async (req, res) => {
     res.json(data);
   } catch (err) {
     throw err;
+  }
+});
+
+// HARDCORE RESET — purges the active character and all cascaded data
+// (quests, logs, purchases, shadows, bosses, awakening, celestial powers)
+// in a single transaction, then immediately rebirths a fresh Level 1 Hunter
+// so the application remains functional. Cascades are wired in the schema.
+router.post("/character/reset", async (req, res) => {
+  try {
+    const newChar = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
+      await tx.delete(characterTable);
+      const [created] = await tx
+        .insert(characterTable)
+        .values({ name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" })
+        .returning();
+      return created;
+    });
+
+    invalidateCharacterCache();
+    req.log.warn({ newCharacterId: newChar.id }, "HARDCORE RESET executed — character purged and reborn");
+
+    const data = ResetCharacterResponse.parse({
+      success: true,
+      characterId: newChar.id,
+      message: "SYSTEM PURGE COMPLETE. WELCOME BACK, HUNTER.",
+    });
+    res.json(data);
+  } catch (err) {
+    req.log.error({ err }, "Error executing hardcore reset");
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

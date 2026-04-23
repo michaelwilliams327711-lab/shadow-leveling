@@ -54,6 +54,7 @@ export * from "./recurrenceConfig";
 export * from "./recurrenceConfigType";
 export * from "./relapseEvent";
 export * from "./relapseResult";
+export * from "./resetCharacterResponse";
 export * from "./reward";
 export * from "./rngEvent";
 export * from "./rngEventResponse";

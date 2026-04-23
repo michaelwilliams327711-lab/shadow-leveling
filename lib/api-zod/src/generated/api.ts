@@ -166,6 +166,15 @@ export const CharacterLoginResponse = zod.object({
 });
 
 /**
+ * @summary NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+ */
+export const ResetCharacterResponse = zod.object({
+  success: zod.boolean(),
+  characterId: zod.number(),
+  message: zod.string(),
+});
+
+/**
  * @summary List all quests
  */
 export const ListQuestsResponseItem = zod.object({

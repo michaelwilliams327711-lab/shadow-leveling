@@ -315,6 +315,10 @@ export default function Shop() {
     [purchaseItem, reduced, queryClient, toast],
   );
 
+  // Double-Guardrail: high-cost items (>= HOLD_THRESHOLD_GOLD) require BOTH the
+  // 1.5s hold AND a confirmation modal — the hold completes here, then the
+  // AlertDialog opens for final authorization. Sub-threshold items skip the hold
+  // and only use the modal.
   const requestPurchase = (item: PendingPurchase) => {
     if ((character?.gold || 0) < item.cost) {
       toast({
@@ -324,12 +328,7 @@ export default function Shop() {
       });
       return;
     }
-
-    if (item.cost >= HOLD_THRESHOLD_GOLD) {
-      executePurchase(item);
-    } else {
-      setPending(item);
-    }
+    setPending(item);
   };
 
   const confirmPurchase = () => {
@@ -558,14 +557,45 @@ export default function Shop() {
       </section>
 
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
-        <AlertDialogContent className="glass-panel border border-primary/40">
+        <AlertDialogContent
+          className={`glass-panel backdrop-blur-xl ${
+            pending && pending.cost >= HOLD_THRESHOLD_GOLD
+              ? "border border-gold/60 shadow-[0_0_40px_rgba(250,204,21,0.25)]"
+              : "border border-primary/40"
+          }`}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display tracking-widest text-xl text-white flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-primary" />
-              CONFIRM REDEMPTION
+              {pending && pending.cost >= HOLD_THRESHOLD_GOLD ? (
+                <>
+                  <Zap className="w-5 h-5 text-gold" />
+                  FINAL AUTHORIZATION
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="w-5 h-5 text-primary" />
+                  CONFIRM REDEMPTION
+                </>
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground pt-2">
-              {pending && (
+              {pending && pending.cost >= HOLD_THRESHOLD_GOLD ? (
+                <>
+                  Spend{" "}
+                  <span className="text-gold font-bold">
+                    {pending.cost.toLocaleString()} Gold
+                  </span>{" "}
+                  on{" "}
+                  <span className="text-white font-bold">{pending.name}</span>?
+                  <br />
+                  <span className="block mt-2 text-xs uppercase tracking-widest text-gold/70">
+                    High-cost reward — this transaction is irreversible.
+                  </span>
+                  <span className="block mt-2 text-xs uppercase tracking-widest text-muted-foreground/80">
+                    {pending.description}
+                  </span>
+                </>
+              ) : pending ? (
                 <>
                   Authorize the system to deduct{" "}
                   <span className="text-gold font-bold">
@@ -578,7 +608,7 @@ export default function Shop() {
                     {pending.description}
                   </span>
                 </>
-              )}
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
