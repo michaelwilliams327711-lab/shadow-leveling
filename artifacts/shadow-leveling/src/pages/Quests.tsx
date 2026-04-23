@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { XpGainToast } from "@/components/XpGainToast";
 import {
   Dialog,
   DialogContent,
@@ -1551,7 +1552,7 @@ export default function Quests() {
       onSuccess: (res) => {
         setCompletingQuestId(id);
         if (!reduced) playQuestComplete();
-        toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
+        toast({ title: "Quest Cleared", description: <XpGainToast xp={res.xpAwarded} gold={res.goldAwarded} /> });
         if ((res as Record<string, unknown>).gateFragmentDropped) {
           const fragCount = (res.character as Record<string, number> | undefined)?.gateFragments ?? 1;
           setTimeout(() => setFragmentDropData({ count: Math.min(fragCount, 3) }), 700);
