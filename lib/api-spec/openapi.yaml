@@ -630,12 +630,16 @@ components:
           type: string
         level:
           type: integer
+          minimum: 0
         xp:
           type: integer
+          minimum: 0
         xpToNextLevel:
           type: integer
+          minimum: 0
         gold:
           type: integer
+          minimum: 0
         gateFragments:
           type: integer
         strength:
@@ -948,6 +952,7 @@ components:
       properties:
         id:
           type: integer
+          minimum: 1
         questName:
           type: string
         category:

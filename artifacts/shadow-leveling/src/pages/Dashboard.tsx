@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -16,9 +16,9 @@ import {
   getListBadHabitsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 
-import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap } from "lucide-react";
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin } from "lucide-react";
 
 
 
@@ -144,6 +144,12 @@ export default function Dashboard() {
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+
+  const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
+  const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
+  useEffect(() => {
+    goldSpring.set(character?.gold ?? 0);
+  }, [character?.gold, goldSpring]);
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
@@ -295,7 +301,9 @@ export default function Dashboard() {
           >
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
               <Coins className="text-gold w-5 h-5" />
-              <span className="text-gold font-stat font-bold text-xl">{character.gold.toLocaleString()} G</span>
+              <span className="text-gold font-stat font-bold text-xl">
+                <motion.span>{goldDisplay}</motion.span> G
+              </span>
             </div>
           </InfoTooltip>
           <InfoTooltip
@@ -442,7 +450,7 @@ export default function Dashboard() {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${xpPercent}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
                   />
                 </div>

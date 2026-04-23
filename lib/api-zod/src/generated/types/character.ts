@@ -9,9 +9,13 @@
 export interface Character {
   id: number;
   name: string;
+  /** @minimum 0 */
   level: number;
+  /** @minimum 0 */
   xp: number;
+  /** @minimum 0 */
   xpToNextLevel: number;
+  /** @minimum 0 */
   gold: number;
   gateFragments: number;
   strength: number;

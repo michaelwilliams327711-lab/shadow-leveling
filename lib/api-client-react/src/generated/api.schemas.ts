@@ -12,11 +12,13 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
-  age?: number | null;
-  residency?: string | null;
+  /** @minimum 0 */
   level: number;
+  /** @minimum 0 */
   xp: number;
+  /** @minimum 0 */
   xpToNextLevel: number;
+  /** @minimum 0 */
   gold: number;
   gateFragments: number;
   strength: number;
@@ -254,6 +256,7 @@ export const QuestLogEntryActionType = {
 } as const;
 
 export interface QuestLogEntry {
+  /** @minimum 1 */
   id: number;
   questName: string;
   category: string;
