@@ -12,9 +12,7 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
-
   /** @minimum 0 */
-
   level: number;
   /** @minimum 0 */
   xp: number;
@@ -307,6 +305,14 @@ export interface ShopItem {
   cost: number;
   category: string;
   icon: string;
+}
+
+export interface ShopPurchaseHistoryEntry {
+  id: string;
+  itemId?: string | null;
+  itemName: string;
+  goldSpent: number;
+  redeemedAt: string;
 }
 
 export interface ShopPurchaseResult {

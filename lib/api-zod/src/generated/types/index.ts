@@ -60,6 +60,7 @@ export * from "./rngEventResponse";
 export * from "./rngEventType";
 export * from "./saveAwakeningRequest";
 export * from "./shopItem";
+export * from "./shopPurchaseHistoryEntry";
 export * from "./shopPurchaseResult";
 export * from "./statBoost";
 export * from "./updateBadHabitRequest";

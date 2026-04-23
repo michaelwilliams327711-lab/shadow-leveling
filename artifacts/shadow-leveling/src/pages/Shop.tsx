@@ -3,9 +3,12 @@ import {
   useListShopItems,
   usePurchaseShopItem,
   useGetCharacter,
+  useGetShopHistory,
   getListShopItemsQueryKey,
   getGetCharacterQueryKey,
+  getGetShopHistoryQueryKey,
   type ShopItem,
+  type ShopPurchaseHistoryEntry,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, useSpring, useTransform, AnimatePresence } from "framer-motion";
@@ -42,7 +45,6 @@ import {
 
 const HOLD_THRESHOLD_GOLD = 2500;
 const HOLD_DURATION_MS = 1500;
-const HISTORY_KEY = "shadow-leveling.purchaseHistory.v1";
 const HISTORY_LIMIT = 5;
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -60,38 +62,6 @@ interface PendingPurchase {
   name: string;
   cost: number;
   description: string;
-}
-
-interface PurchaseHistoryEntry {
-  id: string;
-  itemId: string;
-  name: string;
-  cost: number;
-  redeemedAt: string;
-}
-
-function loadHistory(): PurchaseHistoryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.slice(0, HISTORY_LIMIT) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveHistory(entries: PurchaseHistoryEntry[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      HISTORY_KEY,
-      JSON.stringify(entries.slice(0, HISTORY_LIMIT)),
-    );
-  } catch {
-    /* ignore quota errors */
-  }
 }
 
 function formatHistoryDate(iso: string) {
@@ -293,7 +263,8 @@ export default function Shop() {
 
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingPurchase | null>(null);
-  const [history, setHistory] = useState<PurchaseHistoryEntry[]>(() => loadHistory());
+  const { data: history = [] } = useGetShopHistory();
+  const visibleHistory: ShopPurchaseHistoryEntry[] = history.slice(0, HISTORY_LIMIT);
 
   const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
   const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
@@ -301,17 +272,9 @@ export default function Shop() {
     goldSpring.set(character?.gold ?? 0);
   }, [character?.gold, goldSpring]);
 
-  const recordHistory = useCallback((entry: PurchaseHistoryEntry) => {
-    setHistory((prev) => {
-      const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
-      saveHistory(next);
-      return next;
-    });
-  }, []);
-
   const executePurchase = useCallback(
     (target: PendingPurchase) => {
-      const { id, name, cost } = target;
+      const { id } = target;
       setPurchasingId(id);
 
       purchaseItem.mutate(
@@ -321,13 +284,7 @@ export default function Shop() {
             if (!reduced) playGoldSpend();
             queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
             queryClient.invalidateQueries({ queryKey: getListShopItemsQueryKey() });
-            recordHistory({
-              id: `${id}-${Date.now()}`,
-              itemId: id,
-              name: res.itemName ?? name,
-              cost: res.goldSpent ?? cost,
-              redeemedAt: new Date().toISOString(),
-            });
+            queryClient.invalidateQueries({ queryKey: getGetShopHistoryQueryKey() });
             toast({
               title: "TRANSACTION COMPLETE: Reward Authorized.",
               description: `${res.itemName} — Spent ${res.goldSpent.toLocaleString()} G. Remaining: ${res.goldRemaining.toLocaleString()} G`,
@@ -355,7 +312,7 @@ export default function Shop() {
         },
       );
     },
-    [purchaseItem, reduced, queryClient, recordHistory, toast],
+    [purchaseItem, reduced, queryClient, toast],
   );
 
   const requestPurchase = (item: PendingPurchase) => {
@@ -561,14 +518,14 @@ export default function Shop() {
           </span>
         </div>
         <div className="glass-panel rounded-xl border border-white/10 overflow-hidden">
-          {history.length === 0 ? (
+          {visibleHistory.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground text-sm tracking-widest uppercase">
               No redemptions logged yet.
             </div>
           ) : (
             <ul className="divide-y divide-white/5">
               <AnimatePresence initial={false}>
-                {history.map((entry) => (
+                {visibleHistory.map((entry) => (
                   <motion.li
                     key={entry.id}
                     initial={{ opacity: 0, x: -8 }}
@@ -579,7 +536,7 @@ export default function Shop() {
                   >
                     <div className="flex flex-col">
                       <span className="text-white font-bold text-sm tracking-wide">
-                        {entry.name}
+                        {entry.itemName}
                       </span>
                       <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
                         {formatHistoryDate(entry.redeemedAt)}
@@ -588,7 +545,7 @@ export default function Shop() {
                     <div className="flex items-center gap-1.5 bg-gold/10 border border-gold/20 px-2.5 py-1 rounded-md">
                       <Coins className="w-3.5 h-3.5 text-gold" />
                       <span className="font-stat font-bold text-gold text-sm">
-                        {entry.cost.toLocaleString()}
+                        {entry.goldSpent.toLocaleString()}
                       </span>
                       <span className="text-gold/70 font-stat font-bold text-xs">G</span>
                     </div>

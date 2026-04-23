@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { rewardsTable, characterTable, shopItemsTable, questLogTable } from "@workspace/db";
-import { eq, isNull, sql, asc } from "drizzle-orm";
+import { rewardsTable, characterTable, shopItemsTable, shopPurchasesTable, questLogTable } from "@workspace/db";
+import { eq, isNull, sql, asc, desc } from "drizzle-orm";
 import { CreateRewardBody } from "@workspace/api-zod";
 import { getOrCreateCharacter, invalidateCharacterCache } from "./character.js";
 
@@ -66,6 +66,13 @@ router.post("/shop/purchase/:id", async (req, res) => {
         actionType: "PURCHASE",
       });
 
+      await tx.insert(shopPurchasesTable).values({
+        itemId: item.id,
+        characterId: freshChar.id,
+        itemName: item.name,
+        goldSpent: item.cost,
+      });
+
       result = { newGold, itemName: item.name, cost: item.cost };
     });
 
@@ -94,6 +101,37 @@ router.post("/shop/purchase/:id", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error purchasing shop item");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/shop/history", async (req, res) => {
+  try {
+    const char = await getOrCreateCharacter();
+    const rows = await db
+      .select({
+        id: shopPurchasesTable.id,
+        itemId: shopPurchasesTable.itemId,
+        itemName: shopPurchasesTable.itemName,
+        goldSpent: shopPurchasesTable.goldSpent,
+        redeemedAt: shopPurchasesTable.redeemedAt,
+      })
+      .from(shopPurchasesTable)
+      .where(eq(shopPurchasesTable.characterId, char.id))
+      .orderBy(desc(shopPurchasesTable.redeemedAt))
+      .limit(10);
+
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        itemId: r.itemId,
+        itemName: r.itemName,
+        goldSpent: r.goldSpent,
+        redeemedAt: r.redeemedAt.toISOString(),
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Error fetching shop history");
     res.status(500).json({ error: "Internal server error" });
   }
 });

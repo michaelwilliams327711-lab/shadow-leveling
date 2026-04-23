@@ -28,17 +28,10 @@ export const getCharacterResponseGoldMin = 0;
 export const GetCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-
   level: zod.number().min(getCharacterResponseLevelMin),
   xp: zod.number().min(getCharacterResponseXpMin),
   xpToNextLevel: zod.number().min(getCharacterResponseXpToNextLevelMin),
   gold: zod.number().min(getCharacterResponseGoldMin),
-
-  level: zod.number(),
-  xp: zod.number(),
-  xpToNextLevel: zod.number(),
-  gold: zod.number(),
-
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -76,17 +69,10 @@ export const updateCharacterResponseGoldMin = 0;
 export const UpdateCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-
   level: zod.number().min(updateCharacterResponseLevelMin),
   xp: zod.number().min(updateCharacterResponseXpMin),
   xpToNextLevel: zod.number().min(updateCharacterResponseXpToNextLevelMin),
   gold: zod.number().min(updateCharacterResponseGoldMin),
-
-  level: zod.number(),
-  xp: zod.number(),
-  xpToNextLevel: zod.number(),
-  gold: zod.number(),
-
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -645,6 +631,18 @@ export const PurchaseShopItemResponse = zod.object({
   goldSpent: zod.number(),
   goldRemaining: zod.number(),
 });
+
+/**
+ * @summary Get the last 10 shop purchases for the current character
+ */
+export const GetShopHistoryResponseItem = zod.object({
+  id: zod.string(),
+  itemId: zod.string().nullish(),
+  itemName: zod.string(),
+  goldSpent: zod.number(),
+  redeemedAt: zod.coerce.date(),
+});
+export const GetShopHistoryResponse = zod.array(GetShopHistoryResponseItem);
 
 /**
  * @summary List all shop rewards

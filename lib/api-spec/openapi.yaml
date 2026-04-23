@@ -365,6 +365,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ShopPurchaseResult"
 
+  /shop/history:
+    get:
+      operationId: getShopHistory
+      tags: [shop]
+      summary: Get the last 10 shop purchases for the current character
+      responses:
+        "200":
+          description: Recent shop purchase ledger entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopPurchaseHistoryEntry"
+
   /shop/rewards:
     get:
       operationId: listRewards
@@ -1092,6 +1107,23 @@ components:
         icon:
           type: string
       required: [id, name, description, cost, category, icon]
+
+    ShopPurchaseHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        itemId:
+          type: string
+          nullable: true
+        itemName:
+          type: string
+        goldSpent:
+          type: integer
+        redeemedAt:
+          type: string
+          format: date-time
+      required: [id, itemName, goldSpent, redeemedAt]
 
     ShopPurchaseResult:
       type: object

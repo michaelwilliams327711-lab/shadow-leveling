@@ -48,6 +48,7 @@ import type {
   RngEventResponse,
   SaveAwakeningRequest,
   ShopItem,
+  ShopPurchaseHistoryEntry,
   ShopPurchaseResult,
   UpdateBadHabitRequest,
   UpdateCharacterRequest,
@@ -1705,6 +1706,81 @@ export const usePurchaseShopItem = <
 > => {
   return useMutation(getPurchaseShopItemMutationOptions(options));
 };
+
+/**
+ * @summary Get the last 10 shop purchases for the current character
+ */
+export const getGetShopHistoryUrl = () => {
+  return `/api/shop/history`;
+};
+
+export const getShopHistory = async (
+  options?: RequestInit,
+): Promise<ShopPurchaseHistoryEntry[]> => {
+  return customFetch<ShopPurchaseHistoryEntry[]>(getGetShopHistoryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetShopHistoryQueryKey = () => {
+  return [`/api/shop/history`] as const;
+};
+
+export const getGetShopHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getShopHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetShopHistoryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopHistory>>> = ({
+    signal,
+  }) => getShopHistory({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getShopHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetShopHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getShopHistory>>
+>;
+export type GetShopHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the last 10 shop purchases for the current character
+ */
+
+export function useGetShopHistory<
+  TData = Awaited<ReturnType<typeof getShopHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetShopHistoryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all shop rewards
