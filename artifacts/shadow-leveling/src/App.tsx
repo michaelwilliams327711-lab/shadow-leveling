@@ -211,12 +211,9 @@ function Router() {
         <Route path="/shop" component={Shop} />
         <Route path="/arena" component={BossArena} />
         <Route path="/awakening" component={Awakening} />
-        <Route path="/analytics"><Redirect to="/quests" /></Route>
         <Route path="/shadow" component={ShadowDashboard} />
         <Route path="/bad-habits" component={BadHabits} />
-        <Route path="/vocations"><Redirect to="/" /></Route>
         <Route path="/celestial" component={CelestialDuel} />
-        <Route path="/planner"><Redirect to="/quests" /></Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

@@ -3,7 +3,7 @@ import { characterTable } from "./character";
 
 export const celestialPowerTable = pgTable("celestial_power", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   domainPair: text("domain_pair").notNull(),
   virtueScore: integer("virtue_score").notNull().default(0),
   viceScore: integer("vice_score").notNull().default(0),

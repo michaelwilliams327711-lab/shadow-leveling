@@ -28,8 +28,8 @@ export const bossesTable = pgTable("bosses", {
 
 export const bossDamageLogTable = pgTable("boss_damage_log", {
   id: serial("id").primaryKey(),
-  bossId: integer("boss_id").notNull().references(() => bossesTable.id),
-  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  bossId: integer("boss_id").notNull().references(() => bossesTable.id, { onDelete: "cascade" }),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   damageAmount: integer("damage_amount").notNull(),
   sourceDesc: text("source_desc").notNull(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),

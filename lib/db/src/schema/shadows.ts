@@ -3,7 +3,7 @@ import { characterTable } from "./character";
 
 export const shadowArmyTable = pgTable("shadow_army", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   rank: text("rank").notNull(),
   specialAbility: text("special_ability").notNull(),
@@ -13,7 +13,7 @@ export const shadowArmyTable = pgTable("shadow_army", {
 
 export const shadowJournalTable = pgTable("shadow_journal", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull().references(() => characterTable.id),
+  characterId: integer("character_id").notNull().references(() => characterTable.id, { onDelete: "cascade" }),
   shadowId: integer("shadow_id"),
   shadowName: text("shadow_name").notNull(),
   shadowRank: text("shadow_rank").notNull(),
