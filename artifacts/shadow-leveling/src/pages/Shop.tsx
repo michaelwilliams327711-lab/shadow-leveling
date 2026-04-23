@@ -1,25 +1,14 @@
-
-import { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { 
-  useListRewards, 
-  useCreateReward, 
-  usePurchaseReward,
-  useGetCharacter,
-  getListRewardsQueryKey,
-  getGetCharacterQueryKey,
-  type GetCharacterResponse,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Store, Coins, Plus, ShoppingCart, AlertCircle } from "lucide-react";
-import { motion, useSpring, useTransform } from "framer-motion";
-
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   useListShopItems,
   usePurchaseShopItem,
-  
+  useGetCharacter,
+  getListShopItemsQueryKey,
+  getGetCharacterQueryKey,
+  type ShopItem,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { motion, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag,
   Coins,
@@ -28,6 +17,9 @@ import {
   Cpu,
   UtensilsCrossed,
   Package,
+  Lock,
+  History,
+  Zap,
 } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,13 +40,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-
-const createSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  goldCost: z.coerce.number().min(0, "Cost cannot be negative"),
-  category: z.string().min(1)
-});
+const HOLD_THRESHOLD_GOLD = 2500;
+const HOLD_DURATION_MS = 1500;
+const HISTORY_KEY = "shadow-leveling.purchaseHistory.v1";
+const HISTORY_LIMIT = 5;
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BookOpen,
@@ -73,12 +62,226 @@ interface PendingPurchase {
   description: string;
 }
 
+interface PurchaseHistoryEntry {
+  id: string;
+  itemId: string;
+  name: string;
+  cost: number;
+  redeemedAt: string;
+}
 
-const SOVEREIGN_DEFAULTS = [
-  { name: "Manga / Anime Pass", description: "1 Hour of guilt-free leisure.", goldCost: 1000, category: "Leisure" },
-  { name: "Tech Upgrade", description: "Dedicated budget for your UE5/C++ toolkit.", goldCost: 5000, category: "Tools" },
-  { name: "Cheat Meal", description: "High-protein reward for a successful gym streak.", goldCost: 2500, category: "Reward" },
-];
+function loadHistory(): PurchaseHistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, HISTORY_LIMIT) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(entries: PurchaseHistoryEntry[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      HISTORY_KEY,
+      JSON.stringify(entries.slice(0, HISTORY_LIMIT)),
+    );
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+function formatHistoryDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+interface HoldPurchaseButtonProps {
+  item: ShopItem;
+  canAfford: boolean;
+  isPurchasing: boolean;
+  disabled: boolean;
+  onTrigger: () => void;
+  reduced: boolean;
+}
+
+function HoldPurchaseButton({
+  item,
+  canAfford,
+  isPurchasing,
+  disabled,
+  onTrigger,
+  reduced,
+}: HoldPurchaseButtonProps) {
+  const [progress, setProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const rafRef = useRef<number | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const firedRef = useRef(false);
+
+  const cancelHold = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    startedAtRef.current = null;
+    firedRef.current = false;
+    setIsHolding(false);
+    setProgress(0);
+  }, []);
+
+  useEffect(() => () => cancelHold(), [cancelHold]);
+
+  const tick = useCallback(() => {
+    if (startedAtRef.current === null) return;
+    const elapsed = performance.now() - startedAtRef.current;
+    const next = Math.min(1, elapsed / HOLD_DURATION_MS);
+    setProgress(next);
+    if (next >= 1) {
+      if (!firedRef.current) {
+        firedRef.current = true;
+        onTrigger();
+      }
+      cancelHold();
+      return;
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  }, [cancelHold, onTrigger]);
+
+  const startHold = useCallback(() => {
+    if (disabled || !canAfford || isPurchasing) return;
+    if (reduced) {
+      onTrigger();
+      return;
+    }
+    firedRef.current = false;
+    startedAtRef.current = performance.now();
+    setIsHolding(true);
+    setProgress(0);
+    rafRef.current = requestAnimationFrame(tick);
+  }, [disabled, canAfford, isPurchasing, reduced, onTrigger, tick]);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+    startHold();
+  };
+  const onPointerUp = () => cancelHold();
+  const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if ((e.key === " " || e.key === "Enter") && !e.repeat) {
+      e.preventDefault();
+      startHold();
+    }
+  };
+  const onKeyUp = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === " " || e.key === "Enter") cancelHold();
+  };
+
+  const ringSize = 22;
+  const ringStroke = 2.5;
+  const radius = (ringSize - ringStroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - progress);
+
+  const glitch = isHolding && progress > 0.15;
+  const glowOpacity = 0.2 + progress * 0.6;
+
+  return (
+    <button
+      type="button"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
+      disabled={disabled || !canAfford || isPurchasing}
+      data-testid={`button-hold-purchase-${item.id}`}
+      aria-label={`Hold to authorize purchase of ${item.name} for ${item.cost} gold`}
+      className={`relative w-full font-bold tracking-widest transition-all overflow-hidden select-none rounded-md py-2 px-3 text-sm border ${
+        canAfford
+          ? "bg-primary/20 text-primary border-primary/50 hover:bg-primary/30"
+          : "bg-background text-muted-foreground border-border cursor-not-allowed"
+      } ${glitch ? "animate-pulse" : ""}`}
+      style={
+        isHolding
+          ? {
+              boxShadow: `0 0 ${8 + progress * 24}px rgba(124,58,237,${glowOpacity}), inset 0 0 ${
+                4 + progress * 16
+              }px rgba(250,204,21,${progress * 0.5})`,
+              transform: glitch
+                ? `translate(${(Math.random() - 0.5) * 1.5}px, ${(Math.random() - 0.5) * 1.5}px)`
+                : undefined,
+              backgroundColor: `rgba(124,58,237,${0.2 + progress * 0.25})`,
+            }
+          : undefined
+      }
+    >
+      <span
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isHolding
+            ? `linear-gradient(90deg, rgba(250,204,21,${progress * 0.35}) ${
+                progress * 100
+              }%, transparent ${progress * 100}%)`
+            : undefined,
+        }}
+      />
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        {!canAfford ? (
+          <>
+            <Lock className="w-3.5 h-3.5" />
+            [ INSUFFICIENT GOLD ]
+          </>
+        ) : isPurchasing ? (
+          "[ AUTHORIZING... ]"
+        ) : isHolding ? (
+          <>
+            <svg width={ringSize} height={ringSize} className="-ml-1">
+              <circle
+                cx={ringSize / 2}
+                cy={ringSize / 2}
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.15)"
+                strokeWidth={ringStroke}
+              />
+              <circle
+                cx={ringSize / 2}
+                cy={ringSize / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={ringStroke}
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+              />
+            </svg>
+            HOLD TO AUTHORIZE — {Math.round(progress * 100)}%
+          </>
+        ) : (
+          <>
+            <Zap className="w-3.5 h-3.5" />[ HOLD TO CLAIM ]
+          </>
+        )}
+      </span>
+    </button>
+  );
+}
 
 export default function Shop() {
   const { data: character } = useGetCharacter();
@@ -88,9 +291,9 @@ export default function Shop() {
   const { toast } = useToast();
   const reduced = useReducedMotion();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [purchasingId, setPurchasingId] = useState<number | null>(null);
-  const seededRef = useRef(false);
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingPurchase | null>(null);
+  const [history, setHistory] = useState<PurchaseHistoryEntry[]>(() => loadHistory());
 
   const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
   const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
@@ -98,21 +301,62 @@ export default function Shop() {
     goldSpring.set(character?.gold ?? 0);
   }, [character?.gold, goldSpring]);
 
-  useEffect(() => {
-    if (seededRef.current || isLoading || rewards.length > 0) return;
-    seededRef.current = true;
-    Promise.all(
-      SOVEREIGN_DEFAULTS.map((item) =>
-        createReward.mutateAsync({ data: item }).catch(() => null),
-      ),
-    ).then(() => {
-      queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
+  const recordHistory = useCallback((entry: PurchaseHistoryEntry) => {
+    setHistory((prev) => {
+      const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
+      saveHistory(next);
+      return next;
     });
-  }, [isLoading, rewards.length, createReward, queryClient]);
+  }, []);
 
-  const [purchasingId, setPurchasingId] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingPurchase | null>(null);
+  const executePurchase = useCallback(
+    (target: PendingPurchase) => {
+      const { id, name, cost } = target;
+      setPurchasingId(id);
 
+      purchaseItem.mutate(
+        { id },
+        {
+          onSuccess: (res) => {
+            if (!reduced) playGoldSpend();
+            queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+            queryClient.invalidateQueries({ queryKey: getListShopItemsQueryKey() });
+            recordHistory({
+              id: `${id}-${Date.now()}`,
+              itemId: id,
+              name: res.itemName ?? name,
+              cost: res.goldSpent ?? cost,
+              redeemedAt: new Date().toISOString(),
+            });
+            toast({
+              title: "TRANSACTION COMPLETE: Reward Authorized.",
+              description: `${res.itemName} — Spent ${res.goldSpent.toLocaleString()} G. Remaining: ${res.goldRemaining.toLocaleString()} G`,
+              className: "bg-gold/20 border-gold text-gold",
+            });
+            setTimeout(() => setPurchasingId(null), 1000);
+          },
+          onError: (err) => {
+            setPurchasingId(null);
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 402) {
+              toast({
+                title: "Not enough Gold",
+                description: "Complete more quests to earn Gold, Hunter.",
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Purchase Failed",
+                description: "An error occurred. Please try again.",
+                variant: "destructive",
+              });
+            }
+          },
+        },
+      );
+    },
+    [purchaseItem, reduced, queryClient, recordHistory, toast],
+  );
 
   const requestPurchase = (item: PendingPurchase) => {
     if ((character?.gold || 0) < item.cost) {
@@ -124,81 +368,18 @@ export default function Shop() {
       return;
     }
 
-
-    const characterKey = getGetCharacterQueryKey();
-    const previousChar = queryClient.getQueryData<GetCharacterResponse>(characterKey);
-    queryClient.setQueryData<GetCharacterResponse>(characterKey, (old) =>
-      old ? { ...old, gold: Math.max(0, old.gold - cost) } : old,
-    );
-    setPurchasingId(id);
-    if (!reduced) playGoldSpend();
-
-    purchaseReward.mutate({ id }, {
-      onSuccess: (res) => {
-        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
-        toast({ 
-          title: "Item Purchased!", 
-          description: `Spent ${res.goldSpent} G. Remaining: ${res.goldRemaining} G`,
-          className: "bg-gold/20 border-gold text-gold"
-        });
-        setTimeout(() => setPurchasingId(null), 1000);
-      },
-      onError: (err) => {
-        if (previousChar) queryClient.setQueryData(characterKey, previousChar);
-        setPurchasingId(null);
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        if (status === 402) {
-          toast({ title: "Not enough Gold", description: "Complete more quests to earn Gold, Hunter.", variant: "destructive" });
-        } else {
-          toast({ title: "Purchase Failed", description: "An error occurred. Please try again.", variant: "destructive" });
-        }
-      },
-    });
-
-    setPending(item);
-
+    if (item.cost >= HOLD_THRESHOLD_GOLD) {
+      executePurchase(item);
+    } else {
+      setPending(item);
+    }
   };
 
   const confirmPurchase = () => {
     if (!pending) return;
-    const { id } = pending;
-    setPurchasingId(id);
+    const target = pending;
     setPending(null);
-
-    purchaseItem.mutate(
-      { id },
-      {
-        onSuccess: (res) => {
-          if (!reduced) playGoldSpend();
-          queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListShopItemsQueryKey() });
-          toast({
-            title: "TRANSACTION COMPLETE: Reward Authorized.",
-            description: `${res.itemName} — Spent ${res.goldSpent.toLocaleString()} G. Remaining: ${res.goldRemaining.toLocaleString()} G`,
-            className: "bg-gold/20 border-gold text-gold",
-          });
-          setTimeout(() => setPurchasingId(null), 1000);
-        },
-        onError: (err) => {
-          setPurchasingId(null);
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          if (status === 402) {
-            toast({
-              title: "Not enough Gold",
-              description: "Complete more quests to earn Gold, Hunter.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Purchase Failed",
-              description: "An error occurred. Please try again.",
-              variant: "destructive",
-            });
-          }
-        },
-      },
-    );
+    executePurchase(target);
   };
 
   if (isLoading) {
@@ -224,7 +405,11 @@ export default function Shop() {
         <p className="text-muted-foreground tracking-widest uppercase text-sm">
           System Error — Shop Offline
         </p>
-        <Button onClick={() => refetch()} variant="outline" className="border-white/20 tracking-widest">
+        <Button
+          onClick={() => refetch()}
+          variant="outline"
+          className="border-white/20 tracking-widest"
+        >
           Retry Connection
         </Button>
       </div>
@@ -235,105 +420,6 @@ export default function Shop() {
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-
-          <InfoTooltip
-            what="Shadow Shop — exchange Gold for real-life rewards."
-            fn="A catalog of rewards you define. Each item has a Gold cost. Purchasing deducts Gold from your treasury."
-            usage="Add rewards with the + button. Complete quests to earn Gold, then spend it here on treats you've decided to allow yourself."
-          >
-            <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
-              <Store className="w-8 h-8 text-primary" />
-              SHADOW SHOP
-            </h1>
-          </InfoTooltip>
-          <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">Spend your Gold. Claim what you've earned.</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <InfoTooltip
-            what="Gold — the in-game currency of the Shadow Shop."
-            fn="Earned by completing quests. Higher-rank quests and streak multipliers yield more Gold."
-            usage="Spend it here to purchase real-life rewards you've defined. Add new rewards with the + button."
-          >
-            <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
-              <Coins className="text-gold w-6 h-6" />
-              <span className="text-gold font-stat font-bold text-2xl">
-                <motion.span>{goldDisplay}</motion.span>
-              </span>
-            </div>
-          </InfoTooltip>
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="icon" className="h-12 w-12 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 hover-glow">
-                <Plus className="w-6 h-6" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="glass-panel border-white/10">
-              <DialogHeader>
-                <DialogTitle className="font-display tracking-widest text-xl">Register Reward</DialogTitle>
-                <DialogDescription className="sr-only">Create a new shop reward</DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                  <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reward Name</FormLabel>
-                      <FormControl><Input {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="goldCost" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price (Gold)</FormLabel>
-                      <FormControl><Input type="number" min={0} {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="category" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <FormControl><Input {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={createReward.isPending}>
-                    {createReward.isPending ? "Inscribing..." : "Inscribe to Shop"}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {rewards.map(reward => {
-          const canAfford = (character?.gold || 0) >= reward.goldCost;
-          return (
-            <Card key={reward.id} className={`glass-panel overflow-hidden transition-all duration-300 relative ${canAfford ? 'hover:border-primary/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]' : 'opacity-70 grayscale-[0.3]'}`}>
-              <GoldSpendAnimation active={purchasingId === reward.id} />
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">{reward.name}</h3>
-                    <InfoTooltip
-                      what={`Category: ${reward.category} — the type of real-life reward.`}
-                      fn="Organizes rewards so you can spot which areas you are rewarding yourself in."
-                      usage="Set the category when adding a reward to group similar items together in your shop."
-                    >
-                      <span className="text-xs uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">{reward.category}</span>
-                    </InfoTooltip>
-                  </div>
-                  <InfoTooltip
-                    what="Gold Cost — the price of this reward."
-                    fn="The number of Gold coins required to purchase this item. Deducted from your treasury on purchase."
-                    usage="Set prices that feel proportional to the real value of the reward. Higher prices make rewards feel more earned."
-                  >
-                    <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-lg border border-gold/20">
-                      <Coins className="w-4 h-4 text-gold" />
-                      <span className="font-stat font-bold text-gold">{reward.goldCost.toLocaleString()}</span>
-
           <h1 className="text-4xl font-display font-bold text-white tracking-tight flex items-center gap-3">
             <ShoppingBag className="w-8 h-8 text-primary" />
             SHADOW SHOP
@@ -345,9 +431,9 @@ export default function Shop() {
 
         <div className="glass-panel px-6 py-3 rounded-xl flex items-center gap-3 border-gold/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
           <Coins className="text-gold w-6 h-6" />
-          <span className="text-gold font-stat font-bold text-2xl">
-            {character?.gold?.toLocaleString() || 0}
-          </span>
+          <motion.span className="text-gold font-stat font-bold text-2xl">
+            {goldDisplay}
+          </motion.span>
           <span className="text-gold/70 font-stat font-bold text-lg">G</span>
         </div>
       </div>
@@ -362,30 +448,55 @@ export default function Shop() {
             const canAfford = (character?.gold || 0) >= item.cost;
             const Icon = getIcon(item.icon);
             const isPurchasing = purchasingId === item.id;
+            const requiresHold = item.cost >= HOLD_THRESHOLD_GOLD;
 
             return (
               <Card
                 key={item.id}
-                className={`glass-panel overflow-hidden transition-all duration-300 relative border border-primary/30 ${
+                className={`glass-panel overflow-hidden transition-all duration-300 relative border ${
                   canAfford
-                    ? "hover:border-primary/70 hover:shadow-[0_0_24px_rgba(124,58,237,0.25)]"
-                    : "opacity-70 grayscale-[0.3]"
+                    ? "border-primary/30 hover:border-primary/70 hover:shadow-[0_0_24px_rgba(124,58,237,0.25)]"
+                    : "border-white/5 opacity-60 grayscale"
                 }`}
               >
                 <GoldSpendAnimation active={isPurchasing} />
+
+                {!canAfford && (
+                  <div
+                    className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center bg-black/40 backdrop-blur-[1px]"
+                    aria-hidden
+                  >
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/10 bg-background/70 text-muted-foreground text-[10px] tracking-widest uppercase">
+                      <Lock className="w-3.5 h-3.5" />
+                      Locked — Earn More Gold
+                    </div>
+                  </div>
+                )}
+
                 <CardContent className="p-6 flex flex-col h-full">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/15 border border-primary/40">
                       <Icon className="w-6 h-6 text-primary" />
-
                     </div>
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">
-                      {item.category}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">
+                        {item.category}
+                      </span>
+                      {requiresHold && (
+                        <span className="text-[10px] uppercase tracking-widest text-gold/90 bg-gold/10 border border-gold/30 px-2 py-0.5 rounded flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          High-Cost
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 tracking-wide">{item.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-6 flex-1">{item.description}</p>
+                  <h3 className="text-xl font-bold text-white mb-2 tracking-wide">
+                    {item.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6 flex-1">
+                    {item.description}
+                  </p>
 
                   <div className="flex items-center gap-2 mb-4 bg-gold/10 px-3 py-2 rounded-lg border border-gold/20 w-fit">
                     <Coins className="w-5 h-5 text-gold" />
@@ -395,31 +506,99 @@ export default function Shop() {
                     <span className="text-gold/70 font-stat font-bold">G</span>
                   </div>
 
-                  <Button
-                    onClick={() =>
-                      requestPurchase({
-                        id: item.id,
-                        name: item.name,
-                        cost: item.cost,
-                        description: item.description,
-                      })
-                    }
-                    disabled={!canAfford || purchaseItem.isPending}
-                    data-testid={`button-purchase-${item.id}`}
-                    className={`w-full font-bold tracking-widest transition-all ${
-                      canAfford
-                        ? "bg-primary/20 text-primary border border-primary/50 hover:bg-primary/30"
-                        : "bg-background text-muted-foreground border border-border"
-                    }`}
-                  >
-                    {canAfford ? "[ PURCHASE ]" : "[ INSUFFICIENT GOLD ]"}
-                  </Button>
+                  {requiresHold ? (
+                    <HoldPurchaseButton
+                      item={item}
+                      canAfford={canAfford}
+                      isPurchasing={isPurchasing}
+                      disabled={purchaseItem.isPending}
+                      reduced={reduced}
+                      onTrigger={() =>
+                        requestPurchase({
+                          id: item.id,
+                          name: item.name,
+                          cost: item.cost,
+                          description: item.description,
+                        })
+                      }
+                    />
+                  ) : (
+                    <Button
+                      onClick={() =>
+                        requestPurchase({
+                          id: item.id,
+                          name: item.name,
+                          cost: item.cost,
+                          description: item.description,
+                        })
+                      }
+                      disabled={!canAfford || purchaseItem.isPending}
+                      data-testid={`button-purchase-${item.id}`}
+                      className={`w-full font-bold tracking-widest transition-all ${
+                        canAfford
+                          ? "bg-primary/20 text-primary border border-primary/50 hover:bg-primary/30"
+                          : "bg-background text-muted-foreground border border-border"
+                      }`}
+                    >
+                      {canAfford ? "[ PURCHASE ]" : "[ INSUFFICIENT GOLD ]"}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
       )}
+
+      <section className="mt-12" data-testid="section-purchase-history">
+        <div className="flex items-center gap-3 mb-4">
+          <History className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-display font-bold text-white tracking-widest uppercase">
+            Purchase History — Vault
+          </h2>
+          <span className="text-xs text-muted-foreground tracking-wider uppercase">
+            Last {HISTORY_LIMIT} Redeems
+          </span>
+        </div>
+        <div className="glass-panel rounded-xl border border-white/10 overflow-hidden">
+          {history.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground text-sm tracking-widest uppercase">
+              No redemptions logged yet.
+            </div>
+          ) : (
+            <ul className="divide-y divide-white/5">
+              <AnimatePresence initial={false}>
+                {history.map((entry) => (
+                  <motion.li
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    className="flex items-center justify-between px-4 py-3"
+                    data-testid={`history-row-${entry.id}`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-white font-bold text-sm tracking-wide">
+                        {entry.name}
+                      </span>
+                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                        {formatHistoryDate(entry.redeemedAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-gold/10 border border-gold/20 px-2.5 py-1 rounded-md">
+                      <Coins className="w-3.5 h-3.5 text-gold" />
+                      <span className="font-stat font-bold text-gold text-sm">
+                        {entry.cost.toLocaleString()}
+                      </span>
+                      <span className="text-gold/70 font-stat font-bold text-xs">G</span>
+                    </div>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+        </div>
+      </section>
 
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent className="glass-panel border border-primary/40">
@@ -432,7 +611,9 @@ export default function Shop() {
               {pending && (
                 <>
                   Authorize the system to deduct{" "}
-                  <span className="text-gold font-bold">{pending.cost.toLocaleString()} G</span>{" "}
+                  <span className="text-gold font-bold">
+                    {pending.cost.toLocaleString()} G
+                  </span>{" "}
                   in exchange for{" "}
                   <span className="text-white font-bold">{pending.name}</span>.
                   <br />
