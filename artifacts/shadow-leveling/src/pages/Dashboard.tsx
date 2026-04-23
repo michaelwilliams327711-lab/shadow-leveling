@@ -1,6 +1,4 @@
 
-import { useState, useEffect } from "react";
-
 import { useState, useEffect, useMemo } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,8 +23,6 @@ import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 
-
-import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin } from "lucide-react";
 
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
 

@@ -35,11 +35,7 @@ import {
 const navItems = [
   { title: "Status", href: "/", icon: LayoutDashboard, shadow: false },
   { title: "Quests & Chronicle", href: "/quests", icon: ScrollText, shadow: false },
-
-  { title: "Shadow Shop", href: "/shop", icon: Store, shadow: false },
-
   { title: "Shadow Shop", href: "/shop", icon: ShoppingBag, shadow: false },
-
   { title: "Boss Arena", href: "/arena", icon: Skull, shadow: false },
   { title: "The Awakening", href: "/awakening", icon: BookOpen, shadow: false },
   { title: "Scale of Souls", href: "/celestial", icon: Scale, shadow: false },
