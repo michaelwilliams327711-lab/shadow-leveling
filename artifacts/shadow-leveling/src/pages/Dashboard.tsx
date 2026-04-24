@@ -29,7 +29,7 @@ import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
-import { hapticTick, hapticThud } from "@/lib/haptics";
+import { triggerHapticTick, triggerHapticThud } from "@/lib/haptics";
 import { STAT_META } from "@workspace/shared";
 
 function formatRelativeTime(isoString: string): string {
@@ -197,7 +197,7 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
 
-        hapticThud();
+        triggerHapticThud();
         setAriseStreakTick(res.streak);
         setTimeout(() => setAriseStreakTick(null), 2000);
 
@@ -432,7 +432,7 @@ export default function Dashboard() {
               
               <InfoTooltip
                 what="XP Progress Bar — how close you are to the next level."
-                fn={`XP required for this level = ⌈100 × 1.2^(${character.level} − 1)⌉ = ${character.xpToNextLevel} XP. Logarithmic curve — early levels are quick, late levels demand Monarch effort.`}
+                fn={`XP required for this level = ⌊100 × 1.2^(${character.level} − 1)⌋ = ${character.xpToNextLevel} XP. Logarithmic curve — early levels are quick, late levels demand Monarch effort.`}
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
                 <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
@@ -486,7 +486,7 @@ export default function Dashboard() {
                         const tickBucket = Math.floor(pct * 10);
                         if (tickBucket > holdLastTickRef.current && tickBucket <= 10) {
                           holdLastTickRef.current = tickBucket;
-                          hapticTick();
+                          triggerHapticTick();
                         }
                         if (pct >= 1) {
                           cancelHold();

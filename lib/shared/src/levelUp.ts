@@ -13,7 +13,7 @@ const XP_GROWTH = 1.2;
  */
 export function XP_PER_LEVEL(level: number): number {
   const safeLevel = Math.max(1, level);
-  return Math.round(XP_BASE * Math.pow(XP_GROWTH, safeLevel - 1));
+  return Math.floor(XP_BASE * Math.pow(XP_GROWTH, safeLevel - 1));
 }
 
 /**
@@ -25,7 +25,7 @@ export function XP_PER_LEVEL(level: number): number {
 export function totalXpEarned(xp: number, level: number): number {
   const safeLevel = Math.max(1, level);
   const pastLevels = (XP_BASE / (XP_GROWTH - 1)) * (Math.pow(XP_GROWTH, safeLevel - 1) - 1);
-  return xp + Math.round(pastLevels);
+  return xp + Math.floor(pastLevels);
 }
 
 export function processLevelUp(xp: number, level: number): { xp: number; level: number } {

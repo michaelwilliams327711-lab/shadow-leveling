@@ -67,6 +67,7 @@ export default defineConfig({
         manualChunks: {
           "vendor-icons": ["lucide-react"],
           "vendor-motion": ["framer-motion"],
+          "vendor-charts": ["recharts"],
         },
       },
     },

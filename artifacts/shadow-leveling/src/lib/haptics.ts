@@ -1,4 +1,4 @@
-export function vibrate(pattern: number | number[]): void {
+function vibrate(pattern: number | number[]): void {
   if (typeof navigator === "undefined") return;
   if (typeof navigator.vibrate !== "function") return;
   try {
@@ -8,10 +8,10 @@ export function vibrate(pattern: number | number[]): void {
   }
 }
 
-export function hapticTick(): void {
+export function triggerHapticTick(): void {
   vibrate(10);
 }
 
-export function hapticThud(): void {
+export function triggerHapticThud(): void {
   vibrate(50);
 }
