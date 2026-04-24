@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { 
-  useListBosses, 
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useListBosses,
   useChallengeBoss,
   useForgeBossGateKey,
   useGetCharacter,
   getListBossesQueryKey,
-  getGetCharacterQueryKey
+  getGetCharacterQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skull, Lock, Swords, ShieldAlert, AlertCircle, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,12 +27,27 @@ import {
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { BossVictoryScreen } from "@/components/BossVictoryScreen";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
-import { AriseRitual } from "@/components/AriseRitual";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { ShadowArmyPanel } from "@/components/ShadowArmyPanel";
 import { ShadowJournal } from "@/components/ShadowJournal";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { motion, AnimatePresence } from "framer-motion";
+import { triggerHapticTick, triggerHapticThud } from "@/lib/haptics";
+
+interface ExtractResult {
+  success: boolean;
+  roll: number;
+  threshold: number;
+  message: string;
+  shadow?: {
+    id: number;
+    name: string;
+    rank: string;
+    specialAbility: string;
+  };
+}
+
+const HOLD_DURATION_MS = 2000;
 
 const bossArenaImg = "/images/boss-arena.webp";
 
@@ -125,51 +141,126 @@ export default function BossArena() {
   } | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas?: Array<{ name: string; value: number }> } | null>(null);
 
-  const [showRitual, setShowRitual] = useState(false);
-  const [ritualBoss, setRitualBoss] = useState<{ id: number; name: string } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [extractedBossIds, setExtractedBossIds] = useState<Set<number>>(new Set());
 
+  // Hold-to-Claim state for boss extraction
+  const [activeHoldBossId, setActiveHoldBossId] = useState<number | null>(null);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdRafRef = useRef<number | null>(null);
+  const holdStartRef = useRef<number | null>(null);
+  const holdLastTickRef = useRef<number>(0);
+  const preExtractLevelRef = useRef<number | null>(null);
+
+  const cancelHold = useCallback(() => {
+    if (holdRafRef.current !== null) {
+      cancelAnimationFrame(holdRafRef.current);
+      holdRafRef.current = null;
+    }
+    holdStartRef.current = null;
+    holdLastTickRef.current = 0;
+    setActiveHoldBossId(null);
+    setHoldProgress(0);
+  }, []);
+
   useEffect(() => {
-    if (isLoading || bosses.length === 0) return;
-    const candidate = bosses.find(
-      (b) => b.isDefeated && b.currentHp === 0 && !b.isExtracted && !extractedBossIds.has(b.id)
-    );
-    if (candidate && !showRitual) {
-      setRitualBoss({ id: candidate.id, name: candidate.name });
-      setShowRitual(true);
-    }
-  }, [bosses, isLoading]);
+    return () => {
+      if (holdRafRef.current !== null) cancelAnimationFrame(holdRafRef.current);
+    };
+  }, []);
 
-  const handleRitualSuccess = useCallback((shadowName: string) => {
-    if (ritualBoss) {
-      setExtractedBossIds((prev) => new Set([...prev, ritualBoss.id]));
-    }
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 3500);
+  const extractMutation = useMutation<ExtractResult, Error, { bossId: number }>({
+    mutationFn: ({ bossId }) =>
+      customFetch<ExtractResult>("/api/shadows/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bossId, command: "ARISE" }),
+      }),
+  });
 
-    queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+  const handleExtractSuccess = useCallback(
+    async (bossId: number, shadowName: string) => {
+      triggerHapticThud();
+      setExtractedBossIds((prev) => new Set([...prev, bossId]));
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3500);
 
-    toast({
-      title: "SHADOW EXTRACTED",
-      description: `${shadowName} has joined your army.`,
-      className: "border-blue-700/60 shadow-[0_0_20px_rgba(96,165,250,0.4)] bg-background/95",
-    });
+      toast({
+        title: "SHADOW EXTRACTED",
+        description: `${shadowName} has joined your army.`,
+        className: "border-blue-700/60 shadow-[0_0_20px_rgba(96,165,250,0.4)] bg-background/95",
+      });
 
-    setTimeout(() => {
-      setShowRitual(false);
-      setRitualBoss(null);
-    }, 3800);
-  }, [ritualBoss, queryClient, toast]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListBossesQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() }),
+      ]);
 
-  const handleRitualClose = useCallback(() => {
-    if (ritualBoss) {
-      setExtractedBossIds((prev) => new Set([...prev, ritualBoss.id]));
-    }
-    setShowRitual(false);
-    setRitualBoss(null);
-  }, [ritualBoss]);
+      // State reconciliation: if level changed across the extraction window, fire the ceremony.
+      const after = queryClient.getQueryData<typeof character>(getGetCharacterQueryKey());
+      const before = preExtractLevelRef.current;
+      preExtractLevelRef.current = null;
+      if (before !== null && after && (after.level ?? 0) > before) {
+        setTimeout(() => setLevelUpData({ newLevel: after.level }), 800);
+      }
+    },
+    [queryClient, toast, character]
+  );
+
+  const startHold = useCallback(
+    (bossId: number, bossName: string) => {
+      if (extractMutation.isPending) return;
+      cancelHold();
+      preExtractLevelRef.current = character?.level ?? null;
+      setActiveHoldBossId(bossId);
+      holdStartRef.current = performance.now();
+      holdLastTickRef.current = 0;
+      const step = (now: number) => {
+        if (holdStartRef.current === null) return;
+        const elapsed = now - holdStartRef.current;
+        const pct = Math.min(1, elapsed / HOLD_DURATION_MS);
+        setHoldProgress(pct);
+        // Tick every 5% — 20 ticks total over the 2-second hold.
+        const tickBucket = Math.floor(pct * 20);
+        if (tickBucket > holdLastTickRef.current && tickBucket <= 20) {
+          holdLastTickRef.current = tickBucket;
+          triggerHapticTick();
+        }
+        if (pct >= 1) {
+          cancelHold();
+          extractMutation.mutate(
+            { bossId },
+            {
+              onSuccess: (data) => {
+                if (data.success && data.shadow) {
+                  void handleExtractSuccess(bossId, data.shadow.name);
+                } else {
+                  toast({
+                    title: "EXTRACTION FAILED",
+                    description: data.message || "The shadow resists your command.",
+                    variant: "destructive",
+                  });
+                }
+              },
+              onError: (err) => {
+                toast({
+                  title: "EXTRACTION ERROR",
+                  description: err.message || "Unable to extract this shadow.",
+                  variant: "destructive",
+                });
+              },
+            }
+          );
+          return;
+        }
+        holdRafRef.current = requestAnimationFrame(step);
+      };
+      holdRafRef.current = requestAnimationFrame(step);
+      // Reference bossName for future expansion (e.g. accessible labels).
+      void bossName;
+    },
+    [extractMutation, cancelHold, handleExtractSuccess, character, toast]
+  );
 
   const handleChallenge = (id: number) => {
     const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
@@ -292,11 +383,53 @@ export default function BossArena() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {bosses.map((boss) => {
             const bossImage = bossImageMap[boss.id];
-            const isExtractable = boss.isDefeated && boss.currentHp === 0 && !boss.isExtracted;
+            const isExtractable =
+              boss.isDefeated && boss.currentHp === 0 && !boss.isExtracted && !extractedBossIds.has(boss.id);
             const isForgingThisBoss = forgeBossKey.isPending && forgeBossKey.variables?.id === boss.id;
 
+            const isHolding = activeHoldBossId === boss.id;
+            // Three-stage shake intensity to keep framer-motion stable while still ramping with progress.
+            const intensityBucket =
+              !isHolding ? 0 : holdProgress >= 0.8 ? 3 : holdProgress >= 0.5 ? 2 : 1;
+            const shakeAmplitude = [0, 2, 5, 14][intensityBucket];
+            const shakeDuration = [0, 0.18, 0.12, 0.07][intensityBucket];
+            const glowOpacity = !isHolding ? 0 : holdProgress < 0.8 ? 0.25 + holdProgress * 0.4 : 0.6 + (holdProgress - 0.8) * 2;
+            const glowScale = !isHolding ? 1 : 1 + holdProgress * 0.18 + (holdProgress >= 0.8 ? (holdProgress - 0.8) * 1.2 : 0);
+
             return (
-              <Card key={boss.id} className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
+              <motion.div
+                key={boss.id}
+                className="relative"
+                animate={
+                  isHolding
+                    ? { x: [-shakeAmplitude, shakeAmplitude, -shakeAmplitude, shakeAmplitude, 0] }
+                    : { x: 0 }
+                }
+                transition={
+                  isHolding
+                    ? { duration: shakeDuration, repeat: Infinity, ease: "linear" }
+                    : { duration: 0.3, ease: "easeOut" }
+                }
+              >
+                <AnimatePresence>
+                  {isHolding && (
+                    <motion.div
+                      key="extract-glow"
+                      aria-hidden="true"
+                      className="absolute -inset-6 rounded-3xl pointer-events-none blur-2xl"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{
+                        opacity: Math.min(1, glowOpacity),
+                        scale: glowScale,
+                        backgroundColor:
+                          holdProgress >= 0.8 ? "rgba(96,165,250,0.85)" : "rgba(59,130,246,0.55)",
+                      }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.18 }}
+                    />
+                  )}
+                </AnimatePresence>
+                <Card className={`glass-panel overflow-hidden border-destructive/20 relative group ${!boss.isUnlocked ? 'opacity-70' : ''}`}>
                 {!boss.isUnlocked && (
                   <ShadowIntel
                     title="Shadow Intel"
@@ -450,14 +583,29 @@ export default function BossArena() {
 
                   {isExtractable ? (
                     <Button
-                      className="w-full h-12 bg-blue-900/30 text-blue-300 hover:bg-blue-800/50 border border-blue-700/50 tracking-widest font-bold font-display arise-mana transition-all"
-                      onClick={() => {
-                        setRitualBoss({ id: boss.id, name: boss.name });
-                        setShowRitual(true);
-                      }}
+                      onPointerDown={() => startHold(boss.id, boss.name)}
+                      onPointerUp={cancelHold}
+                      onPointerLeave={cancelHold}
+                      onPointerCancel={cancelHold}
+                      disabled={extractMutation.isPending}
+                      aria-label={`Hold to extract shadow of ${boss.name}`}
+                      className="relative w-full h-12 bg-blue-900/30 text-blue-300 hover:bg-blue-800/50 border border-blue-700/50 tracking-widest font-bold font-display arise-mana transition-all overflow-hidden select-none touch-none"
                     >
-                      <Ghost className="w-4 h-4 mr-2" />
-                      ARISE — EXTRACTION RITUAL
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 bg-blue-400/35 pointer-events-none transition-[width] duration-75 ease-linear"
+                        style={{
+                          width: `${(isHolding ? holdProgress : 0) * 100}%`,
+                        }}
+                      />
+                      <span className="relative z-10 flex items-center justify-center">
+                        <Ghost className="w-4 h-4 mr-2" />
+                        {extractMutation.isPending
+                          ? "EXTRACTING..."
+                          : isHolding
+                            ? `HOLD TO ARISE — ${Math.round(holdProgress * 100)}%`
+                            : "HOLD TO ARISE — EXTRACTION RITUAL"}
+                      </span>
                     </Button>
                   ) : (
                     boss.isLocked ? (
@@ -538,7 +686,8 @@ export default function BossArena() {
                     )
                   )}
                 </CardContent>
-              </Card>
+                </Card>
+              </motion.div>
             );
           })}
         </div>
@@ -562,15 +711,6 @@ export default function BossArena() {
         statDeltas={levelUpData?.statDeltas}
         onDismiss={() => setLevelUpData(null)}
       />
-
-      {showRitual && ritualBoss && (
-        <AriseRitual
-          bossId={ritualBoss.id}
-          bossName={ritualBoss.name}
-          onClose={handleRitualClose}
-          onSuccess={handleRitualSuccess}
-        />
-      )}
     </div>
   );
 }
