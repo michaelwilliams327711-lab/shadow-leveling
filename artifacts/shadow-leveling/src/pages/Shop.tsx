@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { GoldSpendAnimation } from "@/components/GoldSpendAnimation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playGoldSpend } from "@/lib/sounds";
+import { hapticThud } from "@/lib/haptics";
 import {
   Dialog,
   DialogContent,
@@ -71,6 +72,7 @@ export default function Shop() {
       onSuccess: (res) => {
         setPurchasingId(id);
         if (!reduced) playGoldSpend();
+        hapticThud();
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
         toast({ 

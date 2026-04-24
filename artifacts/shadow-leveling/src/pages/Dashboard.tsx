@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -29,6 +29,7 @@ import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
+import { hapticTick, hapticThud } from "@/lib/haptics";
 import { STAT_META } from "@workspace/shared";
 
 function formatRelativeTime(isoString: string): string {
@@ -140,6 +141,11 @@ export default function Dashboard() {
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdRafRef = useRef<number | null>(null);
+  const holdStartRef = useRef<number | null>(null);
+  const holdLastTickRef = useRef<number>(0);
+  const HOLD_DURATION_MS = 1000;
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
@@ -147,6 +153,22 @@ export default function Dashboard() {
   const hasCheckedInToday = character
     ? (character.lastCheckin ? character.lastCheckin.split("T")[0] === todayLocal : false)
     : false;
+
+  const cancelHold = useCallback(() => {
+    if (holdRafRef.current !== null) {
+      cancelAnimationFrame(holdRafRef.current);
+      holdRafRef.current = null;
+    }
+    holdStartRef.current = null;
+    holdLastTickRef.current = 0;
+    setHoldProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (holdRafRef.current !== null) cancelAnimationFrame(holdRafRef.current);
+    };
+  }, []);
 
   const handleCheckin = () => {
     if (hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending) return;
@@ -175,6 +197,7 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
 
+        hapticThud();
         setAriseStreakTick(res.streak);
         setTimeout(() => setAriseStreakTick(null), 2000);
 
@@ -409,7 +432,7 @@ export default function Dashboard() {
               
               <InfoTooltip
                 what="XP Progress Bar — how close you are to the next level."
-                fn={`XP required for this level = (2×${character.level} − 1) × 10 = ${character.xpToNextLevel} XP. Formula: Level = ⌊√(TotalXP / 10)⌋ + 1.`}
+                fn={`XP required for this level = ⌈100 × 1.2^(${character.level} − 1)⌉ = ${character.xpToNextLevel} XP. Logarithmic curve — early levels are quick, late levels demand Monarch effort.`}
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
                 <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
@@ -447,17 +470,60 @@ export default function Dashboard() {
                   transition={{ duration: 0.4 }}
                   className="relative z-10"
                 >
-                  <Button 
-                    onClick={handleCheckin}
-                    disabled={hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending}
-                    className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 disabled:opacity-60"
-                  >
-                    {checkinMutation.isPending || recordCleanDayMutation.isPending
-                      ? "Connecting..."
-                      : hasCheckedInToday
-                        ? "ARISE COMPLETE"
-                        : "DAILY ARISE"}
-                  </Button>
+                  {(() => {
+                    const ariseDisabled =
+                      hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending;
+                    const startHold = () => {
+                      if (ariseDisabled) return;
+                      cancelHold();
+                      holdStartRef.current = performance.now();
+                      holdLastTickRef.current = 0;
+                      const step = (now: number) => {
+                        if (holdStartRef.current === null) return;
+                        const elapsed = now - holdStartRef.current;
+                        const pct = Math.min(1, elapsed / HOLD_DURATION_MS);
+                        setHoldProgress(pct);
+                        const tickBucket = Math.floor(pct * 10);
+                        if (tickBucket > holdLastTickRef.current && tickBucket <= 10) {
+                          holdLastTickRef.current = tickBucket;
+                          hapticTick();
+                        }
+                        if (pct >= 1) {
+                          cancelHold();
+                          handleCheckin();
+                          return;
+                        }
+                        holdRafRef.current = requestAnimationFrame(step);
+                      };
+                      holdRafRef.current = requestAnimationFrame(step);
+                    };
+                    return (
+                      <Button
+                        onPointerDown={startHold}
+                        onPointerUp={cancelHold}
+                        onPointerLeave={cancelHold}
+                        onPointerCancel={cancelHold}
+                        disabled={ariseDisabled}
+                        aria-label="Hold to claim Daily Arise"
+                        className="relative w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 disabled:opacity-60 overflow-hidden select-none touch-none"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 bg-white/25 pointer-events-none transition-[width] duration-75 ease-linear"
+                          style={{ width: `${holdProgress * 100}%` }}
+                        />
+                        <span className="relative z-10">
+                          {checkinMutation.isPending || recordCleanDayMutation.isPending
+                            ? "Connecting..."
+                            : hasCheckedInToday
+                              ? "ARISE COMPLETE"
+                              : holdProgress > 0
+                                ? `HOLD TO CLAIM — ${Math.round(holdProgress * 100)}%`
+                                : "HOLD TO CLAIM — DAILY ARISE"}
+                        </span>
+                      </Button>
+                    );
+                  })()}
                 </motion.div>
                 {ariseAnimating && !reduced && (
                   <motion.div

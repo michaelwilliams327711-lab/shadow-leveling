@@ -1,22 +1,31 @@
 export const MAX_LEVELUP_ITERATIONS = 100;
 
+const XP_BASE = 100;
+const XP_GROWTH = 1.2;
+
 /**
  * XP required to advance from `level` to `level + 1`.
- * Derived from the spec formula: Level = floor(sqrt(TotalXP / 10)) + 1
- * which gives XP_PER_LEVEL(n) = (2n - 1) * 10  (arithmetic progression).
  *
- * Level 1→2: 10 XP | Level 2→3: 30 XP | Level 3→4: 50 XP | Level n→n+1: (2n-1)*10 XP
+ * Logarithmic / geometric scaling: 100 * 1.2^(level - 1)
+ * Designed so early levels are quick and late levels demand true Monarch effort.
+ *
+ * Level 1→2: 100 XP | Level 2→3: 120 XP | Level 3→4: 144 XP | Level 10→11: ~516 XP | Level 50→51: ~736,629 XP
  */
 export function XP_PER_LEVEL(level: number): number {
-  return (2 * Math.max(1, level) - 1) * 10;
+  const safeLevel = Math.max(1, level);
+  return Math.round(XP_BASE * Math.pow(XP_GROWTH, safeLevel - 1));
 }
 
 /**
- * Total XP accumulated across all levels (past levels + current progress).
- * O(1) closed form: totalXp = xp + 10 * (level - 1)^2
+ * Total XP accumulated across all completed levels (past levels + current progress).
+ *
+ * Closed form for the geometric series:
+ *   sum_{k=0}^{level-2} 100 * 1.2^k  =  500 * (1.2^(level-1) - 1)
  */
 export function totalXpEarned(xp: number, level: number): number {
-  return xp + 10 * Math.pow(Math.max(1, level) - 1, 2);
+  const safeLevel = Math.max(1, level);
+  const pastLevels = (XP_BASE / (XP_GROWTH - 1)) * (Math.pow(XP_GROWTH, safeLevel - 1) - 1);
+  return xp + Math.round(pastLevels);
 }
 
 export function processLevelUp(xp: number, level: number): { xp: number; level: number } {
