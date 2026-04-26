@@ -78,6 +78,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/CheckinResult"
 
+  /character/acknowledge-awakening:
+    post:
+      operationId: acknowledgeAwakening
+      tags: [character]
+      summary: Mark the awakening intro as seen for the current character
+      responses:
+        "200":
+          description: Acknowledgement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgeAwakeningResponse"
+
   /character/login:
     post:
       operationId: characterLogin
@@ -90,6 +103,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginCheckResult"
+
+  /character/reset:
+    post:
+      operationId: resetCharacter
+      tags: [character]
+      summary: NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+      responses:
+        "200":
+          description: New character created after purge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetCharacterResponse"
 
   /quests:
     get:
@@ -298,6 +324,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProcessOverdueResult"
+
+  /logs:
+    post:
+      operationId: writeClientLog
+      tags: [logs]
+      summary: Persist a client-side log entry to system_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientLogEntry"
+      responses:
+        "200":
+          description: Log persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLogResult"
+
+  /shop:
+    get:
+      operationId: listShopItems
+      tags: [shop]
+      summary: List all Shadow Shop items
+      responses:
+        "200":
+          description: List of shop items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopItem"
+
+  /shop/purchase/{id}:
+    post:
+      operationId: purchaseShopItem
+      tags: [shop]
+      summary: Purchase a Shadow Shop item with Gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Purchase result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPurchaseResult"
+
+  /shop/history:
+    get:
+      operationId: getShopHistory
+      tags: [shop]
+      summary: Get the last 10 shop purchases for the current character
+      responses:
+        "200":
+          description: Recent shop purchase ledger entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopPurchaseHistoryEntry"
 
   /shop/rewards:
     get:
@@ -630,12 +724,16 @@ components:
           type: string
         level:
           type: integer
+          minimum: 0
         xp:
           type: integer
+          minimum: 0
         xpToNextLevel:
           type: integer
+          minimum: 0
         gold:
           type: integer
+          minimum: 0
         gateFragments:
           type: integer
         strength:
@@ -669,8 +767,12 @@ components:
           readOnly: true
         corruption:
           type: integer
+        vocationXp:
+          type: integer
+        vocationLevel:
+          type: integer
       required:
-        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, spirit, intellect, endurance, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption]
+        [id, name, level, xp, xpToNextLevel, gold, gateFragments, strength, spirit, intellect, endurance, discipline, streak, longestStreak, multiplier, totalQuestsCompleted, totalQuestsFailed, failStreak, penaltyMultiplier, corruption, vocationXp, vocationLevel]
 
     UpdateCharacterRequest:
       type: object
@@ -906,7 +1008,11 @@ components:
           required: [strength, spirit, intellect, endurance, discipline]
         character:
           $ref: "#/components/schemas/Character"
-      required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character]
+        vocationLevelUp:
+          type: boolean
+        vocationXpGained:
+          type: integer
+      required: [success, xpAwarded, goldAwarded, multiplierApplied, rngBonus, newLevel, leveledUp, statGains, character, vocationLevelUp, vocationXpGained]
 
     QuestFailResult:
       type: object
@@ -940,6 +1046,7 @@ components:
       properties:
         id:
           type: integer
+          minimum: 1
         questName:
           type: string
         category:
@@ -969,6 +1076,94 @@ components:
           type: boolean
       required: [success]
 
+    AcknowledgeAwakeningResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    ResetCharacterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        characterId:
+          type: integer
+        message:
+          type: string
+      required: [success, characterId, message]
+
+    ClientLogEntry:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: [info, warn, error]
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required: [level, message]
+
+    ClientLogResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        cost:
+          type: integer
+        category:
+          type: string
+        icon:
+          type: string
+      required: [id, name, description, cost, category, icon]
+
+    ShopPurchaseHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        itemId:
+          type: string
+          nullable: true
+        itemName:
+          type: string
+        goldSpent:
+          type: integer
+        redeemedAt:
+          type: string
+          format: date-time
+      required: [id, itemName, goldSpent, redeemedAt]
+
+    ShopPurchaseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        itemName:
+          type: string
+        goldSpent:
+          type: integer
+        goldRemaining:
+          type: integer
+      required: [success, message, itemName, goldSpent, goldRemaining]
+
     Reward:
       type: object
       properties:
@@ -981,6 +1176,7 @@ components:
           nullable: true
         goldCost:
           type: integer
+          minimum: 0
         category:
           type: string
         timesRedeemed:
@@ -999,6 +1195,7 @@ components:
           nullable: true
         goldCost:
           type: integer
+          minimum: 0
         category:
           type: string
       required: [name, goldCost, category]

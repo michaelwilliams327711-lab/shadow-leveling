@@ -7,6 +7,8 @@ import {
   UpdateCharacterBody,
   UpdateCharacterResponse,
   DailyCheckinResponse,
+  AcknowledgeAwakeningResponse,
+  ResetCharacterResponse,
 } from "@workspace/api-zod";
 import { XP_PER_LEVEL, processLevelUp, STREAK_MULTIPLIER, MILESTONE_STREAKS, getSystemDateFromReq, getSystemDate, ADVISORY_LOCK_ID } from "@workspace/shared";
 
@@ -49,10 +51,34 @@ router.get("/character", async (req, res) => {
   try {
     const char = await getOrCreateCharacter();
     const xpToNextLevel = XP_PER_LEVEL(char.level);
+    // Explicit projection: only ship fields the dashboard needs.
+    // Internal/operational columns (lastLoginDate, lastCronDate,
+    // survivorBuffExpiresAt, age, residency, vocationId, virtueCategory,
+    // hasSeenAwakening) stay server-side and are never serialized.
     const data = GetCharacterResponse.parse({
-      ...char,
+      id: char.id,
+      name: char.name,
+      level: char.level,
+      xp: char.xp,
       xpToNextLevel,
+      gold: char.gold,
+      gateFragments: char.gateFragments,
+      strength: char.strength,
+      spirit: char.spirit,
+      intellect: char.intellect,
+      endurance: char.endurance,
+      discipline: char.discipline,
+      streak: char.streak,
+      longestStreak: char.longestStreak,
+      multiplier: char.multiplier,
       lastCheckin: char.lastCheckin?.toISOString() ?? null,
+      totalQuestsCompleted: char.totalQuestsCompleted,
+      totalQuestsFailed: char.totalQuestsFailed,
+      failStreak: char.failStreak,
+      penaltyMultiplier: char.penaltyMultiplier,
+      corruption: char.corruption,
+      vocationXp: char.vocationXp,
+      vocationLevel: char.vocationLevel,
     });
     res.json(data);
   } catch (err) {
@@ -75,6 +101,51 @@ router.patch("/character", async (req, res) => {
       xpToNextLevel: XP_PER_LEVEL(updated.level),
       lastCheckin: updated.lastCheckin?.toISOString() ?? null,
     });
+    res.json(data);
+  } catch (err) {
+    throw err;
+  }
+});
+
+// HARDCORE RESET — purges the active character and all cascaded data
+// (quests, logs, purchases, shadows, bosses, awakening, celestial powers)
+// in a single transaction, then immediately rebirths a fresh Level 1 Hunter
+// so the application remains functional. Cascades are wired in the schema.
+router.post("/character/reset", async (req, res) => {
+  try {
+    const newChar = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
+      await tx.delete(characterTable);
+      const [created] = await tx
+        .insert(characterTable)
+        .values({ name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" })
+        .returning();
+      return created;
+    });
+
+    invalidateCharacterCache();
+    req.log.warn({ newCharacterId: newChar.id }, "HARDCORE RESET executed — character purged and reborn");
+
+    const data = ResetCharacterResponse.parse({
+      success: true,
+      characterId: newChar.id,
+      message: "SYSTEM PURGE COMPLETE. WELCOME BACK, HUNTER.",
+    });
+    res.json(data);
+  } catch (err) {
+    req.log.error({ err }, "Error executing hardcore reset");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/character/acknowledge-awakening", async (req, res) => {
+  try {
+    const char = await getOrCreateCharacter();
+    await db.update(characterTable)
+      .set({ hasSeenAwakening: true })
+      .where(eq(characterTable.id, char.id));
+    invalidateCharacterCache();
+    const data = AcknowledgeAwakeningResponse.parse({ success: true });
     res.json(data);
   } catch (err) {
     throw err;

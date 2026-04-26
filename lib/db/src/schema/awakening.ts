@@ -5,7 +5,7 @@ import { characterTable } from "./character";
 
 export const awakeningTable = pgTable("awakening", {
   id: serial("id").primaryKey(),
-  characterId: integer("character_id").references(() => characterTable.id),
+  characterId: integer("character_id").references(() => characterTable.id, { onDelete: "cascade" }),
   vision: text("vision"),
   antiVision: text("anti_vision"),
   coreValues: text("core_values"),

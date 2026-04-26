@@ -10,6 +10,7 @@ export interface Reward {
   id: number;
   name: string;
   description?: string | null;
+  /** @minimum 0 */
   goldCost: number;
   category: string;
   timesRedeemed: number;

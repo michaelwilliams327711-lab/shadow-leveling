@@ -17,15 +17,21 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get character stats
  */
+export const getCharacterResponseLevelMin = 0;
+
+export const getCharacterResponseXpMin = 0;
+
+export const getCharacterResponseXpToNextLevelMin = 0;
+
+export const getCharacterResponseGoldMin = 0;
+
 export const GetCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  age: zod.number().nullish(),
-  residency: zod.string().nullish(),
-  level: zod.number(),
-  xp: zod.number(),
-  xpToNextLevel: zod.number(),
-  gold: zod.number(),
+  level: zod.number().min(getCharacterResponseLevelMin),
+  xp: zod.number().min(getCharacterResponseXpMin),
+  xpToNextLevel: zod.number().min(getCharacterResponseXpToNextLevelMin),
+  gold: zod.number().min(getCharacterResponseGoldMin),
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -41,9 +47,8 @@ export const GetCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
-  vocationId: zod.string().nullish(),
-  virtueCategory: zod.string().nullish(),
-  vocationXp: zod.number().default(0),
+  vocationXp: zod.number(),
+  vocationLevel: zod.number(),
 });
 
 /**
@@ -53,15 +58,21 @@ export const UpdateCharacterBody = zod.object({
   name: zod.string(),
 });
 
+export const updateCharacterResponseLevelMin = 0;
+
+export const updateCharacterResponseXpMin = 0;
+
+export const updateCharacterResponseXpToNextLevelMin = 0;
+
+export const updateCharacterResponseGoldMin = 0;
+
 export const UpdateCharacterResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  age: zod.number().nullish(),
-  residency: zod.string().nullish(),
-  level: zod.number(),
-  xp: zod.number(),
-  xpToNextLevel: zod.number(),
-  gold: zod.number(),
+  level: zod.number().min(updateCharacterResponseLevelMin),
+  xp: zod.number().min(updateCharacterResponseXpMin),
+  xpToNextLevel: zod.number().min(updateCharacterResponseXpToNextLevelMin),
+  gold: zod.number().min(updateCharacterResponseGoldMin),
   gateFragments: zod.number(),
   strength: zod.number(),
   intellect: zod.number(),
@@ -77,9 +88,8 @@ export const UpdateCharacterResponse = zod.object({
   failStreak: zod.number(),
   penaltyMultiplier: zod.number(),
   corruption: zod.number(),
-  vocationId: zod.string().nullish(),
-  virtueCategory: zod.string().nullish(),
-  vocationXp: zod.number().default(0),
+  vocationXp: zod.number(),
+  vocationLevel: zod.number(),
 });
 
 /**
@@ -99,8 +109,23 @@ export const DailyCheckinResponse = zod.object({
 });
 
 /**
+ * @summary Mark the awakening intro as seen for the current character
+ */
+export const AcknowledgeAwakeningResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Auto login check - detects missed days and applies penalties
  */
+export const characterLoginResponseCharacterLevelMin = 0;
+
+export const characterLoginResponseCharacterXpMin = 0;
+
+export const characterLoginResponseCharacterXpToNextLevelMin = 0;
+
+export const characterLoginResponseCharacterGoldMin = 0;
+
 export const CharacterLoginResponse = zod.object({
   penalties: zod.array(
     zod.object({
@@ -114,10 +139,12 @@ export const CharacterLoginResponse = zod.object({
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
-    level: zod.number(),
-    xp: zod.number(),
-    xpToNextLevel: zod.number(),
-    gold: zod.number(),
+    level: zod.number().min(characterLoginResponseCharacterLevelMin),
+    xp: zod.number().min(characterLoginResponseCharacterXpMin),
+    xpToNextLevel: zod
+      .number()
+      .min(characterLoginResponseCharacterXpToNextLevelMin),
+    gold: zod.number().min(characterLoginResponseCharacterGoldMin),
     gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
@@ -133,7 +160,18 @@ export const CharacterLoginResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
+});
+
+/**
+ * @summary NUCLEAR — purge the current character and all cascaded data, then rebirth a fresh Level 1 profile
+ */
+export const ResetCharacterResponse = zod.object({
+  success: zod.boolean(),
+  characterId: zod.number(),
+  message: zod.string(),
 });
 
 /**
@@ -356,6 +394,14 @@ export const CompleteQuestParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const completeQuestResponseCharacterLevelMin = 0;
+
+export const completeQuestResponseCharacterXpMin = 0;
+
+export const completeQuestResponseCharacterXpToNextLevelMin = 0;
+
+export const completeQuestResponseCharacterGoldMin = 0;
+
 export const CompleteQuestResponse = zod.object({
   success: zod.boolean(),
   xpAwarded: zod.number(),
@@ -374,10 +420,12 @@ export const CompleteQuestResponse = zod.object({
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
-    level: zod.number(),
-    xp: zod.number(),
-    xpToNextLevel: zod.number(),
-    gold: zod.number(),
+    level: zod.number().min(completeQuestResponseCharacterLevelMin),
+    xp: zod.number().min(completeQuestResponseCharacterXpMin),
+    xpToNextLevel: zod
+      .number()
+      .min(completeQuestResponseCharacterXpToNextLevelMin),
+    gold: zod.number().min(completeQuestResponseCharacterGoldMin),
     gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
@@ -393,7 +441,11 @@ export const CompleteQuestResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
+  vocationLevelUp: zod.boolean(),
+  vocationXpGained: zod.number(),
 });
 
 /**
@@ -402,6 +454,14 @@ export const CompleteQuestResponse = zod.object({
 export const FailQuestParams = zod.object({
   id: zod.coerce.number(),
 });
+
+export const failQuestResponseCharacterLevelMin = 0;
+
+export const failQuestResponseCharacterXpMin = 0;
+
+export const failQuestResponseCharacterXpToNextLevelMin = 0;
+
+export const failQuestResponseCharacterGoldMin = 0;
 
 export const FailQuestResponse = zod.object({
   success: zod.boolean(),
@@ -417,10 +477,10 @@ export const FailQuestResponse = zod.object({
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
-    level: zod.number(),
-    xp: zod.number(),
-    xpToNextLevel: zod.number(),
-    gold: zod.number(),
+    level: zod.number().min(failQuestResponseCharacterLevelMin),
+    xp: zod.number().min(failQuestResponseCharacterXpMin),
+    xpToNextLevel: zod.number().min(failQuestResponseCharacterXpToNextLevelMin),
+    gold: zod.number().min(failQuestResponseCharacterGoldMin),
     gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
@@ -436,14 +496,17 @@ export const FailQuestResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
 /**
  * @summary Get quest history log
  */
+
 export const GetQuestLogResponseItem = zod.object({
-  id: zod.number(),
+  id: zod.number().min(1),
   questName: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
@@ -459,6 +522,14 @@ export const GetQuestLogResponse = zod.array(GetQuestLogResponseItem);
 /**
  * @summary Auto-fail active quests past their deadline and apply penalties
  */
+export const processOverdueQuestsResponseCharacterLevelMin = 0;
+
+export const processOverdueQuestsResponseCharacterXpMin = 0;
+
+export const processOverdueQuestsResponseCharacterXpToNextLevelMin = 0;
+
+export const processOverdueQuestsResponseCharacterGoldMin = 0;
+
 export const ProcessOverdueQuestsResponse = zod.object({
   penalties: zod.array(
     zod.object({
@@ -503,10 +574,12 @@ export const ProcessOverdueQuestsResponse = zod.object({
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
-    level: zod.number(),
-    xp: zod.number(),
-    xpToNextLevel: zod.number(),
-    gold: zod.number(),
+    level: zod.number().min(processOverdueQuestsResponseCharacterLevelMin),
+    xp: zod.number().min(processOverdueQuestsResponseCharacterXpMin),
+    xpToNextLevel: zod
+      .number()
+      .min(processOverdueQuestsResponseCharacterXpToNextLevelMin),
+    gold: zod.number().min(processOverdueQuestsResponseCharacterGoldMin),
     gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
@@ -522,17 +595,74 @@ export const ProcessOverdueQuestsResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 
 /**
+ * @summary Persist a client-side log entry to system_logs
+ */
+export const WriteClientLogBody = zod.object({
+  level: zod.enum(["info", "warn", "error"]),
+  message: zod.string(),
+  context: zod.record(zod.string(), zod.unknown()).nullish(),
+});
+
+export const WriteClientLogResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List all Shadow Shop items
+ */
+export const ListShopItemsResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  description: zod.string(),
+  cost: zod.number(),
+  category: zod.string(),
+  icon: zod.string(),
+});
+export const ListShopItemsResponse = zod.array(ListShopItemsResponseItem);
+
+/**
+ * @summary Purchase a Shadow Shop item with Gold
+ */
+export const PurchaseShopItemParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const PurchaseShopItemResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+  itemName: zod.string(),
+  goldSpent: zod.number(),
+  goldRemaining: zod.number(),
+});
+
+/**
+ * @summary Get the last 10 shop purchases for the current character
+ */
+export const GetShopHistoryResponseItem = zod.object({
+  id: zod.string(),
+  itemId: zod.string().nullish(),
+  itemName: zod.string(),
+  goldSpent: zod.number(),
+  redeemedAt: zod.coerce.date(),
+});
+export const GetShopHistoryResponse = zod.array(GetShopHistoryResponseItem);
+
+/**
  * @summary List all shop rewards
  */
+export const listRewardsResponseGoldCostMin = 0;
+
 export const ListRewardsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number(),
+  goldCost: zod.number().min(listRewardsResponseGoldCostMin),
   category: zod.string(),
   timesRedeemed: zod.number(),
   createdAt: zod.string(),
@@ -542,10 +672,12 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem);
 /**
  * @summary Create a custom reward
  */
+export const createRewardBodyGoldCostMin = 0;
+
 export const CreateRewardBody = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
-  goldCost: zod.number(),
+  goldCost: zod.number().min(createRewardBodyGoldCostMin),
   category: zod.string(),
 });
 
@@ -609,6 +741,14 @@ export const ChallengeBossParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const challengeBossResponseCharacterLevelMin = 0;
+
+export const challengeBossResponseCharacterXpMin = 0;
+
+export const challengeBossResponseCharacterXpToNextLevelMin = 0;
+
+export const challengeBossResponseCharacterGoldMin = 0;
+
 export const ChallengeBossResponse = zod.object({
   success: zod.boolean(),
   victory: zod.boolean(),
@@ -620,10 +760,12 @@ export const ChallengeBossResponse = zod.object({
   character: zod.object({
     id: zod.number(),
     name: zod.string(),
-    level: zod.number(),
-    xp: zod.number(),
-    xpToNextLevel: zod.number(),
-    gold: zod.number(),
+    level: zod.number().min(challengeBossResponseCharacterLevelMin),
+    xp: zod.number().min(challengeBossResponseCharacterXpMin),
+    xpToNextLevel: zod
+      .number()
+      .min(challengeBossResponseCharacterXpToNextLevelMin),
+    gold: zod.number().min(challengeBossResponseCharacterGoldMin),
     gateFragments: zod.number(),
     strength: zod.number(),
     intellect: zod.number(),
@@ -639,6 +781,8 @@ export const ChallengeBossResponse = zod.object({
     failStreak: zod.number(),
     penaltyMultiplier: zod.number(),
     corruption: zod.number(),
+    vocationXp: zod.number(),
+    vocationLevel: zod.number(),
   }),
 });
 

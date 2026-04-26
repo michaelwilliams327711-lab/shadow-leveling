@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -21,19 +23,38 @@ import {
   customFetch,
 } from "@workspace/api-client-react";
 
-// Pages
+// Pages — eager (critical path)
 import Dashboard from "@/pages/Dashboard";
-import Quests from "@/pages/Quests";
-import Shop from "@/pages/Shop";
 import BossArena from "@/pages/BossArena";
 import Awakening from "@/pages/Awakening";
 import ShadowDashboard from "@/pages/ShadowDashboard";
-import BadHabits from "@/pages/BadHabits";
 import CelestialDuel from "@/pages/CelestialDuel";
 import PenaltyZone from "@/pages/PenaltyZone";
 import NotFound from "@/pages/not-found";
 
+// Pages — code-split into separate chunks (lazy-loaded on demand)
+const Quests = lazy(() => import("@/pages/Quests"));
+const Shop = lazy(() => import("@/pages/Shop"));
+const BadHabits = lazy(() => import("@/pages/BadHabits"));
+
+function RouteSuspenseFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] w-full">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Loading System Module...
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const heroBgImg = "/images/hero-bg.webp";
+
+// Cache TTL for persisted queries — Status Window remains accessible
+// for 24 hours after the last successful sync, even fully offline.
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,9 +63,34 @@ const queryClient = new QueryClient({
       refetchOnReconnect: false,
       refetchOnMount: false,
       staleTime: 1000 * 60 * 5,
+      // Cache must outlive the persistence window so dehydration captures it.
+      gcTime: TWENTY_FOUR_HOURS,
     },
   },
 });
+
+// ── Query Persistence ──────────────────────────────────────────────────────
+// Persist a curated set of queries (character, quests, bad_habits) to
+// localStorage so the Status Window survives full-page reloads and offline
+// sessions for up to 24 hours.
+const PERSIST_KEY_PREFIXES = [
+  "/api/character",
+  "/api/quests",
+  "/api/quests-windowed",
+  "/api/bad-habits",
+];
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "SHADOW_LEVELING_QUERY_CACHE_V1",
+  throttleTime: 1000,
+});
+
+function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
+  const head = queryKey[0];
+  if (typeof head !== "string") return false;
+  return PERSIST_KEY_PREFIXES.some((prefix) => head.startsWith(prefix));
+}
 
 function getLocalDateStr(): string {
   const now = new Date();
@@ -159,21 +205,20 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/penalty-zone" component={PenaltyZone} />
-      <Route path="/" component={Dashboard} />
-      <Route path="/quests" component={Quests} />
-      <Route path="/shop" component={Shop} />
-      <Route path="/arena" component={BossArena} />
-      <Route path="/awakening" component={Awakening} />
-      <Route path="/analytics"><Redirect to="/quests" /></Route>
-      <Route path="/shadow" component={ShadowDashboard} />
-      <Route path="/bad-habits" component={BadHabits} />
-      <Route path="/vocations"><Redirect to="/" /></Route>
-      <Route path="/celestial" component={CelestialDuel} />
-      <Route path="/planner"><Redirect to="/quests" /></Route>
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<RouteSuspenseFallback />}>
+      <Switch>
+        <Route path="/penalty-zone" component={PenaltyZone} />
+        <Route path="/" component={Dashboard} />
+        <Route path="/quests" component={Quests} />
+        <Route path="/shop" component={Shop} />
+        <Route path="/arena" component={BossArena} />
+        <Route path="/awakening" component={Awakening} />
+        <Route path="/shadow" component={ShadowDashboard} />
+        <Route path="/bad-habits" component={BadHabits} />
+        <Route path="/celestial" component={CelestialDuel} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -203,7 +248,21 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: localStoragePersister,
+        maxAge: TWENTY_FOUR_HOURS,
+        buster: "v1",
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            // Persist only successful character / quests / bad_habits responses.
+            if (query.state.status !== "success") return false;
+            return shouldPersistQuery(query.queryKey);
+          },
+        },
+      }}
+    >
       <PenaltyProvider>
       <VisualSettingsProvider>
       <TooltipProvider>
@@ -244,7 +303,7 @@ function App() {
       </TooltipProvider>
       </VisualSettingsProvider>
       </PenaltyProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

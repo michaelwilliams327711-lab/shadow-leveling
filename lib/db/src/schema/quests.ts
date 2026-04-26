@@ -26,6 +26,7 @@ export const questsTable = pgTable("quests", {
 }, (table) => [
   index("quests_status_deleted_at_created_at_idx").on(table.status, table.deletedAt, table.createdAt),
   index("quests_character_id_idx").on(table.characterId),
+  index("quests_status_idx").on(table.status),
 ]);
 
 export const questLogTable = pgTable("quest_log", {

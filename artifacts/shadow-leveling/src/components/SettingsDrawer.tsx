@@ -1,10 +1,25 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Settings, RotateCcw } from "lucide-react";
+import { Settings, RotateCcw, Skull, AlertTriangle } from "lucide-react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import { useResetCharacter } from "@workspace/api-client-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useVisualSettings, type CorruptionTheme } from "@/context/VisualSettingsContext";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { useToast } from "@/hooks/use-toast";
+
+const RESET_CONFIRM_PHRASE = "CONFIRM";
 
 const THEMES: { id: CorruptionTheme; label: string; color: string; ring: string }[] = [
   { id: "amber", label: "Amber",  color: "hsl(45 100% 60%)",  ring: "ring-amber-400" },
@@ -94,6 +109,39 @@ export function SettingsDrawer() {
     setCorruptionTheme,
     setIsSettingsOpen,
   } = useVisualSettings();
+
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const resetCharacter = useResetCharacter();
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const canExecuteWipe = confirmText === RESET_CONFIRM_PHRASE && !resetCharacter.isPending;
+
+  const handleHardcoreReset = () => {
+    if (!canExecuteWipe) return;
+    resetCharacter.mutate(undefined, {
+      onSuccess: (res) => {
+        queryClient.clear();
+        setIsResetModalOpen(false);
+        setConfirmText("");
+        setIsSettingsOpen(false);
+        setLocation("/");
+        toast({
+          title: res.message,
+          description: "All progress, quests, shadows, and gold have been purged.",
+          className: "bg-red-950/40 border-red-600 text-red-200",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "PURGE FAILED",
+          description: "The system rejected the reset. Try again.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
 
   useEffect(() => {
     const elements = document.querySelectorAll<HTMLElement>(".celestial-void-context");
@@ -334,8 +382,102 @@ export function SettingsDrawer() {
           <p className="text-[10px] tracking-[0.3em] text-amber-900/40 uppercase font-display text-center">
             Settings persist across sessions
           </p>
+
+          <div className="mt-2 pt-4 border-t border-red-900/40 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+              <span className="font-display text-[11px] tracking-[0.4em] uppercase text-red-500">
+                Danger Zone
+              </span>
+            </div>
+            <p className="text-[10px] tracking-[0.15em] text-red-300/60 leading-relaxed">
+              Irreversibly purge your Hunter — all quests, logs, gold, shadows, and bosses
+              will be wiped. A new Level 1 profile is reborn in their place.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmText("");
+                setIsResetModalOpen(true);
+              }}
+              data-testid="button-open-hardcore-reset"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-700/60 bg-red-950/40 px-4 py-2.5 text-xs font-display tracking-[0.3em] uppercase text-red-300 hover:bg-red-900/50 hover:text-red-200 hover:border-red-500 hover:shadow-[0_0_18px_rgba(220,38,38,0.35)] transition-all duration-200"
+            >
+              <Skull className="h-3.5 w-3.5" />
+              Hardcore Reset
+            </button>
+          </div>
         </div>
       </SheetContent>
+
+      <AlertDialog
+        open={isResetModalOpen}
+        onOpenChange={(open) => {
+          if (!open && !resetCharacter.isPending) {
+            setIsResetModalOpen(false);
+            setConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="glass-panel border border-red-700/60 bg-black/95 backdrop-blur-xl shadow-[0_0_40px_rgba(220,38,38,0.25)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display tracking-[0.3em] text-xl text-red-400 uppercase flex items-center gap-2">
+              <Skull className="w-5 h-5" />
+              Hardcore Reset
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground pt-2 space-y-3">
+              <span className="block text-red-200/90">
+                This will <span className="font-bold text-red-400">permanently destroy</span>{" "}
+                your character and every record tied to it: quests, logs, purchases, shadow army,
+                bosses, awakening, and celestial powers.
+              </span>
+              <span className="block text-xs uppercase tracking-[0.3em] text-red-500/80">
+                Type <span className="font-bold text-red-300">CONFIRM</span> to unlock the wipe.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <Input
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="Type CONFIRM to proceed"
+            disabled={resetCharacter.isPending}
+            data-testid="input-confirm-hardcore-reset"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            className="bg-black/60 border-red-900/60 text-red-200 placeholder:text-red-900/60 tracking-[0.2em] font-display uppercase focus-visible:ring-red-500/40 focus-visible:border-red-500"
+          />
+
+          <AlertDialogFooter>
+            <button
+              type="button"
+              onClick={() => {
+                setIsResetModalOpen(false);
+                setConfirmText("");
+              }}
+              disabled={resetCharacter.isPending}
+              data-testid="button-cancel-hardcore-reset"
+              className="rounded-md border border-white/20 bg-background px-4 py-2 text-xs font-display tracking-[0.25em] uppercase text-muted-foreground hover:bg-white/5 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleHardcoreReset}
+              disabled={!canExecuteWipe}
+              data-testid="button-execute-hardcore-reset"
+              className={`rounded-md border px-4 py-2 text-xs font-display tracking-[0.3em] uppercase transition-all duration-200 ${
+                canExecuteWipe
+                  ? "border-red-500 bg-red-700/40 text-red-100 hover:bg-red-600/60 hover:shadow-[0_0_24px_rgba(220,38,38,0.5)] cursor-pointer"
+                  : "border-red-900/40 bg-red-950/30 text-red-700 cursor-not-allowed"
+              }`}
+            >
+              {resetCharacter.isPending ? "Purging..." : "Wipe System"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

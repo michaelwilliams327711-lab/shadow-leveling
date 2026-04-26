@@ -788,7 +788,12 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
 
     const localMidnight = new Date(today + "T00:00:00.000Z");
 
-    const [updatedChar, newLevel, leveledUp] = await db.transaction(async (tx) => {
+    const VOCATION_XP_MAP: Record<string, number> = {
+      D: 10, C: 15, B: 20, A: 30, S: 50, SS: 70, SSS: 100,
+    };
+    const vocationXpGain = VOCATION_XP_MAP[quest.difficulty] ?? 10;
+
+    const [updatedChar, newLevel, leveledUp, vocationLevelUp] = await db.transaction(async (tx) => {
       const questResult = await tx.update(questsTable)
         .set({ status: "completed", completedAt: localMidnight })
         .where(and(eq(questsTable.id, id), eq(questsTable.status, "active")))
@@ -799,13 +804,23 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       }
 
       const [lockedChar] = await tx
-        .select({ xp: characterTable.xp, level: characterTable.level })
+        .select({
+          xp: characterTable.xp,
+          level: characterTable.level,
+          vocationXp: characterTable.vocationXp,
+          vocationLevel: characterTable.vocationLevel,
+        })
         .from(characterTable)
         .where(eq(characterTable.id, char.id))
         .for("update");
 
       const { xp: newXp, level: txNewLevel } = processLevelUp(lockedChar.xp + xpAwarded, lockedChar.level);
       const txLeveledUp = txNewLevel > lockedChar.level;
+
+      const rawNewVocXp = lockedChar.vocationXp + vocationXpGain;
+      const txVocationLevelUp = lockedChar.vocationLevel === 0 && rawNewVocXp >= 1000;
+      const txNewVocLevel = txVocationLevelUp ? 1 : lockedChar.vocationLevel;
+      const txNewVocXp = txVocationLevelUp ? rawNewVocXp - 1000 : Math.min(999, rawNewVocXp);
 
       const [updated] = await tx.update(characterTable)
         .set({
@@ -820,12 +835,14 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
           totalQuestsCompleted: sql`${characterTable.totalQuestsCompleted} + 1`,
           failStreak: 0,
           penaltyMultiplier: 1.0,
-          vocationXp: sql`${characterTable.vocationXp} + ${vocationXpAwarded}`,
+
+          vocationXp: txNewVocXp,
+          vocationLevel: txNewVocLevel,
         })
         .where(eq(characterTable.id, char.id))
         .returning();
 
-      return [updated, txNewLevel, txLeveledUp] as const;
+      return [updated, txNewLevel, txLeveledUp, txVocationLevelUp] as const;
     });
     invalidateCharacterCache();
 
@@ -932,6 +949,8 @@ router.post("/quests/:id/complete", strictLimiter, async (req, res) => {
       newLevel,
       leveledUp,
       statGains,
+      vocationLevelUp,
+      vocationXpGained: vocationXpGain,
       character: {
         ...updatedChar,
         xpToNextLevel: XP_PER_LEVEL(updatedChar.level),

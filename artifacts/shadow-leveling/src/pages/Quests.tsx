@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { XpGainToast } from "@/components/XpGainToast";
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,7 @@ import { ShadowIntel } from "@/components/ShadowIntel";
 import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { LevelUpCeremony } from "@/components/LevelUpCeremony";
+import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
@@ -1414,10 +1416,40 @@ export default function Quests() {
   const createQuest = useCreateQuest();
   const updateQuest = useUpdateQuest();
   const deleteQuest = useDeleteQuest();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const completeQuestMutation = useCompleteQuest({
     mutation: {
       mutationFn: ({ id }: { id: number }) =>
         completeQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+      // ── OPTIMISTIC: flip quest → completed in the active windowed list
+      //    immediately, snapshot prior state for rollback.
+      onMutate: async ({ id }: { id: number }) => {
+        const activeQueryKey = getListQuestsWindowedQueryKey({ windowDays });
+        await queryClient.cancelQueries({ queryKey: activeQueryKey });
+        const previousQuests = queryClient.getQueryData<Quest[]>(activeQueryKey);
+        queryClient.setQueryData<Quest[]>(activeQueryKey, (old) =>
+          old?.map((q) => (q.id === id ? { ...q, status: "completed" } : q)) ?? [],
+        );
+        return { previousQuests, activeQueryKey };
+      },
+      onError: (_err, _vars, context) => {
+        // Rollback the windowed list — server completion failed.
+        if (context?.previousQuests && context?.activeQueryKey) {
+          queryClient.setQueryData(context.activeQueryKey, context.previousQuests);
+        }
+        toast({
+          title: "Sync Error",
+          description: "Failed to complete quest. Reverting...",
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        // Reconcile authoritative state across every dependent surface.
+        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
     },
   });
   const failQuestMutation = useFailQuest({
@@ -1426,8 +1458,6 @@ export default function Quests() {
         failQuest(id, { headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
     },
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const reduced = useReducedMotion();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
@@ -1437,6 +1467,9 @@ export default function Quests() {
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
+
+  const [awakeningOpen, setAwakeningOpen] = useState(false);
+
   const [deadlineTick, setDeadlineTick] = useState(0);
 
   useEffect(() => {
@@ -1454,6 +1487,7 @@ export default function Quests() {
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, []);
+
 
   const createForm = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
@@ -1534,22 +1568,21 @@ export default function Quests() {
     ]);
   };
 
-  const onComplete = async (id: number) => {
-    const activeQueryKey = getListQuestsWindowedQueryKey({ windowDays });
-    await queryClient.cancelQueries({ queryKey: activeQueryKey });
-    const previousQuests = queryClient.getQueryData<Quest[]>(activeQueryKey);
-    queryClient.setQueryData<Quest[]>(activeQueryKey, (old) =>
-      old?.map((q) => q.id === id ? { ...q, status: "completed" } : q) ?? []
-    );
-
+  const onComplete = (id: number) => {
+    // Optimistic snapshot + rollback live inside the hook config (onMutate /
+    // onError / onSettled). The per-invocation onSuccess below handles the
+    // celebratory side-effects (toasts, animations, level-up overlays).
     completeQuestMutation.mutate({ id }, {
       onSuccess: (res) => {
         setCompletingQuestId(id);
         if (!reduced) playQuestComplete();
-        toast({ title: "Quest Cleared", description: `+${res.xpAwarded} XP | +${res.goldAwarded} Gold` });
+        toast({ title: "Quest Cleared", description: <XpGainToast xp={res.xpAwarded} gold={res.goldAwarded} /> });
         if ((res as Record<string, unknown>).gateFragmentDropped) {
           const fragCount = (res.character as Record<string, number> | undefined)?.gateFragments ?? 1;
           setTimeout(() => setFragmentDropData({ count: Math.min(fragCount, 3) }), 700);
+        }
+        if ((res as Record<string, unknown>).vocationLevelUp === true) {
+          setTimeout(() => setAwakeningOpen(true), 1400);
         }
         if (res.leveledUp && res.newLevel) {
           const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
@@ -1578,15 +1611,6 @@ export default function Quests() {
             }
           }
         }
-      },
-      onError: () => {
-        queryClient.setQueryData(activeQueryKey, previousQuests);
-        toast({ title: "Sync Error", description: "Failed to complete quest. Reverting...", variant: "destructive" });
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
       },
     });
   };
@@ -2475,6 +2499,11 @@ export default function Quests() {
         active={fragmentDropData !== null}
         fragmentCount={fragmentDropData?.count ?? 0}
         onDone={() => setFragmentDropData(null)}
+      />
+
+      <AwakeningOverlay
+        open={awakeningOpen}
+        onDismiss={() => setAwakeningOpen(false)}
       />
       </div>
       )}

@@ -12,11 +12,13 @@ export interface HealthStatus {
 export interface Character {
   id: number;
   name: string;
-  age?: number | null;
-  residency?: string | null;
+  /** @minimum 0 */
   level: number;
+  /** @minimum 0 */
   xp: number;
+  /** @minimum 0 */
   xpToNextLevel: number;
+  /** @minimum 0 */
   gold: number;
   gateFragments: number;
   strength: number;
@@ -33,6 +35,8 @@ export interface Character {
   failStreak: number;
   readonly penaltyMultiplier: number;
   corruption: number;
+  vocationXp: number;
+  vocationLevel: number;
 }
 
 export interface UpdateCharacterRequest {
@@ -213,6 +217,8 @@ export interface QuestCompletionResult {
   leveledUp: boolean;
   statGains: QuestCompletionResultStatGains;
   character: Character;
+  vocationLevelUp: boolean;
+  vocationXpGained: number;
 }
 
 export type QuestFailResultStatPenalties = {
@@ -250,6 +256,7 @@ export const QuestLogEntryActionType = {
 } as const;
 
 export interface QuestLogEntry {
+  /** @minimum 1 */
   id: number;
   questName: string;
   category: string;
@@ -266,10 +273,67 @@ export interface DeleteResult {
   success: boolean;
 }
 
+export interface AcknowledgeAwakeningResponse {
+  success: boolean;
+}
+
+export interface ResetCharacterResponse {
+  success: boolean;
+  characterId: number;
+  message: string;
+}
+
+export type ClientLogEntryLevel =
+  (typeof ClientLogEntryLevel)[keyof typeof ClientLogEntryLevel];
+
+export const ClientLogEntryLevel = {
+  info: "info",
+  warn: "warn",
+  error: "error",
+} as const;
+
+export type ClientLogEntryContext = { [key: string]: unknown } | null;
+
+export interface ClientLogEntry {
+  level: ClientLogEntryLevel;
+  message: string;
+  context?: ClientLogEntryContext;
+}
+
+export interface ClientLogResult {
+  success: boolean;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  category: string;
+  icon: string;
+}
+
+export interface ShopPurchaseHistoryEntry {
+  id: string;
+  itemId?: string | null;
+  itemName: string;
+  goldSpent: number;
+  redeemedAt: string;
+}
+
+export interface ShopPurchaseResult {
+  success: boolean;
+  message: string;
+  itemName: string;
+  goldSpent: number;
+  goldRemaining: number;
+}
+
 export interface Reward {
   id: number;
   name: string;
   description?: string | null;
+  /** @minimum 0 */
   goldCost: number;
   category: string;
   timesRedeemed: number;
@@ -279,6 +343,7 @@ export interface Reward {
 export interface CreateRewardRequest {
   name: string;
   description?: string | null;
+  /** @minimum 0 */
   goldCost: number;
   category: string;
 }

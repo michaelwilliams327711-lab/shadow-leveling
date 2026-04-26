@@ -9,6 +9,7 @@ import type { QuestLogEntryActionType } from "./questLogEntryActionType";
 import type { QuestLogEntryOutcome } from "./questLogEntryOutcome";
 
 export interface QuestLogEntry {
+  /** @minimum 1 */
   id: number;
   questName: string;
   category: string;

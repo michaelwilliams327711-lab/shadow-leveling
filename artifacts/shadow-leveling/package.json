@@ -75,5 +75,9 @@
     "vite-imagetools": "^10.0.0",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@tanstack/query-sync-storage-persister": "^5.90.27",
+    "@tanstack/react-query-persist-client": "^5.90.27"
   }
 }

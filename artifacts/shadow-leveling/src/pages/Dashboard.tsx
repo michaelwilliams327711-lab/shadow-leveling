@@ -1,4 +1,9 @@
+
 import { useState, useRef, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useMemo } from "react";
+
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   useGetCharacter, 
@@ -10,14 +15,23 @@ import {
   getGetCharacterQueryKey,
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
+  type Character,
   useListBadHabits,
   useRecordCleanDay,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
+  useAcknowledgeAwakening,
 } from "@workspace/api-client-react";
+import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Lock, Zap, User, MapPin } from "lucide-react";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+
+
+import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
+
+
+
+
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,23 +143,88 @@ export default function Dashboard() {
   const { data: badHabits } = useListBadHabits();
   const { data: corruptionConfigData } = useGetCorruptionConfig();
   const recordCleanDayMutation = useRecordCleanDay();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const checkinMutation = useDailyCheckin({
     mutation: {
       mutationFn: () => dailyCheckin({ headers: { "x-local-date": new Date().toLocaleDateString("en-CA") } }),
+      // ── OPTIMISTIC: bump streak + lastCheckin instantly so the
+      //    Status Window reflects the Arise the moment the button is tapped.
+      onMutate: async () => {
+        const charKey = getGetCharacterQueryKey();
+        await queryClient.cancelQueries({ queryKey: charKey });
+        const previousCharacter = queryClient.getQueryData<Character>(charKey);
+        if (previousCharacter) {
+          const nowIso = new Date().toISOString();
+          const optimistic: Character = {
+            ...previousCharacter,
+            streak: previousCharacter.streak + 1,
+            longestStreak: Math.max(
+              previousCharacter.longestStreak ?? 0,
+              previousCharacter.streak + 1,
+            ),
+            lastCheckin: nowIso,
+          };
+          queryClient.setQueryData<Character>(charKey, optimistic);
+        }
+        return { previousCharacter };
+      },
+      onError: (_err, _vars, context) => {
+        // Rollback on failure — server is authoritative.
+        const charKey = getGetCharacterQueryKey();
+        if (context?.previousCharacter) {
+          queryClient.setQueryData<Character>(charKey, context.previousCharacter);
+        }
+        toast({
+          title: "[SYSTEM] Arise failed",
+          description: "Check-in could not be recorded. Reverting.",
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        // Final reconciliation — pull authoritative state regardless of
+        // success/failure so xp / gold / multipliers settle correctly.
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
+      },
     },
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const reduced = useReducedMotion();
   const [ariseAnimating, setAriseAnimating] = useState(false);
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+
   const [holdProgress, setHoldProgress] = useState(0);
   const holdRafRef = useRef<number | null>(null);
   const holdStartRef = useRef<number | null>(null);
   const holdLastTickRef = useRef<number>(0);
   const HOLD_DURATION_MS = 1000;
+
+  const [showAwakening, setShowAwakening] = useState(false);
+  const acknowledgeAwakeningMutation = useAcknowledgeAwakening();
+
+  useEffect(() => {
+    if (character && character.vocationLevel >= 1 && !character.hasSeenAwakening) {
+      setShowAwakening(true);
+    }
+  }, [character?.vocationLevel, character?.hasSeenAwakening]);
+
+  const handleDismissAwakening = () => {
+    setShowAwakening(false);
+    acknowledgeAwakeningMutation.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+      },
+    });
+  };
+
+  const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
+  const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
+  useEffect(() => {
+    goldSpring.set(character?.gold ?? 0);
+  }, [character?.gold, goldSpring]);
+
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
@@ -228,6 +307,21 @@ export default function Dashboard() {
     });
   };
 
+  // Memoize Level/XP derivations BEFORE any early returns — Rules of Hooks
+  // forbid conditional hook execution. Falls back to safe defaults until the
+  // character query resolves.
+  const { xpPercent, xpRemaining } = useMemo(() => {
+    const total = character?.xpToNextLevel ?? 0;
+    const current = character?.xp ?? 0;
+    const percent = total > 0
+      ? Math.min(100, Math.round((current / total) * 100))
+      : 0;
+    return {
+      xpPercent: percent,
+      xpRemaining: Math.max(0, total - current),
+    };
+  }, [character?.xp, character?.level, character?.xpToNextLevel]);
+
   if (charLoading) {
     return <CharacterStatsSkeleton />;
   }
@@ -243,10 +337,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const xpPercent = character.xpToNextLevel > 0
-    ? Math.min(100, Math.round((character.xp / character.xpToNextLevel) * 100))
-    : 100;
 
   const failStreak = character.failStreak ?? 0;
   const penaltyMultiplier = character.penaltyMultiplier ?? 1.0;
@@ -271,7 +361,7 @@ export default function Dashboard() {
 
   const stats = [
     { name: STAT_META.strength.label,   val: character.strength,                      icon: Dumbbell, color: "text-red-400",    barColor: "bg-red-400"    },
-    { name: STAT_META.spirit.label,     val: (character as Record<string, unknown>).spirit as number ?? 0, icon: Sparkles, color: "text-pink-400",   barColor: "bg-pink-400"   },
+    { name: STAT_META.spirit.label,     val: character.spirit ?? 0,                                       icon: Sparkles, color: "text-pink-400",   barColor: "bg-pink-400"   },
     { name: STAT_META.endurance.label,  val: character.endurance,                     icon: Shield,   color: "text-green-400",  barColor: "bg-green-400"  },
     { name: STAT_META.intellect.label,  val: character.intellect,                     icon: Brain,    color: "text-blue-400",   barColor: "bg-blue-400"   },
     { name: STAT_META.discipline.label, val: character.discipline,                    icon: Target,   color: "text-purple-400", barColor: "bg-purple-400" },
@@ -314,7 +404,9 @@ export default function Dashboard() {
           >
             <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
               <Coins className="text-gold w-5 h-5" />
-              <span className="text-gold font-stat font-bold text-xl">{character.gold.toLocaleString()} G</span>
+              <span className="text-gold font-stat font-bold text-xl">
+                <motion.span>{goldDisplay}</motion.span> G
+              </span>
             </div>
           </InfoTooltip>
           <InfoTooltip
@@ -322,7 +414,13 @@ export default function Dashboard() {
             fn="Builds a multiplier (up to 3×) that boosts XP and Gold rewards for completed quests. Tiers: 3 days → 1.5×, 7 days → 2×, 14 days → 2.5×, 30+ days → 3×."
             usage="Hit the 'Daily Arise' button every day to keep your streak alive and grow your multiplier."
           >
-            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-orange-500/30 relative overflow-hidden">
+            <div
+              className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 relative overflow-hidden"
+              style={character.streak > 0 ? {
+                border: "1px solid rgba(249,115,22,0.5)",
+                boxShadow: "0 0 16px rgba(249,115,22,0.25)",
+              } : { border: "1px solid rgba(249,115,22,0.2)" }}
+            >
               <AnimatePresence>
                 {ariseStreakTick !== null && !reduced && (
                   <motion.div
@@ -334,16 +432,32 @@ export default function Dashboard() {
                   />
                 )}
               </AnimatePresence>
-              <Flame className="text-orange-500 w-5 h-5" />
-              <motion.span
-                key={ariseStreakTick ?? character.streak}
-                initial={ariseStreakTick !== null && !reduced ? { scale: 1.5, color: "hsl(var(--accent))" } : {}}
-                animate={{ scale: 1, color: "hsl(var(--accent))" }}
-                transition={{ type: "spring", stiffness: 300, damping: 12 }}
-                className="text-orange-500 font-stat font-bold text-xl"
+              <motion.div
+                animate={character.streak > 0 && !reduced ? {
+                  filter: [
+                    "drop-shadow(0 0 4px rgba(249,115,22,0.6))",
+                    "drop-shadow(0 0 10px rgba(249,115,22,0.9))",
+                    "drop-shadow(0 0 4px rgba(249,115,22,0.6))",
+                  ],
+                } : {}}
+                transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
               >
-                {(ariseStreakTick ?? character.streak)} Day
-              </motion.span>
+                <Flame className={`w-5 h-5 ${character.streak > 0 ? "text-orange-400" : "text-orange-600"}`} />
+              </motion.div>
+              <div className="flex flex-col">
+                <motion.span
+                  key={ariseStreakTick ?? character.streak}
+                  initial={ariseStreakTick !== null && !reduced ? { scale: 1.4, color: "#fb923c" } : {}}
+                  animate={{ scale: 1, color: character.streak > 0 ? "#fb923c" : "#9a3412" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 12 }}
+                  className="font-stat font-bold text-xl leading-tight"
+                >
+                  {(ariseStreakTick ?? character.streak)} DAY STREAK
+                </motion.span>
+                {character.longestStreak > 0 && (
+                  <span className="text-[10px] text-orange-600/70 tracking-wider">BEST: {character.longestStreak}</span>
+                )}
+              </div>
               {character.multiplier > 1 && (
                 <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
                   {character.multiplier}x
@@ -439,7 +553,7 @@ export default function Dashboard() {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${xpPercent}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
                   />
                 </div>
@@ -447,7 +561,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-center text-[11px] text-muted-foreground/60 font-mono mb-6">
                 <span>LVL {character.level} → LVL {character.level + 1}</span>
                 <span className="text-primary/70">
-                  {(character.xpToNextLevel - character.xp).toLocaleString()} XP remaining
+                  {xpRemaining.toLocaleString()} XP remaining
                 </span>
               </div>
 
@@ -666,6 +780,97 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
+
+          {/* Vocation Card */}
+          {(() => {
+            const vocationLevel = character.vocationLevel ?? 0;
+            const vocationXp = character.vocationXp ?? 0;
+            const isAwakened = vocationLevel >= 1;
+            const vocationXpPercent = isAwakened ? 100 : Math.min(100, (vocationXp / 1000) * 100);
+            return (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card
+                  className="glass-panel"
+                  style={isAwakened ? {
+                    border: "1px solid rgba(139,92,246,0.55)",
+                    boxShadow: "0 0 24px rgba(139,92,246,0.2)",
+                  } : undefined}
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="font-display tracking-widest text-lg flex items-center justify-between">
+                      <InfoTooltip
+                        what="Vocation — your specialization path earned through quest completion."
+                        fn="Earn Vocation XP (VXP) by completing quests. Reach 1000 VXP to awaken Vocation Rank I: TECH_MONARCH."
+                        usage="Complete missions regularly to accumulate VXP. Higher-rank quests award more VXP."
+                      >
+                        <span className="flex items-center gap-2 cursor-default">
+                          <Zap className={`w-4 h-4 ${isAwakened ? "text-violet-400" : "text-muted-foreground"}`} />
+                          Vocation
+                        </span>
+                      </InfoTooltip>
+                      {isAwakened ? (
+                        <motion.span
+                          animate={!reduced ? {
+                            textShadow: [
+                              "0 0 6px rgba(139,92,246,0.6)",
+                              "0 0 14px rgba(139,92,246,1)",
+                              "0 0 6px rgba(139,92,246,0.6)",
+                            ],
+                          } : {}}
+                          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                          className="text-xs font-mono text-violet-300 bg-violet-950/60 border border-violet-600/50 px-2 py-0.5 rounded"
+                        >
+                          RANK I
+                        </motion.span>
+                      ) : (
+                        <span className="text-xs font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded">
+                          UNAWAKENED
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {isAwakened ? (
+                      <div className="space-y-2">
+                        <p
+                          className="font-mono font-bold text-center tracking-[0.2em] text-violet-300 text-sm"
+                          style={{ textShadow: "0 0 10px rgba(139,92,246,0.8)" }}
+                        >
+                          TECH_MONARCH
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 text-center">
+                          Vocation Rank I awakening achieved.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Vocation XP</span>
+                          <span className="font-stat font-bold text-violet-400">{vocationXp} / 1000</span>
+                        </div>
+                        <div className="relative h-2 bg-secondary rounded-full overflow-hidden border border-white/5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${vocationXpPercent}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="absolute top-0 left-0 h-full rounded-full"
+                            style={{
+                              background: "linear-gradient(90deg, #4c1d95, #7c3aed, #a78bfa)",
+                              boxShadow: "0 0 8px rgba(139,92,246,0.6)",
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground/60 text-center">
+                          {1000 - vocationXp} VXP until Rank I awakening
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })()}
+
           {/* Biographic Data */}
           <Card className="glass-panel" style={{ borderColor: "rgba(168,85,247,0.2)" }}>
             <CardHeader className="pb-2">
@@ -769,6 +974,7 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
 
           {corruption > 0 && (
             <motion.div
@@ -888,6 +1094,11 @@ export default function Dashboard() {
         open={levelUpData !== null}
         newLevel={levelUpData?.newLevel ?? 0}
         onDismiss={() => setLevelUpData(null)}
+      />
+
+      <AwakeningOverlay
+        open={showAwakening}
+        onDismiss={handleDismissAwakening}
       />
     </div>
   );

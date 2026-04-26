@@ -18,6 +18,7 @@ export const badHabitsTable = pgTable("bad_habits", {
   lastCleanDate: text("last_clean_date"),
 }, (table) => [
   index("bad_habits_deleted_at_idx").on(table.deletedAt),
+  index("bad_habits_character_id_idx").on(table.characterId),
 ]);
 
 export const badHabitLogTable = pgTable("bad_habit_log", {
