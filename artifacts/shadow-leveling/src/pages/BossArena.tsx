@@ -147,10 +147,12 @@ export default function BossArena() {
   // Hold-to-Claim state for boss extraction
   const [activeHoldBossId, setActiveHoldBossId] = useState<number | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
+  const [snapBossId, setSnapBossId] = useState<number | null>(null);
   const holdRafRef = useRef<number | null>(null);
   const holdStartRef = useRef<number | null>(null);
   const holdLastTickRef = useRef<number>(0);
   const preExtractLevelRef = useRef<number | null>(null);
+  const snapTimeoutRef = useRef<number | null>(null);
 
   const cancelHold = useCallback(() => {
     if (holdRafRef.current !== null) {
@@ -163,9 +165,21 @@ export default function BossArena() {
     setHoldProgress(0);
   }, []);
 
+  const triggerSnap = useCallback((bossId: number) => {
+    if (snapTimeoutRef.current !== null) {
+      window.clearTimeout(snapTimeoutRef.current);
+    }
+    setSnapBossId(bossId);
+    snapTimeoutRef.current = window.setTimeout(() => {
+      setSnapBossId(null);
+      snapTimeoutRef.current = null;
+    }, 420);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (holdRafRef.current !== null) cancelAnimationFrame(holdRafRef.current);
+      if (snapTimeoutRef.current !== null) window.clearTimeout(snapTimeoutRef.current);
     };
   }, []);
 
@@ -228,6 +242,7 @@ export default function BossArena() {
         }
         if (pct >= 1) {
           cancelHold();
+          triggerSnap(bossId);
           extractMutation.mutate(
             { bossId },
             {
@@ -259,7 +274,7 @@ export default function BossArena() {
       // Reference bossName for future expansion (e.g. accessible labels).
       void bossName;
     },
-    [extractMutation, cancelHold, handleExtractSuccess, character, toast]
+    [extractMutation, cancelHold, handleExtractSuccess, character, toast, triggerSnap]
   );
 
   const handleChallenge = (id: number) => {
@@ -358,6 +373,21 @@ export default function BossArena() {
     <div className="min-h-screen relative">
       <AnimatePresence>
         {showConfetti && <ShadowConfetti key="confetti" />}
+        {snapBossId !== null && (
+          <motion.div
+            key="extract-flash"
+            aria-hidden="true"
+            className="fixed inset-0 z-[9999] pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.85, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.42, times: [0, 0.18, 1], ease: "easeOut" }}
+            style={{
+              background:
+                "radial-gradient(circle at center, rgba(191,219,254,0.95) 0%, rgba(96,165,250,0.55) 35%, rgba(15,23,42,0) 75%)",
+            }}
+          />
+        )}
       </AnimatePresence>
 
       <div 
@@ -388,6 +418,7 @@ export default function BossArena() {
             const isForgingThisBoss = forgeBossKey.isPending && forgeBossKey.variables?.id === boss.id;
 
             const isHolding = activeHoldBossId === boss.id;
+            const isSnapping = snapBossId === boss.id;
             // Three-stage shake intensity to keep framer-motion stable while still ramping with progress.
             const intensityBucket =
               !isHolding ? 0 : holdProgress >= 0.8 ? 3 : holdProgress >= 0.5 ? 2 : 1;
@@ -396,20 +427,25 @@ export default function BossArena() {
             const glowOpacity = !isHolding ? 0 : holdProgress < 0.8 ? 0.25 + holdProgress * 0.4 : 0.6 + (holdProgress - 0.8) * 2;
             const glowScale = !isHolding ? 1 : 1 + holdProgress * 0.18 + (holdProgress >= 0.8 ? (holdProgress - 0.8) * 1.2 : 0);
 
+            // Snap takes precedence over hold-shake so the climax reads as a clean punch-in.
+            const cardAnimate = isSnapping
+              ? { x: 0, scale: [1, 1.09, 0.98, 1.04, 1] }
+              : isHolding
+                ? { x: [-shakeAmplitude, shakeAmplitude, -shakeAmplitude, shakeAmplitude, 0], scale: 1 }
+                : { x: 0, scale: 1 };
+            const cardTransition = isSnapping
+              ? { duration: 0.42, ease: "easeOut", times: [0, 0.25, 0.5, 0.75, 1] }
+              : isHolding
+                ? { duration: shakeDuration, repeat: Infinity, ease: "linear" }
+                : { duration: 0.3, ease: "easeOut" };
+
             return (
               <motion.div
                 key={boss.id}
                 className="relative"
-                animate={
-                  isHolding
-                    ? { x: [-shakeAmplitude, shakeAmplitude, -shakeAmplitude, shakeAmplitude, 0] }
-                    : { x: 0 }
-                }
-                transition={
-                  isHolding
-                    ? { duration: shakeDuration, repeat: Infinity, ease: "linear" }
-                    : { duration: 0.3, ease: "easeOut" }
-                }
+                animate={cardAnimate}
+                transition={cardTransition}
+                style={{ transformOrigin: "center center" }}
               >
                 <AnimatePresence>
                   {isHolding && (
