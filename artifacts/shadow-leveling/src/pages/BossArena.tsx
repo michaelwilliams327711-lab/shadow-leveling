@@ -33,6 +33,7 @@ import { ShadowJournal } from "@/components/ShadowJournal";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerHapticTick, triggerHapticThud } from "@/lib/haptics";
+import { triggerBoom } from "@/lib/audio";
 
 interface ExtractResult {
   success: boolean;
@@ -170,6 +171,7 @@ export default function BossArena() {
       window.clearTimeout(snapTimeoutRef.current);
     }
     setSnapBossId(bossId);
+    triggerBoom();
     snapTimeoutRef.current = window.setTimeout(() => {
       setSnapBossId(null);
       snapTimeoutRef.current = null;
