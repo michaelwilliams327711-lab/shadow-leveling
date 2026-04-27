@@ -735,8 +735,17 @@ export default function BadHabits() {
                           </div>
                           <div className="relative h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div
-                              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${habit.cleanStreak >= purificationDays ? "bg-green-400" : "bg-purple-500"}`}
-                              style={{ width: `${streakPercent}%` }}
+                              className="absolute top-0 left-0 h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${streakPercent}%`,
+                                backgroundColor:
+                                  habit.cleanStreak >= purificationDays
+                                    ? "rgb(74,222,128)"
+                                    : tierTheme?.iconStroke ?? "rgb(168,85,247)",
+                                boxShadow: tierTheme
+                                  ? `0 0 8px ${tierTheme.glowHigh}`
+                                  : undefined,
+                              }}
                             />
                           </div>
                         </div>
