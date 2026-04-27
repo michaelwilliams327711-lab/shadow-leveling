@@ -25,6 +25,63 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 
 
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
+import { triggerGoldTick } from "@/lib/audio";
+
+// Shared 300ms spring "Hit State" variants for the top-bar status pills
+// — identical visual language to the StatRadar so every stat change
+// reads the same way no matter where it lands on screen.
+const PILL_HIT_VARIANTS = {
+  idle: {
+    scale: 1,
+    boxShadow: "0 0 0px rgba(0,0,0,0)",
+    transition: { type: "spring" as const, stiffness: 500, damping: 30 },
+  },
+  gain: {
+    scale: 1.05,
+    boxShadow: "0 0 12px #60a5fa",
+    transition: { type: "spring" as const, stiffness: 500, damping: 18 },
+  },
+  loss: {
+    scale: 0.95,
+    boxShadow: "0 0 12px #ef4444",
+    transition: { type: "spring" as const, stiffness: 500, damping: 18 },
+  },
+};
+
+// Tracks a single numeric stat and returns the current pill hit state
+// ("idle" | "gain" | "loss"), auto-resetting to "idle" 320ms after the
+// pulse begins. First-mount snapshot is silent so the user doesn't see
+// a phantom flash on initial character load.
+function usePillHitState(
+  value: number,
+  reduced: boolean | null,
+): "idle" | "gain" | "loss" {
+  const prevRef = useRef<number | null>(null);
+  const [hit, setHit] = useState<"idle" | "gain" | "loss">("idle");
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevRef.current === null) {
+      prevRef.current = value;
+      return;
+    }
+    if (value === prevRef.current) return;
+    const delta = value - prevRef.current;
+    prevRef.current = value;
+    if (reduced) return;
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    setHit(delta > 0 ? "gain" : "loss");
+    timerRef.current = window.setTimeout(() => setHit("idle"), 320);
+  }, [value, reduced]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return hit;
+}
 
 
 
@@ -222,14 +279,35 @@ export default function Dashboard() {
   // the digits roll smoothly instead of snapping or spring-bouncing.
   const goldMV = useMotionValue(character?.gold ?? 0);
   const goldDisplay = useTransform(goldMV, (v) => Math.round(v).toLocaleString());
+  const lastRoundedGoldRef = useRef<number>(Math.round(character?.gold ?? 0));
   useEffect(() => {
     const target = character?.gold ?? 0;
     const controls = animate(goldMV, target, {
       duration: 0.5,
       ease: [0.22, 1, 0.36, 1],
     });
-    return () => controls.stop();
-  }, [character?.gold, goldMV]);
+    // Rolling-tick sync — fire a 10ms 5-6kHz "Tick" SFX every time the
+    // visible (rounded) digit changes, so the audio mirrors the on-screen
+    // counter exactly. Skips redundant sub-pixel updates within one digit.
+    const unsubscribe = goldMV.on("change", (latest) => {
+      const rounded = Math.round(latest);
+      if (rounded !== lastRoundedGoldRef.current) {
+        lastRoundedGoldRef.current = rounded;
+        if (!reduced) triggerGoldTick();
+      }
+    });
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [character?.gold, goldMV, reduced]);
+
+  // Status-pill hit state — same 300ms spring "Hit State" cadence as the
+  // StatRadar. Pulse blue (#60a5fa) on gain, red (#ef4444) on loss; snap
+  // back to idle with a sharper spring exit (damping 30) so the pill
+  // settles instantly rather than wobbling.
+  const goldHit = usePillHitState(character?.gold ?? 0, reduced);
+  const disciplineHit = usePillHitState(character?.discipline ?? 0, reduced);
 
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
@@ -408,12 +486,34 @@ export default function Dashboard() {
             fn="Accumulates as you clear missions. Higher-rank quests award more Gold."
             usage="Spend it in the Shop to claim real-life rewards you define."
           >
-            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
+            <motion.div
+              className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3"
+              variants={PILL_HIT_VARIANTS}
+              animate={goldHit}
+              initial="idle"
+            >
               <Coins className="text-gold w-5 h-5" />
               <span className="text-gold font-stat font-bold text-xl">
                 <motion.span>{goldDisplay}</motion.span> G
               </span>
-            </div>
+            </motion.div>
+          </InfoTooltip>
+          <InfoTooltip
+            what="Discipline — willpower, consistency, and self-control."
+            fn="Hardens against fracture penalties and unlocks higher-tier rewards."
+            usage="Maintain a daily streak and clear quests consistently to raise Discipline."
+          >
+            <motion.div
+              className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3"
+              variants={PILL_HIT_VARIANTS}
+              animate={disciplineHit}
+              initial="idle"
+            >
+              <Target className="text-purple-400 w-5 h-5" />
+              <span className="text-purple-300 font-stat font-bold text-xl">
+                {character.discipline.toLocaleString()} DISC
+              </span>
+            </motion.div>
           </InfoTooltip>
           <InfoTooltip
             what="Daily check-in streak — consecutive days you've logged in and checked in."

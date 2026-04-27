@@ -149,3 +149,37 @@ export function triggerShatter(): void {
     // Ignore — older browsers or autoplay policies can throw before user gesture.
   }
 }
+
+/**
+ * High-frequency "Tick" SFX for the Rolling Gold counter — one of these
+ * per visible digit increment. Designed to be ~10ms long, very subtle
+ * (~0.15 gain), so a fast roll sounds like a coin flurry instead of a
+ * cacophony. Sine oscillator at a randomized 5000-6000 Hz with a near-
+ * instant attack and an 8ms exponential decay to silence.
+ */
+export function triggerGoldTick(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    // Randomize within the 5k-6k band so a fast roll sounds organic
+    // (every tick gets a slightly different timbre, like real coins).
+    const freq = 5000 + Math.random() * 1000;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now);
+
+    const gain = ctx.createGain();
+    // Near-instant attack -> exponential decay to silence within 8ms.
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.15, now + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.012);
+  } catch {
+    // Ignore — older browsers or autoplay policies can throw before user gesture.
+  }
+}
