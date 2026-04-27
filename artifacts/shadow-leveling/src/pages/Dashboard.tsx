@@ -547,11 +547,19 @@ export default function Dashboard() {
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
                 <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${xpPercent}%` }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  {/* XP bar — CSS cubic-bezier overshoot easing. The width
+                      is driven directly off the cached character.xp, so the
+                      moment an optimistic setQueryData lands (e.g. from a
+                      RESILIENT resolution on the BadHabits page), the bar
+                      surges and slightly settles like a snap-fit. */}
+                  <div
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
+                    style={{
+                      width: `${xpPercent}%`,
+                      transition: reduced
+                        ? "none"
+                        : "width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    }}
                   />
                 </div>
               </InfoTooltip>

@@ -73,7 +73,7 @@ interface RepairResult {
 
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { triggerShatter } from "@/lib/audio";
-import { triggerHapticThud } from "@/lib/haptics";
+import { triggerHapticThud, triggerHapticTick } from "@/lib/haptics";
 
 const REPAIR_COST = 250;
 
@@ -406,6 +406,24 @@ export default function BadHabits() {
       { habitId: habit.id, resolution },
       {
         onSuccess: (res) => {
+          // Optimistic character cache write — push the authoritative server
+          // snapshot straight into the cache so the global Status panel
+          // (Gold, XP, Discipline, Corruption, Level) repaints THIS frame
+          // instead of waiting for the refetch round-trip.
+          queryClient.setQueryData(
+            getGetCharacterQueryKey(),
+            (old: Record<string, unknown> | undefined) =>
+              old
+                ? {
+                    ...old,
+                    gold: res.newGold,
+                    corruption: res.newCorruption,
+                    discipline: res.newDiscipline,
+                    level: res.newLevel,
+                    xp: res.newXp,
+                  }
+                : old,
+          );
           queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
 
@@ -421,6 +439,13 @@ export default function BadHabits() {
           if (fractureTransition || isCollapsed) {
             triggerShatter();
             triggerHapticThud();
+          }
+
+          // Haptic sync — RESILIENT awards XP. The optimistic setQueryData
+          // above triggers the XP bar surge animation on the same frame,
+          // so the tick lands in lockstep with the bar's "surge & settle".
+          if (resolution === "RESILIENT") {
+            triggerHapticTick();
           }
 
           if (resolution === "RESILIENT") {
@@ -460,6 +485,26 @@ export default function BadHabits() {
       { habitId: habit.id },
       {
         onSuccess: (res) => {
+          // Optimistic character cache write — mirror the relapse path so
+          // the Gold counter drops the instant the response lands instead of
+          // waiting for the refetch round-trip. /repair now returns a full
+          // character snapshot (newGold/newCorruption/newDiscipline/newLevel/
+          // newXp); only gold actually mutates server-side, but we splat the
+          // whole snapshot to keep cache identical to the authoritative row.
+          queryClient.setQueryData(
+            getGetCharacterQueryKey(),
+            (old: Record<string, unknown> | undefined) =>
+              old
+                ? {
+                    ...old,
+                    gold: res.newGold,
+                    corruption: res.newCorruption,
+                    discipline: res.newDiscipline,
+                    level: res.newLevel,
+                    xp: res.newXp,
+                  }
+                : old,
+          );
           queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
           toast({
