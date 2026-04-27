@@ -72,6 +72,7 @@ interface RepairResult {
 }
 
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { triggerShatter } from "@/lib/audio";
 
 const REPAIR_COST = 250;
 
@@ -406,6 +407,14 @@ export default function BadHabits() {
         onSuccess: (res) => {
           queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+          // Ritual: if isFractured transitioned false -> true on this resolve,
+          // play the glass-shatter SFX. Compare prior client-side habit state
+          // against the fresh server response.
+          const wasFractured = habit.isFractured ?? false;
+          const isNowFractured = res.isFractured;
+          if (!wasFractured && isNowFractured) {
+            triggerShatter();
+          }
           if (resolution === "RESILIENT") {
             toast({
               title: "RESILIENT — TRIGGER OVERCOME",
@@ -563,26 +572,21 @@ export default function BadHabits() {
                   totalExposures > 0
                     ? Math.round((resilientCount / totalExposures) * 100)
                     : null;
-                // Color tier follows the Consistency Tracker exclusively:
-                //   S-RANK  (Blue):  Win Rate >= 80%
-                //   MID-TIER (Amber): Win Rate 50-79%
-                //   CRITICAL (Red):  Win Rate < 50%
-                //   null:            no exposures logged yet
-                // Fractured state does NOT change the color — it only ramps up
-                // pulse intensity (handled below via animationClass).
-                const consistencyTier: "blue" | "amber" | "red" | null =
-                  winRate === null
+                // Strict tier boundaries (per Sovereign spec):
+                //   S-RANK  (Blue):  winRate >= 80 AND !isFractured
+                //   MID-TIER (Amber): winRate >= 50 && winRate < 80 AND !isFractured
+                //   CRITICAL (Red):  winRate < 50 OR isFractured
+                //   null:            no exposures logged AND not fractured
+                const effectiveTier: "blue" | "amber" | "red" | null =
+                  isFractured
+                    ? "red"
+                    : winRate === null
                     ? null
                     : winRate >= 80
                     ? "blue"
                     : winRate >= 50
                     ? "amber"
                     : "red";
-
-                // If fractured but no win-rate data yet, fall back to red so the
-                // emergency pulse still has a color to render in.
-                const effectiveTier: "blue" | "amber" | "red" | null =
-                  consistencyTier ?? (isFractured ? "red" : null);
 
                 const TIER_THEME = {
                   blue: {
@@ -693,7 +697,14 @@ export default function BadHabits() {
                               </Badge>
                               <span className="text-xs text-muted-foreground">{habit.category}</span>
                               {isFractured && (
-                                <Badge className="text-[10px] tracking-widest bg-red-700/40 text-red-200 border border-red-500/60 animate-pulse">
+                                <Badge
+                                  className="text-[10px] tracking-widest border animate-pulse transition-colors duration-700"
+                                  style={{
+                                    color: tierTheme?.iconStroke,
+                                    borderColor: tierTheme?.borderHigh,
+                                    backgroundColor: tierTheme?.glowLow,
+                                  }}
+                                >
                                   FRACTURED · x{lapseMultiplier}
                                 </Badge>
                               )}

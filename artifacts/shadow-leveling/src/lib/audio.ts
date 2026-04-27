@@ -69,3 +69,83 @@ export function triggerBoom(): void {
     // Ignore — older browsers or autoplay policies can throw before user gesture.
   }
 }
+
+/**
+ * Glass-shatter SFX for the moment a habit fractures.
+ * Pairs a 150ms high-passed white-noise burst with three brittle sine
+ * transients (3k/4.5k/6k Hz) routed through a shared master "filter"
+ * (high-pass) so it cohabits with triggerBoom's "Concussion" effect.
+ */
+export function triggerShatter(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+
+    // Master output gain + high-pass "masterFilter" — keeps the shatter
+    // tonally in the same register as other concussive effects.
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.9, now);
+
+    const masterFilter = ctx.createBiquadFilter();
+    masterFilter.type = "highpass";
+    masterFilter.frequency.setValueAtTime(2500, now);
+    masterFilter.Q.setValueAtTime(0.7, now);
+
+    master.connect(masterFilter).connect(ctx.destination);
+
+    // 1) High-frequency white-noise burst (150ms) through a high-pass @ 2500Hz.
+    const noiseDuration = 0.15;
+    const noiseBuffer = ctx.createBuffer(
+      1,
+      Math.max(1, Math.floor(ctx.sampleRate * noiseDuration)),
+      ctx.sampleRate
+    );
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / data.length;
+      // Sharp attack, quick decay envelope baked into the noise.
+      data[i] = (Math.random() * 2 - 1) * (1 - t);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const noiseHighPass = ctx.createBiquadFilter();
+    noiseHighPass.type = "highpass";
+    noiseHighPass.frequency.setValueAtTime(2500, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.55, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseDuration);
+
+    noise.connect(noiseHighPass).connect(noiseGain).connect(master);
+    noise.start(now);
+    noise.stop(now + noiseDuration);
+
+    // 2) Three glass transients — sine oscillators at 3k/4.5k/6k Hz with
+    // near-instant exponential decays of 20ms / 40ms / 60ms.
+    const transients: Array<{ freq: number; decay: number; gain: number }> = [
+      { freq: 3000, decay: 0.02, gain: 0.5 },
+      { freq: 4500, decay: 0.04, gain: 0.4 },
+      { freq: 6000, decay: 0.06, gain: 0.3 },
+    ];
+
+    transients.forEach(({ freq, decay, gain }, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+
+      const oscGain = ctx.createGain();
+      // Slight stagger so the transients sound like separate shards, not a chord.
+      const start = now + i * 0.005;
+      oscGain.gain.setValueAtTime(gain, start);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, start + decay);
+
+      osc.connect(oscGain).connect(master);
+      osc.start(start);
+      osc.stop(start + decay + 0.005);
+    });
+  } catch {
+    // Ignore — older browsers or autoplay policies can throw before user gesture.
+  }
+}
