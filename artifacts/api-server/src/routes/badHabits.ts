@@ -358,6 +358,10 @@ router.post("/bad-habits/:id/repair", async (req, res) => {
     if (!habit.length || habit[0].deletedAt) return res.status(404).json({ error: "Not found" });
 
     let newGold = 0;
+    let newCorruption = 0;
+    let newDiscipline = 0;
+    let newLevel = 0;
+    let newXp = 0;
     let didRepair = false;
     let errorOut: string | null = null;
 
@@ -374,6 +378,14 @@ router.post("/bad-habits/:id/repair", async (req, res) => {
       }
 
       newGold = char.gold - REPAIR_COST;
+      // Repair only mutates gold, but the response carries a full character
+      // snapshot so the client can echo authoritative stats immediately
+      // (parity with /relapse — fixes the "Status Desync" bug).
+      newCorruption = char.corruption;
+      newDiscipline = char.discipline;
+      newLevel = char.level;
+      newXp = char.xp;
+
       await tx.update(characterTable)
         .set({ gold: newGold })
         .where(eq(characterTable.id, char.id));
@@ -395,6 +407,10 @@ router.post("/bad-habits/:id/repair", async (req, res) => {
       didRepair,
       cost: REPAIR_COST,
       newGold,
+      newCorruption,
+      newDiscipline,
+      newLevel,
+      newXp,
       isFractured: false,
       lapseMultiplier: 1,
     });
