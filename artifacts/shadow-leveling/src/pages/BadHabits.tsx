@@ -563,19 +563,21 @@ export default function BadHabits() {
                   totalExposures > 0
                     ? Math.round((resilientCount / totalExposures) * 100)
                     : null;
-                const consistencyTier: "blue" | "amber" | "red" | null =
-                  winRate === null
+                // Strict tier boundaries:
+                //   S-RANK  (Blue):  Win Rate >= 80% AND !isFractured
+                //   MID-TIER (Amber): Win Rate 50-79% AND !isFractured
+                //   CRITICAL (Red):  Win Rate < 50% OR isFractured
+                //   null:            no exposures logged yet
+                const effectiveTier: "blue" | "amber" | "red" | null =
+                  isFractured
+                    ? "red"
+                    : winRate === null
                     ? null
                     : winRate >= 80
                     ? "blue"
                     : winRate >= 50
                     ? "amber"
                     : "red";
-
-                // Fractured armor is a critical failure — red pulse always wins.
-                const effectiveTier: "blue" | "amber" | "red" | null = isFractured
-                  ? "red"
-                  : consistencyTier;
 
                 const TIER_THEME = {
                   blue: {
@@ -632,7 +634,7 @@ export default function BadHabits() {
 
                 const cardStyle: React.CSSProperties & Record<string, string | undefined> = {
                   transition:
-                    "box-shadow 700ms ease, border-color 700ms ease, background-color 700ms ease",
+                    "color 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease, background-color 0.7s ease",
                 };
                 if (tierTheme && !isFractured) {
                   cardStyle["--tier-glow-low"] = tierTheme.glowLow;
