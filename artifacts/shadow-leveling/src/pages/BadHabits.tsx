@@ -557,6 +557,39 @@ export default function BadHabits() {
                 const isThisHabitResolving = pendingHabitId === habit.id && resolveMutation.isPending;
                 const isThisHabitRepairing = repairingHabitId === habit.id && repairMutation.isPending;
 
+                const totalExposures = habit.totalExposures ?? 0;
+                const resilientCount = habit.resilientCount ?? 0;
+                const winRate =
+                  totalExposures > 0
+                    ? Math.round((resilientCount / totalExposures) * 100)
+                    : null;
+                const consistencyTier: "blue" | "amber" | "red" | null =
+                  winRate === null
+                    ? null
+                    : winRate >= 80
+                    ? "blue"
+                    : winRate >= 50
+                    ? "amber"
+                    : "red";
+
+                const tierGlow =
+                  consistencyTier === "blue"
+                    ? "0 0 24px rgba(96,165,250,0.55)"
+                    : consistencyTier === "amber"
+                    ? "0 0 24px rgba(251,191,36,0.55)"
+                    : consistencyTier === "red"
+                    ? "0 0 24px rgba(239,68,68,0.55)"
+                    : null;
+
+                const tierBorder =
+                  consistencyTier === "blue"
+                    ? "border-blue-500"
+                    : consistencyTier === "amber"
+                    ? "border-amber-500"
+                    : consistencyTier === "red"
+                    ? "border-red-500"
+                    : null;
+
                 return (
                   <motion.div
                     key={habit.id}
@@ -567,14 +600,17 @@ export default function BadHabits() {
                   >
                     <Card
                       className={`glass-panel relative overflow-hidden border ${
-                        isFractured ? "fractured-armor border-red-500" : cfg.border
-                      }`}
+                        isFractured ? "fractured-armor" : ""
+                      } ${tierBorder ?? (isFractured ? "border-red-500" : cfg.border)}`}
                       style={{
-                        boxShadow: isFractured
-                          ? "0 0 24px rgba(239,68,68,0.45)"
-                          : habit.severity === "High"
-                          ? "0 0 20px rgba(239,68,68,0.1)"
-                          : undefined,
+                        boxShadow:
+                          tierGlow ??
+                          (isFractured
+                            ? "0 0 24px rgba(239,68,68,0.45)"
+                            : habit.severity === "High"
+                            ? "0 0 20px rgba(239,68,68,0.1)"
+                            : undefined),
+                        transition: "box-shadow 700ms ease",
                       }}
                     >
                       <div
