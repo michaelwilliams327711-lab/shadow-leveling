@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldAlert, Plus, Trash2, Flame, Trophy, AlertTriangle, CheckCircle2, XCircle, Shield, Zap, Skull, Wrench } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, Flame, Trophy, AlertTriangle, CheckCircle2, XCircle, Shield, Zap, Skull, Wrench, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,57 @@ const createHabitSchema = z.object({
 });
 
 type CreateHabitFormValues = z.infer<typeof createHabitSchema>;
+
+function ConsistencyTracker({
+  totalExposures,
+  resilientCount,
+}: {
+  totalExposures: number;
+  resilientCount: number;
+}) {
+  const winRate =
+    totalExposures > 0 ? Math.round((resilientCount / totalExposures) * 100) : 0;
+  const hasData = totalExposures > 0;
+
+  const tierColor =
+    !hasData
+      ? "text-muted-foreground"
+      : winRate >= 80
+      ? "text-blue-300"
+      : winRate >= 50
+      ? "text-amber-300"
+      : "text-red-300";
+  const barColor =
+    !hasData
+      ? "bg-white/10"
+      : winRate >= 80
+      ? "bg-blue-400"
+      : winRate >= 50
+      ? "bg-amber-400"
+      : "bg-red-500";
+
+  return (
+    <div className="mb-4 rounded-md bg-white/3 border border-white/5 px-3 py-2">
+      <div className="flex justify-between items-center text-xs mb-1">
+        <span className="text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+          <Activity className="w-3.5 h-3.5 text-purple-400" />
+          Consistency
+        </span>
+        <span className={`font-stat font-bold ${tierColor}`}>
+          {hasData
+            ? `Win Rate: ${winRate}% (${resilientCount}/${totalExposures} Exposures)`
+            : "No exposures logged"}
+        </span>
+      </div>
+      <div className="relative h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div
+          className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${barColor}`}
+          style={{ width: `${hasData ? winRate : 0}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 function FractureControls({
   habit,
@@ -598,6 +649,11 @@ export default function BadHabits() {
                             />
                           </div>
                         </div>
+
+                        <ConsistencyTracker
+                          totalExposures={habit.totalExposures ?? 0}
+                          resilientCount={habit.resilientCount ?? 0}
+                        />
 
                         <FractureControls
                           habit={habit}
