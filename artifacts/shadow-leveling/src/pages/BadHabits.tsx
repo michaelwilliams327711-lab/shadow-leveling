@@ -563,21 +563,26 @@ export default function BadHabits() {
                   totalExposures > 0
                     ? Math.round((resilientCount / totalExposures) * 100)
                     : null;
-                // Strict tier boundaries:
-                //   S-RANK  (Blue):  Win Rate >= 80% AND !isFractured
-                //   MID-TIER (Amber): Win Rate 50-79% AND !isFractured
-                //   CRITICAL (Red):  Win Rate < 50% OR isFractured
+                // Color tier follows the Consistency Tracker exclusively:
+                //   S-RANK  (Blue):  Win Rate >= 80%
+                //   MID-TIER (Amber): Win Rate 50-79%
+                //   CRITICAL (Red):  Win Rate < 50%
                 //   null:            no exposures logged yet
-                const effectiveTier: "blue" | "amber" | "red" | null =
-                  isFractured
-                    ? "red"
-                    : winRate === null
+                // Fractured state does NOT change the color — it only ramps up
+                // pulse intensity (handled below via animationClass).
+                const consistencyTier: "blue" | "amber" | "red" | null =
+                  winRate === null
                     ? null
                     : winRate >= 80
                     ? "blue"
                     : winRate >= 50
                     ? "amber"
                     : "red";
+
+                // If fractured but no win-rate data yet, fall back to red so the
+                // emergency pulse still has a color to render in.
+                const effectiveTier: "blue" | "amber" | "red" | null =
+                  consistencyTier ?? (isFractured ? "red" : null);
 
                 const TIER_THEME = {
                   blue: {
@@ -625,18 +630,23 @@ export default function BadHabits() {
                 const borderClass =
                   tierTheme?.border ?? cfg.border;
 
-                // Animation: fractured -> .fractured-armor (red pulse). Otherwise tier-pulse with CSS vars.
-                const animationClass = isFractured
+                // Animation:
+                //   - With a tier color: tier-pulse (or tier-pulse-emergency when fractured)
+                //   - No tier and not fractured: no animation
+                //   - Fractured but no tier vars: fall back to legacy fractured-armor red pulse
+                const animationClass = tierTheme
+                  ? isFractured
+                    ? "tier-pulse-emergency"
+                    : "tier-pulse"
+                  : isFractured
                   ? "fractured-armor"
-                  : tierTheme
-                  ? "tier-pulse"
                   : "";
 
                 const cardStyle: React.CSSProperties & Record<string, string | undefined> = {
                   transition:
                     "color 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease, background-color 0.7s ease",
                 };
-                if (tierTheme && !isFractured) {
+                if (tierTheme) {
                   cardStyle["--tier-glow-low"] = tierTheme.glowLow;
                   cardStyle["--tier-glow-high"] = tierTheme.glowHigh;
                   cardStyle["--tier-border-low"] = tierTheme.borderLow;
