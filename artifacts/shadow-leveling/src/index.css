@@ -955,3 +955,17 @@
 .fractured-armor {
   animation: fractured-pulse 1.4s ease-in-out infinite;
 }
+
+@keyframes tier-pulse {
+  0%, 100% {
+    border-color: var(--tier-border-low, rgba(96, 165, 250, 0.55));
+    box-shadow: 0 0 12px 0 var(--tier-glow-low, rgba(96, 165, 250, 0.30));
+  }
+  50% {
+    border-color: var(--tier-border-high, rgba(147, 197, 253, 1));
+    box-shadow: 0 0 28px 6px var(--tier-glow-high, rgba(96, 165, 250, 0.65));
+  }
+}
+.tier-pulse {
+  animation: tier-pulse 1.6s ease-in-out infinite;
+}

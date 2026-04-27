@@ -572,23 +572,77 @@ export default function BadHabits() {
                     ? "amber"
                     : "red";
 
-                const tierGlow =
-                  consistencyTier === "blue"
-                    ? "0 0 24px rgba(96,165,250,0.55)"
-                    : consistencyTier === "amber"
-                    ? "0 0 24px rgba(251,191,36,0.55)"
-                    : consistencyTier === "red"
-                    ? "0 0 24px rgba(239,68,68,0.55)"
-                    : null;
+                // Fractured armor is a critical failure — red pulse always wins.
+                const effectiveTier: "blue" | "amber" | "red" | null = isFractured
+                  ? "red"
+                  : consistencyTier;
 
-                const tierBorder =
-                  consistencyTier === "blue"
-                    ? "border-blue-500"
-                    : consistencyTier === "amber"
-                    ? "border-amber-500"
-                    : consistencyTier === "red"
-                    ? "border-red-500"
-                    : null;
+                const TIER_THEME = {
+                  blue: {
+                    text: "text-blue-300",
+                    iconStroke: "rgb(96,165,250)",
+                    stripe: "rgba(96,165,250,0.85)",
+                    border: "border-blue-500",
+                    glowLow: "rgba(96,165,250,0.30)",
+                    glowHigh: "rgba(96,165,250,0.65)",
+                    borderLow: "rgba(96,165,250,0.55)",
+                    borderHigh: "rgba(147,197,253,1)",
+                  },
+                  amber: {
+                    text: "text-amber-300",
+                    iconStroke: "rgb(251,191,36)",
+                    stripe: "rgba(251,191,36,0.85)",
+                    border: "border-amber-500",
+                    glowLow: "rgba(251,191,36,0.30)",
+                    glowHigh: "rgba(251,191,36,0.65)",
+                    borderLow: "rgba(251,191,36,0.55)",
+                    borderHigh: "rgba(252,211,77,1)",
+                  },
+                  red: {
+                    text: "text-red-300",
+                    iconStroke: "rgb(239,68,68)",
+                    stripe: "rgba(239,68,68,0.85)",
+                    border: "border-red-500",
+                    glowLow: "rgba(239,68,68,0.35)",
+                    glowHigh: "rgba(239,68,68,0.65)",
+                    borderLow: "rgba(239,68,68,0.55)",
+                    borderHigh: "rgba(248,113,113,1)",
+                  },
+                } as const;
+
+                const tierTheme = effectiveTier ? TIER_THEME[effectiveTier] : null;
+
+                const nameColorClass = tierTheme?.text ?? cfg.color;
+                const stripeBg =
+                  tierTheme?.stripe ??
+                  (habit.severity === "High"
+                    ? "rgba(239,68,68,0.5)"
+                    : habit.severity === "Medium"
+                    ? "rgba(249,115,22,0.5)"
+                    : "rgba(234,179,8,0.5)");
+                const borderClass =
+                  tierTheme?.border ?? cfg.border;
+
+                // Animation: fractured -> .fractured-armor (red pulse). Otherwise tier-pulse with CSS vars.
+                const animationClass = isFractured
+                  ? "fractured-armor"
+                  : tierTheme
+                  ? "tier-pulse"
+                  : "";
+
+                const cardStyle: React.CSSProperties & Record<string, string | undefined> = {
+                  transition:
+                    "box-shadow 700ms ease, border-color 700ms ease, background-color 700ms ease",
+                };
+                if (tierTheme && !isFractured) {
+                  cardStyle["--tier-glow-low"] = tierTheme.glowLow;
+                  cardStyle["--tier-glow-high"] = tierTheme.glowHigh;
+                  cardStyle["--tier-border-low"] = tierTheme.borderLow;
+                  cardStyle["--tier-border-high"] = tierTheme.borderHigh;
+                }
+                if (!animationClass && habit.severity === "High") {
+                  cardStyle.boxShadow = "0 0 20px rgba(239,68,68,0.1)";
+                }
 
                 return (
                   <motion.div
@@ -599,38 +653,27 @@ export default function BadHabits() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Card
-                      className={`glass-panel relative overflow-hidden border ${
-                        isFractured ? "fractured-armor" : ""
-                      } ${tierBorder ?? (isFractured ? "border-red-500" : cfg.border)}`}
-                      style={{
-                        boxShadow:
-                          tierGlow ??
-                          (isFractured
-                            ? "0 0 24px rgba(239,68,68,0.45)"
-                            : habit.severity === "High"
-                            ? "0 0 20px rgba(239,68,68,0.1)"
-                            : undefined),
-                        transition: "box-shadow 700ms ease",
-                      }}
+                      className={`glass-panel relative overflow-hidden border transition-all duration-700 ${animationClass} ${borderClass}`}
+                      style={cardStyle}
                     >
                       <div
-                        className={`absolute top-0 left-0 w-1 h-full ${cfg.bg}`}
-                        style={{
-                          background: isFractured
-                            ? "rgba(239,68,68,0.85)"
-                            : habit.severity === "High"
-                            ? "rgba(239,68,68,0.5)"
-                            : habit.severity === "Medium"
-                            ? "rgba(249,115,22,0.5)"
-                            : "rgba(234,179,8,0.5)",
-                        }}
+                        className="absolute top-0 left-0 w-1 h-full transition-all duration-700"
+                        style={{ background: stripeBg }}
                       />
                       <CardContent className="p-5 pl-6">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg select-none">{cfg.icon}</span>
-                              <h3 className={`font-bold text-lg leading-tight truncate ${cfg.color}`}>{habit.name}</h3>
+                              <span
+                                className="text-lg select-none transition-all duration-700"
+                                style={{
+                                  color: tierTheme?.iconStroke,
+                                  opacity: tierTheme ? 0.5 : 1,
+                                }}
+                              >
+                                {cfg.icon}
+                              </span>
+                              <h3 className={`font-bold text-lg leading-tight truncate transition-colors duration-700 ${nameColorClass}`}>{habit.name}</h3>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className={`text-xs ${cfg.border} ${cfg.color} bg-transparent`}>
