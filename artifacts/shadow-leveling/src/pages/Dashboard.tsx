@@ -21,7 +21,7 @@ import {
 } from "@workspace/api-client-react";
 import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 
 
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
@@ -216,11 +216,20 @@ export default function Dashboard() {
     });
   };
 
-  const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
-  const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
+  // Rolling Gold counter — deterministic 0.5s tween from the previously
+  // displayed value to the new value. Pairs with the optimistic character
+  // cache writes so the moment a relapse / repair / quest payout lands,
+  // the digits roll smoothly instead of snapping or spring-bouncing.
+  const goldMV = useMotionValue(character?.gold ?? 0);
+  const goldDisplay = useTransform(goldMV, (v) => Math.round(v).toLocaleString());
   useEffect(() => {
-    goldSpring.set(character?.gold ?? 0);
-  }, [character?.gold, goldSpring]);
+    const target = character?.gold ?? 0;
+    const controls = animate(goldMV, target, {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1],
+    });
+    return () => controls.stop();
+  }, [character?.gold, goldMV]);
 
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
