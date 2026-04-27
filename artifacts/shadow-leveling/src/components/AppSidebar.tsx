@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { usePenalty } from "@/context/PenaltyContext";
+import { useListBadHabits } from "@workspace/api-client-react";
 import {
   Sidebar,
   SidebarContent,
@@ -47,6 +48,14 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { setIsSettingsOpen } = useVisualSettings();
   const { penaltyActive } = usePenalty();
+  // Global awareness of system fractures — light up the Bad Habits nav
+  // dot whenever any active habit is in a fractured state.
+  const { data: badHabits } = useListBadHabits();
+  const hasFracturedHabit = (badHabits ?? []).some(
+    (h) =>
+      h.isActive === 1 &&
+      (h as { isFractured?: boolean }).isFractured === true,
+  );
 
   return (
     <Sidebar className="border-r border-white/5 bg-sidebar/95 backdrop-blur-xl">
@@ -179,6 +188,8 @@ export function AppSidebar() {
                 navItems.map((item) => {
                   const isActive = location === item.href;
                   const isShadow = item.shadow;
+                  const showFractureDot =
+                    item.href === "/bad-habits" && hasFracturedHabit;
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={isActive}>
@@ -219,6 +230,16 @@ export function AppSidebar() {
                           >
                             {item.title}
                           </span>
+                          {showFractureDot && (
+                            <span
+                              className="relative ml-auto flex h-2.5 w-2.5"
+                              aria-label="One or more habits are fractured"
+                              title="One or more habits are fractured"
+                            >
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                            </span>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

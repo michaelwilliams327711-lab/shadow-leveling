@@ -73,6 +73,7 @@ interface RepairResult {
 
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { triggerShatter } from "@/lib/audio";
+import { triggerHapticThud } from "@/lib/haptics";
 
 const REPAIR_COST = 250;
 
@@ -407,14 +408,21 @@ export default function BadHabits() {
         onSuccess: (res) => {
           queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
-          // Ritual: if isFractured transitioned false -> true on this resolve,
-          // play the glass-shatter SFX. Compare prior client-side habit state
-          // against the fresh server response.
+
+          // Sensory ritual — shatter + haptic thud fire together so a streak
+          // collapse (or a fresh fracture transition) is felt and heard at once.
+          //   1. STAGGERED that flips isFractured from false -> true
+          //   2. COLLAPSED — always (a streak shatter is, by definition, a shatter)
           const wasFractured = habit.isFractured ?? false;
           const isNowFractured = res.isFractured;
-          if (!wasFractured && isNowFractured) {
+          const fractureTransition =
+            resolution === "STAGGERED" && !wasFractured && isNowFractured;
+          const isCollapsed = resolution === "COLLAPSED";
+          if (fractureTransition || isCollapsed) {
             triggerShatter();
+            triggerHapticThud();
           }
+
           if (resolution === "RESILIENT") {
             toast({
               title: "RESILIENT — TRIGGER OVERCOME",
