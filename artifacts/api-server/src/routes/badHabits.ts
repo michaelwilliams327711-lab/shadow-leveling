@@ -210,63 +210,196 @@ router.delete("/bad-habits/:id", async (req, res) => {
   }
 });
 
+type FractureResolution = "RESILIENT" | "STAGGERED" | "COLLAPSED";
+const VALID_RESOLUTIONS: FractureResolution[] = ["RESILIENT", "STAGGERED", "COLLAPSED"];
+
 router.post("/bad-habits/:id/relapse", async (req, res) => {
   try {
     const { id } = req.params;
+    const rawResolution = (req.body?.resolution ?? "STAGGERED") as string;
+    const resolution = rawResolution.toUpperCase() as FractureResolution;
+    if (!VALID_RESOLUTIONS.includes(resolution)) {
+      return res.status(400).json({ error: "Invalid resolution. Expected RESILIENT | STAGGERED | COLLAPSED." });
+    }
+
     const habit = await db.select().from(badHabitsTable).where(eq(badHabitsTable.id, id)).limit(1);
     if (!habit.length || habit[0].deletedAt) return res.status(404).json({ error: "Not found" });
-    if (habit[0].isActive === 0) return res.status(400).json({ error: "Cannot relapse on an archived habit" });
+    if (habit[0].isActive === 0) return res.status(400).json({ error: "Cannot log on an archived habit" });
 
     const h = habit[0];
     const severity = h.severity as HabitSeverity;
-    const corruptionDelta = corruptionConfig.corruptionDelta[severity];
-    const xpPenalty = corruptionConfig.xpPenalty[severity];
-
     const todayStr = getSystemDateFromReq(req);
 
+    // Fracture engine outputs.
+    let xpDelta = 0;
+    let goldLoss = 0;
+    let discLoss = 0;
+    let corruptionDelta = 0;
+    let nextMultiplier = h.lapseMultiplier;
+    let nextIsFractured = h.isFractured;
+    let resetStreak = false;
+    let bumpResilient = 0;
+
+    if (resolution === "RESILIENT") {
+      xpDelta = 25;
+    } else if (resolution === "STAGGERED") {
+      xpDelta = 5;
+      goldLoss = 50 * h.lapseMultiplier;
+      discLoss = 1 * h.lapseMultiplier;
+      corruptionDelta = corruptionConfig.corruptionDelta[severity];
+      nextIsFractured = true;
+      nextMultiplier = h.lapseMultiplier * 3;
+    } else {
+      // COLLAPSED — apply current-multiplier penalty, then escalate, and shatter streak.
+      goldLoss = 50 * h.lapseMultiplier;
+      discLoss = 1 * h.lapseMultiplier;
+      corruptionDelta = corruptionConfig.corruptionDelta[severity];
+      nextIsFractured = true;
+      nextMultiplier = h.lapseMultiplier * 3;
+      resetStreak = true;
+    }
+    if (resolution === "RESILIENT") bumpResilient = 1;
+
     let resultCorruption = 0;
+    let resultGold = 0;
+    let resultDiscipline = 0;
+    let resultLevel = 0;
+    let resultXp = 0;
+
     await db.transaction(async (tx) => {
       const chars = await tx.select().from(characterTable).limit(1).for("update");
       if (!chars.length) return;
       const char = chars[0];
 
       const newCorruption = Math.min(100, char.corruption + corruptionDelta);
-      resultCorruption = newCorruption;
+      const newGold = Math.max(0, char.gold - goldLoss);
+      const newDiscipline = Math.max(1, char.discipline - discLoss);
 
+      // Forward-XP loop with safety cap (avoid runaway level-ups on absurd XP gifts).
       let newLevel = char.level;
-      let leftoverXp = char.xp - xpPenalty;
-      while (newLevel > 1 && leftoverXp < 0) {
-        newLevel--;
-        leftoverXp += XP_PER_LEVEL(newLevel);
+      let newXp = char.xp + xpDelta;
+      let safety = 0;
+      while (newXp >= XP_PER_LEVEL(newLevel) && safety < 100) {
+        newXp -= XP_PER_LEVEL(newLevel);
+        newLevel++;
+        safety++;
       }
-      const newXp = Math.max(0, leftoverXp);
+
+      resultCorruption = newCorruption;
+      resultGold = newGold;
+      resultDiscipline = newDiscipline;
+      resultLevel = newLevel;
+      resultXp = newXp;
 
       await tx.update(characterTable)
-        .set({ corruption: newCorruption, xp: newXp, level: newLevel })
+        .set({
+          corruption: newCorruption,
+          gold: newGold,
+          discipline: newDiscipline,
+          xp: newXp,
+          level: newLevel,
+        })
         .where(eq(characterTable.id, char.id));
 
       await tx.insert(badHabitLogTable).values({
         habitId: id,
         date: todayStr,
-        type: "relapse",
+        type: resolution.toLowerCase(),
         corruptionDelta,
       });
 
-      // Cache reset: streak is broken on relapse.
+      const habitUpdate: Record<string, unknown> = {
+        isFractured: nextIsFractured,
+        lapseMultiplier: nextMultiplier,
+        totalExposures: sql`${badHabitsTable.totalExposures} + 1`,
+      };
+      if (bumpResilient) {
+        habitUpdate.resilientCount = sql`${badHabitsTable.resilientCount} + 1`;
+      }
+      if (resetStreak) {
+        habitUpdate.currentStreak = 0;
+        habitUpdate.lastCleanDate = null;
+      }
       await tx.update(badHabitsTable)
-        .set({ currentStreak: 0, lastCleanDate: null })
+        .set(habitUpdate)
         .where(eq(badHabitsTable.id, id));
     });
     invalidateCharacterCache();
 
     res.json({
       success: true,
+      resolution,
+      xpDelta,
+      goldLoss,
+      discLoss,
       corruptionDelta,
-      xpPenalty,
       newCorruption: resultCorruption,
+      newGold: resultGold,
+      newDiscipline: resultDiscipline,
+      newLevel: resultLevel,
+      newXp: resultXp,
+      lapseMultiplier: nextMultiplier,
+      isFractured: nextIsFractured,
+      // Legacy fields for backwards compatibility with existing client code.
+      xpPenalty: xpDelta < 0 ? -xpDelta : 0,
     });
   } catch (err) {
-    req.log.error({ err }, "Error logging relapse");
+    req.log.error({ err }, "Error logging fracture resolution");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/bad-habits/:id/repair", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const REPAIR_COST = 250;
+
+    const habit = await db.select().from(badHabitsTable).where(eq(badHabitsTable.id, id)).limit(1);
+    if (!habit.length || habit[0].deletedAt) return res.status(404).json({ error: "Not found" });
+
+    let newGold = 0;
+    let didRepair = false;
+    let errorOut: string | null = null;
+
+    await db.transaction(async (tx) => {
+      const chars = await tx.select().from(characterTable).limit(1).for("update");
+      if (!chars.length) {
+        errorOut = "Character not found";
+        return;
+      }
+      const char = chars[0];
+      if (char.gold < REPAIR_COST) {
+        errorOut = `Insufficient gold. Need ${REPAIR_COST}, have ${char.gold}.`;
+        return;
+      }
+
+      newGold = char.gold - REPAIR_COST;
+      await tx.update(characterTable)
+        .set({ gold: newGold })
+        .where(eq(characterTable.id, char.id));
+
+      await tx.update(badHabitsTable)
+        .set({ isFractured: false, lapseMultiplier: 1 })
+        .where(eq(badHabitsTable.id, id));
+
+      didRepair = true;
+    });
+
+    if (errorOut) {
+      return res.status(400).json({ error: errorOut });
+    }
+    invalidateCharacterCache();
+
+    res.json({
+      success: true,
+      didRepair,
+      cost: REPAIR_COST,
+      newGold,
+      isFractured: false,
+      lapseMultiplier: 1,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error repairing armor");
     res.status(500).json({ error: "Internal server error" });
   }
 });

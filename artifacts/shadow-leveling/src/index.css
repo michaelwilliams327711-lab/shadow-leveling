@@ -947,3 +947,11 @@
   border: 1px solid rgba(168, 85, 247, 0.35);
 }
 
+
+@keyframes fractured-pulse {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.55); box-shadow: 0 0 12px 0 rgba(239, 68, 68, 0.35); }
+  50%       { border-color: rgba(248, 113, 113, 1);   box-shadow: 0 0 28px 6px rgba(239, 68, 68, 0.65); }
+}
+.fractured-armor {
+  animation: fractured-pulse 1.4s ease-in-out infinite;
+}
