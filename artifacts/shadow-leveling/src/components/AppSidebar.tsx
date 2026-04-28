@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { 
   Sword, 
   ScrollText, 
@@ -14,7 +16,10 @@ import {
 } from "lucide-react";
 import { useVisualSettings } from "@/context/VisualSettingsContext";
 import { usePenalty } from "@/context/PenaltyContext";
-import { useListBadHabits } from "@workspace/api-client-react";
+import { useListBadHabits, useGetCharacter } from "@workspace/api-client-react";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { triggerHapticThud } from "@/lib/haptics";
+import { triggerBoom } from "@/lib/audio";
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +37,82 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+type PillHit = "idle" | "xp" | "rankUp";
+
+const PILL_HIT_VARIANTS = {
+  idle: {
+    scale: 1,
+    boxShadow: "0 0 0px rgba(0,0,0,0)",
+    textShadow: "0 0 0px rgba(0,0,0,0)",
+    transition: { type: "spring" as const, stiffness: 500, damping: 30 },
+  },
+  xp: {
+    scale: 1.05,
+    boxShadow: "0 0 12px #60a5fa",
+    textShadow: "0 0 0px rgba(0,0,0,0)",
+    transition: {
+      type: "spring" as const,
+      stiffness: 500,
+      damping: 18,
+      duration: 0.3,
+    },
+  },
+  rankUp: {
+    scale: 1.15,
+    boxShadow: "0 0 25px #facc15",
+    textShadow: "0 0 10px #facc15",
+    transition: {
+      type: "spring" as const,
+      stiffness: 700,
+      damping: 14,
+      duration: 0.45,
+    },
+  },
+};
+
+function usePillHitState(
+  xp: number,
+  level: number,
+  reduced: boolean | null,
+): PillHit {
+  const prevXpRef = useRef<number | null>(null);
+  const prevLevelRef = useRef<number | null>(null);
+  const [hit, setHit] = useState<PillHit>("idle");
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevXpRef.current === null || prevLevelRef.current === null) {
+      prevXpRef.current = xp;
+      prevLevelRef.current = level;
+      return;
+    }
+    const xpDelta = xp - prevXpRef.current;
+    const levelDelta = level - prevLevelRef.current;
+    prevXpRef.current = xp;
+    prevLevelRef.current = level;
+    if (reduced) return;
+    if (levelDelta > 0) {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      setHit("rankUp");
+      triggerHapticThud();
+      triggerBoom(0.5);
+      timerRef.current = window.setTimeout(() => setHit("idle"), 470);
+    } else if (xpDelta > 0) {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      setHit("xp");
+      timerRef.current = window.setTimeout(() => setHit("idle"), 320);
+    }
+  }, [xp, level, reduced]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return hit;
+}
 
 const navItems = [
   { title: "Status", href: "/", icon: LayoutDashboard, shadow: false },
@@ -56,6 +137,16 @@ export function AppSidebar() {
       h.isActive === 1 &&
       (h as { isFractured?: boolean }).isFractured === true,
   );
+
+  // Global Level/XP awareness — drives the dual-layer Rank-Up flash on
+  // the sidebar Level/XP pill. XP gain → blue pulse, Level Up → gold
+  // "Rank-Up" snap (priority over XP if both land in the same frame).
+  const { data: character } = useGetCharacter();
+  const reduced = useReducedMotion();
+  const xp = character?.xp ?? 0;
+  const level = character?.level ?? 0;
+  const xpToNextLevel = character?.xpToNextLevel ?? 0;
+  const pillHit = usePillHitState(xp, level, reduced);
 
   return (
     <Sidebar className="border-r border-white/5 bg-sidebar/95 backdrop-blur-xl">
@@ -122,7 +213,7 @@ export function AppSidebar() {
           </button>
         </div>
 
-        {penaltyActive && (
+        {penaltyActive ? (
           <div
             className="mt-4 rounded border px-3 py-2 font-mono text-xs text-center"
             style={{
@@ -133,6 +224,39 @@ export function AppSidebar() {
           >
             [ PENALTY PROTOCOL ACTIVE ]
           </div>
+        ) : (
+          character && (
+            <motion.div
+              data-testid="sidebar-level-xp-pill"
+              variants={PILL_HIT_VARIANTS}
+              initial="idle"
+              animate={pillHit}
+              className="mt-4 flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 will-change-transform"
+              style={{
+                background: "rgba(124,58,237,0.10)",
+                borderColor: "rgba(124,58,237,0.40)",
+                color: "rgb(196,181,253)",
+              }}
+            >
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-display text-[10px] tracking-[0.2em] text-muted-foreground">
+                  LV
+                </span>
+                <span className="font-display text-base font-bold tabular-nums text-white">
+                  {level}
+                </span>
+              </div>
+              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                {xp.toLocaleString()}
+                <span className="text-muted-foreground/60">
+                  {xpToNextLevel > 0 ? `/${xpToNextLevel.toLocaleString()}` : ""}
+                </span>
+                <span className="ml-1 text-[9px] tracking-widest text-muted-foreground/70">
+                  XP
+                </span>
+              </span>
+            </motion.div>
+          )
         )}
       </SidebarHeader>
       

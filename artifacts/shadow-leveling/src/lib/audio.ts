@@ -19,15 +19,17 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
-export function triggerBoom(): void {
+export function triggerBoom(volume: number = 1): void {
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
+    const v = Math.max(0, Math.min(1, volume));
+    if (v <= 0) return;
 
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.9, now + 0.012);
+    master.gain.exponentialRampToValueAtTime(0.9 * v, now + 0.012);
     master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
     master.connect(ctx.destination);
 
