@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { BossVictoryScreen } from "@/components/BossVictoryScreen";
-import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { ShadowArmyPanel } from "@/components/ShadowArmyPanel";
 import { ShadowJournal } from "@/components/ShadowJournal";
@@ -140,7 +139,6 @@ export default function BossArena() {
     goldGained: number;
     statDeltas: Array<{ name: string; value: number }>;
   } | null>(null);
-  const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas?: Array<{ name: string; value: number }> } | null>(null);
 
   const [showConfetti, setShowConfetti] = useState(false);
   const [extractedBossIds, setExtractedBossIds] = useState<Set<number>>(new Set());
@@ -212,13 +210,8 @@ export default function BossArena() {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() }),
       ]);
 
-      // State reconciliation: if level changed across the extraction window, fire the ceremony.
-      const after = queryClient.getQueryData<typeof character>(getGetCharacterQueryKey());
-      const before = preExtractLevelRef.current;
+      // Level-up ceremony is now handled globally by GlobalCeremonyWatcher.
       preExtractLevelRef.current = null;
-      if (before !== null && after && (after.level ?? 0) > before) {
-        setTimeout(() => setLevelUpData({ newLevel: after.level }), 800);
-      }
     },
     [queryClient, toast, character]
   );
@@ -306,11 +299,6 @@ export default function BossArena() {
             statDeltas,
           });
 
-          if (res.leveledUp && res.newLevel) {
-            setTimeout(() => {
-              setLevelUpData({ newLevel: res.newLevel!, statDeltas });
-            }, 4000);
-          }
         } else {
           toast({ 
             title: "DEFEAT", 
@@ -743,12 +731,6 @@ export default function BossArena() {
         onDismiss={() => setVictoryData(null)}
       />
 
-      <LevelUpCeremony
-        open={levelUpData !== null}
-        newLevel={levelUpData?.newLevel ?? 0}
-        statDeltas={levelUpData?.statDeltas}
-        onDismiss={() => setLevelUpData(null)}
-      />
     </div>
   );
 }

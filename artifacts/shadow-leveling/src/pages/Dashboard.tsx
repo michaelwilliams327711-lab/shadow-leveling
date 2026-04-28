@@ -94,7 +94,6 @@ import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
-import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
 import { triggerHapticTick, triggerHapticThud } from "@/lib/haptics";
@@ -247,7 +246,6 @@ export default function Dashboard() {
   const [ariseAnimating, setAriseAnimating] = useState(false);
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
-  const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
 
   const [holdProgress, setHoldProgress] = useState(0);
   const holdRafRef = useRef<number | null>(null);
@@ -369,10 +367,6 @@ export default function Dashboard() {
           description: `Streak: ${res.streak} | Multiplier: ${res.multiplier}x`,
           className: "bg-primary/20 border-primary text-primary-foreground",
         });
-
-        if (res.leveledUp && res.newLevel) {
-          setTimeout(() => setLevelUpData({ newLevel: res.newLevel! }), 1200);
-        }
 
         if (STREAK_MILESTONES.includes(res.streak)) {
           setTimeout(() => setStreakMilestone(res.streak), 800);
@@ -1202,12 +1196,6 @@ export default function Dashboard() {
         open={streakMilestone !== null}
         streak={streakMilestone ?? 0}
         onDismiss={() => setStreakMilestone(null)}
-      />
-
-      <LevelUpCeremony
-        open={levelUpData !== null}
-        newLevel={levelUpData?.newLevel ?? 0}
-        onDismiss={() => setLevelUpData(null)}
       />
 
       <AwakeningOverlay

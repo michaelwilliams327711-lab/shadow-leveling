@@ -82,7 +82,6 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { ShadowIntel } from "@/components/ShadowIntel";
 import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE } from "@workspace/shared";
 import { SYSTEM_INTEL } from "@/lib/systemLore";
-import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
 import { RankUpNotification } from "@/components/RankUpNotification";
@@ -1463,7 +1462,6 @@ export default function Quests() {
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [showEditRecurrence, setShowEditRecurrence] = useState(false);
-  const [levelUpData, setLevelUpData] = useState<{ newLevel: number; statDeltas: Array<{ name: string; value: number }> } | null>(null);
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
@@ -1583,19 +1581,6 @@ export default function Quests() {
         }
         if ((res as Record<string, unknown>).vocationLevelUp === true) {
           setTimeout(() => setAwakeningOpen(true), 1400);
-        }
-        if (res.leveledUp && res.newLevel) {
-          const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
-          const statDeltas: Array<{ name: string; value: number }> = [];
-          if (res.statGains) {
-            for (const stat of statNames) {
-              const gain = (res.statGains as Record<string, number>)[stat] ?? 0;
-              if (gain > 0) {
-                statDeltas.push({ name: stat.charAt(0).toUpperCase() + stat.slice(1), value: gain });
-              }
-            }
-          }
-          setTimeout(() => setLevelUpData({ newLevel: res.newLevel!, statDeltas }), 600);
         }
         if (res.statGains && res.character) {
           const statNames = ["strength", "spirit", "endurance", "intellect", "discipline"] as const;
@@ -2480,13 +2465,6 @@ export default function Quests() {
           </TabsContent>
         ))}
       </Tabs>
-
-      <LevelUpCeremony
-        open={levelUpData !== null}
-        newLevel={levelUpData?.newLevel ?? 0}
-        statDeltas={levelUpData?.statDeltas}
-        onDismiss={() => setLevelUpData(null)}
-      />
 
       <RankUpNotification
         open={rankUpData !== null}
