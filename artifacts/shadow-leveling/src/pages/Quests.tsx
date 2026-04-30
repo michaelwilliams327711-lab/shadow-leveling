@@ -62,6 +62,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { BookOpen } from "lucide-react";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import {
   Command,
@@ -1982,8 +1991,78 @@ export default function Quests() {
           <p className="text-muted-foreground mt-1 tracking-wider uppercase text-sm">System missions and daily tasks</p>
         </div>
 
-        {/* Create Quest Dialog */}
-        <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) setShowRecurrence(false); }}>
+        {/* Create Quest Dialog + Templates Dropdown */}
+        <div className="flex items-center gap-2">
+          {/* ── Templates "Book" dropdown ─────────────────────────────────
+              Lives next to the ADD QUEST button so power users can summon a
+              saved template into the create drawer with one click instead
+              of opening the dialog and re-filling every field by hand. */}
+          <DropdownMenu
+            onOpenChange={(open) => {
+              // Lazy-load on each open so newly saved templates appear without
+              // remounting the page or wiring a global storage event listener.
+              if (open) setTemplates(loadQuestTemplates());
+            }}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-purple-500/40 hover:border-purple-400/70 hover:bg-purple-500/10 text-purple-200"
+                aria-label="Open quest templates"
+                data-testid="open-templates-dropdown"
+              >
+                <BookOpen className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-64 glass-panel border-purple-500/30"
+            >
+              <DropdownMenuLabel className="font-display tracking-[0.25em] uppercase text-xs text-purple-200/80 flex items-center gap-2">
+                <Bookmark className="w-3.5 h-3.5" />
+                Quest Templates
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              {templates.length === 0 ? (
+                <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                  No templates yet — create a quest and tap
+                  <br />
+                  <span className="text-purple-300">"Save as Template"</span>.
+                </div>
+              ) : (
+                templates.map((tpl) => {
+                  const rewards = getTemplateBaseRewards(tpl);
+                  return (
+                    <DropdownMenuItem
+                      key={tpl.id}
+                      onSelect={(e) => {
+                        // Block the default close-and-blur so we can chain
+                        // form-reset → dialog-open in one flick.
+                        e.preventDefault();
+                        onSummonTemplate(tpl);
+                        setIsCreateOpen(true);
+                      }}
+                      className="flex items-start gap-2 cursor-pointer focus:bg-purple-500/15"
+                      data-testid={`template-dropdown-item-${tpl.id}`}
+                    >
+                      <Bookmark className="w-3.5 h-3.5 mt-0.5 text-purple-300 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-purple-100 truncate">
+                          {tpl.label}
+                        </div>
+                        <div className="text-[10px] tabular-nums text-purple-300/80 truncate">
+                          Rank {tpl.difficulty} · {tpl.durationMinutes}m · +{rewards.xp} XP · +{rewards.gold} G
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) setShowRecurrence(false); }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold tracking-wider hover-glow">
               <Plus className="w-4 h-4 mr-2" /> ADD QUEST
@@ -1996,51 +2075,6 @@ export default function Quests() {
             </DialogHeader>
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 pt-4">
-                {/* ── Quick Summon — Templates ──────────────────────────── */}
-                {templates.length > 0 && (
-                  <div className="rounded-lg border border-purple-500/20 bg-[#111118]/70 p-3">
-                    <div className="flex items-center gap-2 text-xs font-display tracking-[0.25em] uppercase text-purple-200/80 mb-2">
-                      <Bookmark className="w-3.5 h-3.5" />
-                      Quick Summon
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {templates.map((tpl) => {
-                        const rewards = getTemplateBaseRewards(tpl);
-                        return (
-                          <div
-                            key={tpl.id}
-                            className="group inline-flex items-stretch rounded-md border border-purple-500/30 bg-purple-500/10 hover:border-purple-400/60 hover:bg-purple-500/15 transition-colors"
-                            data-testid={`quest-template-chip-${tpl.id}`}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => onSummonTemplate(tpl)}
-                              className="flex flex-col items-start gap-0.5 px-2.5 py-1.5 text-left"
-                              title={`${tpl.title} • Rank ${tpl.difficulty} • ${tpl.durationMinutes}m`}
-                            >
-                              <span className="text-xs font-bold text-purple-100 leading-tight">
-                                {tpl.label}
-                              </span>
-                              <span className="text-[10px] tabular-nums text-purple-300/80 leading-tight">
-                                Rank {tpl.difficulty} · +{rewards.xp} XP · +{rewards.gold} G
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteTemplate(tpl.id)}
-                              className="px-1.5 border-l border-purple-500/30 text-purple-300/60 hover:text-red-300 hover:bg-red-500/10 transition-colors rounded-r-md"
-                              aria-label={`Delete template ${tpl.label}`}
-                              data-testid={`quest-template-delete-${tpl.id}`}
-                            >
-                              <XIcon className="w-3 h-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
                 <FormField control={createForm.control} name="name" render={({ field }) => (
                   <FormItem>
                     <InfoTooltip what="The name of the task you want to track." fn="Displayed on your quest card and used as the primary identifier in your log." usage="Be specific — 'Read 20 pages of Atomic Habits' is better than 'Read'.">
@@ -2250,7 +2284,8 @@ export default function Quests() {
               </form>
             </Form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Edit Quest Dialog */}

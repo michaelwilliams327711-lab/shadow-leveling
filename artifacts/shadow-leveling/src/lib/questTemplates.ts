@@ -19,6 +19,11 @@ export interface QuestTemplate {
   durationMinutes: number;
   statBoost?: StatBoost | null;
   createdAt: number;
+  // Number of times this template has been instant-summoned via the Dashboard
+  // "Quick Summon" runes. Drives the top-3-most-used ranking. Bumping this is
+  // intentionally NOT done by the in-dialog Quick Summon (which only pre-fills
+  // the form) — only by a successful one-click spawn.
+  usageCount: number;
 }
 
 function isQuestDifficulty(value: unknown): value is QuestDifficulty {
@@ -64,6 +69,13 @@ function parseTemplate(raw: unknown): QuestTemplate | null {
   const statBoost = isStatBoost(r.statBoost) ? r.statBoost : null;
   const createdAt =
     typeof r.createdAt === "number" ? r.createdAt : Date.now();
+  // Older v1 entries (saved before usage tracking landed) won't have
+  // usageCount — default them to 0 so they still rank, just behind any
+  // template that has been summoned at least once.
+  const usageCount =
+    typeof r.usageCount === "number" && r.usageCount >= 0
+      ? Math.floor(r.usageCount)
+      : 0;
 
   if (!id || !label || !title || !category) return null;
   return {
@@ -76,6 +88,7 @@ function parseTemplate(raw: unknown): QuestTemplate | null {
     durationMinutes,
     statBoost,
     createdAt,
+    usageCount,
   };
 }
 
@@ -145,6 +158,7 @@ export function saveQuestTemplate(
     durationMinutes: input.durationMinutes,
     statBoost: input.statBoost ?? null,
     createdAt: Date.now(),
+    usageCount: 0,
   };
   const list = loadQuestTemplates();
   list.push(tpl);
@@ -155,6 +169,35 @@ export function saveQuestTemplate(
 export function deleteQuestTemplate(id: string): void {
   const list = loadQuestTemplates().filter((t) => t.id !== id);
   persist(list);
+}
+
+// Bumps the per-template usage counter by one. Called from the Dashboard
+// "Quick Summon" runes the moment a template-spawned quest successfully
+// commits to the server, so the top-3 ranking reflects real-world reach.
+export function incrementTemplateUsage(id: string): QuestTemplate | null {
+  const list = loadQuestTemplates();
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
+  const updated: QuestTemplate = {
+    ...list[idx],
+    usageCount: list[idx].usageCount + 1,
+  };
+  list[idx] = updated;
+  persist(list);
+  return updated;
+}
+
+// Returns up to `count` templates ordered by usageCount (desc), with
+// createdAt (asc) as a stable tiebreaker so the rune order is deterministic
+// when several templates share the same usage count.
+export function getTopTemplates(count: number): QuestTemplate[] {
+  return loadQuestTemplates()
+    .slice()
+    .sort((a, b) => {
+      if (b.usageCount !== a.usageCount) return b.usageCount - a.usageCount;
+      return a.createdAt - b.createdAt;
+    })
+    .slice(0, Math.max(0, count));
 }
 
 // Convenience accessor — looks up the rank's base reward bundle, used for

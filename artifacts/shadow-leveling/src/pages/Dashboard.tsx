@@ -13,12 +13,22 @@ import {
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
   type Character,
+  type Quest,
   useListBadHabits,
   useRecordCleanDay,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
   useAcknowledgeAwakening,
+  useCreateQuest,
+  getListQuestsQueryKey,
 } from "@workspace/api-client-react";
+import { getListQuestsWindowedQueryKey } from "@workspace/api-client-react";
+import {
+  getTopTemplates,
+  incrementTemplateUsage,
+  getTemplateBaseRewards,
+  type QuestTemplate,
+} from "@/lib/questTemplates";
 import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
@@ -255,6 +265,86 @@ export default function Dashboard() {
 
   const [showAwakening, setShowAwakening] = useState(false);
   const acknowledgeAwakeningMutation = useAcknowledgeAwakening();
+
+  // ── Quest Templates — Quick Summon (Dashboard runes) ─────────────────
+  // Holds the top-3 most-used templates so the user can spawn a saved
+  // quest from the home screen without opening the Quests page first.
+  // Reload triggers: initial mount, every successful summon, and the
+  // browser-level "storage" event (so editing templates in another tab
+  // updates this list live).
+  const [topTemplates, setTopTemplates] = useState<QuestTemplate[]>([]);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const createQuestFromTemplate = useCreateQuest();
+
+  useEffect(() => {
+    setTopTemplates(getTopTemplates(3));
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "shadow-leveling.quest-templates.v1") {
+        setTopTemplates(getTopTemplates(3));
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const summonTemplate = (tpl: QuestTemplate) => {
+    if (pendingTemplateId) return; // serialize spawns; one rune at a time
+    setPendingTemplateId(tpl.id);
+    createQuestFromTemplate.mutate(
+      {
+        data: {
+          name: tpl.title,
+          category: tpl.category,
+          difficulty: tpl.difficulty,
+          durationMinutes: tpl.durationMinutes,
+          description: tpl.description || null,
+          // Dashboard one-click spawns are deliberately deadline-less &
+          // non-recurring — those fields are situational and the rune is
+          // a "fire and forget" affordance, not a planning surface.
+          deadline: null,
+          statBoost: tpl.statBoost ?? null,
+          targetAmount: null,
+          amountUnit: null,
+          recurrence: null,
+          vocationId: null,
+        },
+      },
+      {
+        onSuccess: (newQuest: Quest) => {
+          // Cache injection: paint the new quest into both quest list shapes
+          // so the Quests page reflects the spawn instantly.
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey(),
+            (old) => (old ? [...old, newQuest] : [newQuest]),
+          );
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsQueryKey(),
+            (old) => (old ? [...old, newQuest] : [newQuest]),
+          );
+          // Bump usage count so most-used ranking adapts in real time.
+          incrementTemplateUsage(tpl.id);
+          setTopTemplates(getTopTemplates(3));
+          // Background reconciliation — mirrors the Quests page pattern.
+          queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey() });
+          triggerHapticTick();
+          toast({
+            title: "Quest Summoned",
+            description: `"${tpl.label}" is now in your active missions.`,
+          });
+        },
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error.";
+          toast({
+            title: "Summon Failed",
+            description: msg,
+            variant: "destructive",
+          });
+        },
+        onSettled: () => setPendingTemplateId(null),
+      },
+    );
+  };
 
   useEffect(() => {
     if (character && character.vocationLevel >= 1 && !character.hasSeenAwakening) {
@@ -836,6 +926,64 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <StatRadar character={character} />
+
+              {/* ── Quick Summon Runes ──────────────────────────────────
+                  Top 3 most-used quest templates, rendered as compact
+                  "runes" the player can tap to instantly spawn the saved
+                  quest into their active mission queue. Only renders if
+                  the player has saved at least one template (created from
+                  the Quests page → "Save as Template"). */}
+              {topTemplates.length > 0 && (
+                <div className="mt-6 rounded-lg border border-purple-500/20 bg-[#111118]/70 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-xs font-display tracking-[0.25em] uppercase text-purple-200/80">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Quick Summon
+                    </div>
+                    <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Top {topTemplates.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {topTemplates.map((tpl) => {
+                      const rewards = getTemplateBaseRewards(tpl);
+                      const pending = pendingTemplateId === tpl.id;
+                      const disabled = pendingTemplateId !== null;
+                      return (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => summonTemplate(tpl)}
+                          disabled={disabled}
+                          className={`group relative flex flex-col items-center justify-center gap-1 rounded-lg border px-2 py-3 text-center transition-all
+                            ${pending
+                              ? "border-purple-300/70 bg-purple-500/25 animate-pulse"
+                              : disabled
+                                ? "border-purple-500/20 bg-purple-500/5 opacity-50 cursor-not-allowed"
+                                : "border-purple-500/30 bg-purple-500/10 hover:border-purple-300/70 hover:bg-purple-500/20 hover:shadow-[0_0_12px_rgba(168,85,247,0.35)] active:scale-95"}`}
+                          title={`Spawn "${tpl.title}" — Rank ${tpl.difficulty} · ${tpl.durationMinutes}m`}
+                          data-testid={`summon-rune-${tpl.id}`}
+                        >
+                          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-100 text-[11px] font-display tracking-wider">
+                            {tpl.difficulty}
+                          </div>
+                          <span className="text-[11px] font-bold text-purple-100 leading-tight line-clamp-1 w-full">
+                            {tpl.label}
+                          </span>
+                          <span className="text-[9px] tabular-nums text-purple-300/80 leading-tight">
+                            +{rewards.xp} XP · +{rewards.gold} G
+                          </span>
+                          {tpl.usageCount > 0 && (
+                            <span className="absolute top-1 right-1 text-[8px] tabular-nums text-purple-300/60">
+                              ×{tpl.usageCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-4 mt-6">
                 {stats.map((stat) => {
