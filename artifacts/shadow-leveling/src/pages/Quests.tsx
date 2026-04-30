@@ -88,6 +88,14 @@ import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
 import { playQuestComplete, playSystemWarning } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import {
+  loadQuestTemplates,
+  saveQuestTemplate,
+  deleteQuestTemplate,
+  getTemplateBaseRewards,
+  type QuestTemplate,
+} from "@/lib/questTemplates";
+import { Bookmark, BookmarkPlus, X as XIcon } from "lucide-react";
 
 import {
   AreaChart,
@@ -1462,6 +1470,9 @@ export default function Quests() {
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [showEditRecurrence, setShowEditRecurrence] = useState(false);
+  const [templates, setTemplates] = useState<QuestTemplate[]>([]);
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [templateLabel, setTemplateLabel] = useState("");
   const [completingQuestId, setCompletingQuestId] = useState<number | null>(null);
   const [rankUpData, setRankUpData] = useState<{ statName: string; statValue: number } | null>(null);
   const [fragmentDropData, setFragmentDropData] = useState<{ count: number } | null>(null);
@@ -1485,6 +1496,17 @@ export default function Quests() {
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, []);
+
+  // Load templates from localStorage when the create dialog opens so any
+  // template added in another tab/window is reflected immediately.
+  useEffect(() => {
+    if (isCreateOpen) {
+      setTemplates(loadQuestTemplates());
+      // Reset the inline "Save as Template" form whenever the dialog opens.
+      setTemplateFormOpen(false);
+      setTemplateLabel("");
+    }
+  }, [isCreateOpen]);
 
 
   const createForm = useForm<z.infer<typeof createSchema>>({
@@ -1636,6 +1658,73 @@ export default function Quests() {
   const buildRecurrence = (rec: z.infer<typeof recurrenceSchema> | null | undefined): RecurrenceConfig | null => {
     if (!rec || rec.type === "none") return null;
     return rec as RecurrenceConfig;
+  };
+
+  // ── Quest Templates — handlers ──────────────────────────────────────
+  // Quick Summon: populate every relevant field on the create form from a
+  // saved template. We deliberately do NOT touch deadline / recurrence —
+  // those are situational and shouldn't carry across summons.
+  const onSummonTemplate = (tpl: QuestTemplate) => {
+    createForm.reset({
+      name: tpl.title,
+      description: tpl.description,
+      category: tpl.category,
+      statBoost: tpl.statBoost ?? undefined,
+      difficulty: tpl.difficulty,
+      durationMinutes: tpl.durationMinutes,
+      deadline: "",
+      targetAmount: undefined,
+      amountUnit: "",
+      recurrence: { type: "none" },
+    });
+    toast({
+      title: "Template Summoned",
+      description: `"${tpl.label}" loaded into the form.`,
+    });
+  };
+
+  // Save the current form state as a new template. Triggered from the
+  // inline "Save as Template" widget below the Submit Mission button.
+  const onSaveTemplate = () => {
+    const data = createForm.getValues();
+    const label = templateLabel.trim();
+    if (!label) {
+      toast({
+        title: "Template Name Required",
+        description: "Give the template a short name before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!data.name?.trim() || !data.category?.trim()) {
+      toast({
+        title: "Incomplete Quest",
+        description: "Fill in at least Quest Objective and Category first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const tpl = saveQuestTemplate({
+      label,
+      title: data.name,
+      description: data.description ?? "",
+      category: data.category,
+      difficulty: data.difficulty,
+      durationMinutes: data.durationMinutes,
+      statBoost: data.statBoost ?? null,
+    });
+    setTemplates((prev) => [...prev, tpl]);
+    setTemplateLabel("");
+    setTemplateFormOpen(false);
+    toast({
+      title: "Template Saved",
+      description: `"${tpl.label}" is now in Quick Summon.`,
+    });
+  };
+
+  const onDeleteTemplate = (id: string) => {
+    deleteQuestTemplate(id);
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
   };
 
   const onCreateSubmit = (data: z.infer<typeof createSchema>) => {
@@ -1907,6 +1996,51 @@ export default function Quests() {
             </DialogHeader>
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 pt-4">
+                {/* ── Quick Summon — Templates ──────────────────────────── */}
+                {templates.length > 0 && (
+                  <div className="rounded-lg border border-purple-500/20 bg-[#111118]/70 p-3">
+                    <div className="flex items-center gap-2 text-xs font-display tracking-[0.25em] uppercase text-purple-200/80 mb-2">
+                      <Bookmark className="w-3.5 h-3.5" />
+                      Quick Summon
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {templates.map((tpl) => {
+                        const rewards = getTemplateBaseRewards(tpl);
+                        return (
+                          <div
+                            key={tpl.id}
+                            className="group inline-flex items-stretch rounded-md border border-purple-500/30 bg-purple-500/10 hover:border-purple-400/60 hover:bg-purple-500/15 transition-colors"
+                            data-testid={`quest-template-chip-${tpl.id}`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => onSummonTemplate(tpl)}
+                              className="flex flex-col items-start gap-0.5 px-2.5 py-1.5 text-left"
+                              title={`${tpl.title} • Rank ${tpl.difficulty} • ${tpl.durationMinutes}m`}
+                            >
+                              <span className="text-xs font-bold text-purple-100 leading-tight">
+                                {tpl.label}
+                              </span>
+                              <span className="text-[10px] tabular-nums text-purple-300/80 leading-tight">
+                                Rank {tpl.difficulty} · +{rewards.xp} XP · +{rewards.gold} G
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteTemplate(tpl.id)}
+                              className="px-1.5 border-l border-purple-500/30 text-purple-300/60 hover:text-red-300 hover:bg-red-500/10 transition-colors rounded-r-md"
+                              aria-label={`Delete template ${tpl.label}`}
+                              data-testid={`quest-template-delete-${tpl.id}`}
+                            >
+                              <XIcon className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <FormField control={createForm.control} name="name" render={({ field }) => (
                   <FormItem>
                     <InfoTooltip what="The name of the task you want to track." fn="Displayed on your quest card and used as the primary identifier in your log." usage="Be specific — 'Read 20 pages of Atomic Habits' is better than 'Read'.">
@@ -2052,6 +2186,67 @@ export default function Quests() {
                 <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" disabled={createQuest.isPending}>
                   {createQuest.isPending ? "Registering..." : "Submit Mission"}
                 </Button>
+
+                {/* ── Save as Template ──────────────────────────────────── */}
+                <div className="border-t border-white/10 pt-3">
+                  {!templateFormOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setTemplateFormOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 text-xs text-purple-300/80 hover:text-purple-200 transition-colors py-1"
+                      data-testid="open-save-template"
+                    >
+                      <BookmarkPlus className="w-3.5 h-3.5" />
+                      Save as Template
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-display tracking-[0.25em] uppercase text-purple-200/80">
+                        <BookmarkPlus className="w-3.5 h-3.5" />
+                        Save as Template
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={templateLabel}
+                          onChange={(e) => setTemplateLabel(e.target.value)}
+                          placeholder="Template name (e.g. Deep Work)"
+                          className="bg-background/50 h-8 text-xs"
+                          maxLength={40}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              onSaveTemplate();
+                            }
+                          }}
+                          data-testid="template-label-input"
+                        />
+                        <Button
+                          type="button"
+                          onClick={onSaveTemplate}
+                          variant="outline"
+                          className="h-8 px-3 text-xs border-purple-500/40 hover:bg-purple-500/10"
+                          data-testid="confirm-save-template"
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setTemplateFormOpen(false);
+                            setTemplateLabel("");
+                          }}
+                          variant="ghost"
+                          className="h-8 px-2 text-xs text-muted-foreground"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Stores title, description, category, rank, duration & stat boost.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </form>
             </Form>
           </DialogContent>

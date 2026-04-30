@@ -185,3 +185,59 @@ export function triggerGoldTick(): void {
     // Ignore — older browsers or autoplay policies can throw before user gesture.
   }
 }
+
+/**
+ * "Victory Fanfare" SFX — a 4-note ascending C-major arpeggio (C4-E4-G4-C5)
+ * for the breakthrough moment of the Ceremony sequence. Each note is a soft
+ * sine-wave oscillator with an exponential decay envelope so the timbre rings
+ * like a magical bell rather than a square-wave alert.
+ *
+ * Notes:    C4         E4         G4         C5
+ * Hz:       261.63     329.63     392.00     523.25
+ * Spacing:  ~150ms per note (4 notes -> ~600ms total).
+ */
+export function triggerLevelUpMelody(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+
+    // Master bus — keeps the fanfare comfortably below clipping while the
+    // overlapping decays of consecutive notes overlap in the tail.
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.35, now);
+    master.connect(ctx.destination);
+
+    const notes: Array<{ freq: number }> = [
+      { freq: 261.63 }, // C4
+      { freq: 329.63 }, // E4
+      { freq: 392.0 },  // G4
+      { freq: 523.25 }, // C5
+    ];
+
+    const stepSeconds = 0.15; // ~150ms per note
+    const noteDuration = 0.6; // long exponential ring tail for a bell-like sustain
+
+    notes.forEach(({ freq }, i) => {
+      const start = now + i * stepSeconds;
+      const end = start + noteDuration;
+
+      // Soft sine oscillator — pure tone, no harmonics, "magical" timbre.
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, start);
+
+      // Exponential decay envelope — fast attack into a long ringing tail.
+      const noteGain = ctx.createGain();
+      noteGain.gain.setValueAtTime(0.0001, start);
+      noteGain.gain.exponentialRampToValueAtTime(0.9, start + 0.012);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+      osc.connect(noteGain).connect(master);
+      osc.start(start);
+      osc.stop(end + 0.02);
+    });
+  } catch {
+    // Ignore — older browsers or autoplay policies can throw before user gesture.
+  }
+}

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useGetCharacter } from "@workspace/api-client-react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { triggerHapticThud } from "@/lib/haptics";
-import { triggerBoom, triggerGoldTick } from "@/lib/audio";
+import { triggerBoom, triggerGoldTick, triggerLevelUpMelody } from "@/lib/audio";
 
 interface StatDelta {
   name: string;
@@ -28,17 +28,22 @@ interface AscensionPayload {
   statDeltas: StatDelta[];
 }
 
-type Phase = "idle" | "gathering" | "ascended";
+type Phase = "idle" | "xp-surge" | "gold-flurry" | "ascended";
 
-// 1.5s gathering window — long enough for the gold "tick" flurry to register.
-const GATHERING_MS = 1500;
+// Phase A — XP Surge: animate XP bar from current % to 100%.
+const XP_SURGE_MS = 1000;
+// Phase B — Gold Flurry: animate Gold counter from prevGold to newGold.
+const GOLD_FLURRY_MS = 800;
 
-// Throttle floor: ~33 audio ticks/sec max, so a long XP run still sounds
+// Throttle floor: ~33 audio ticks/sec max, so a long Gold roll still sounds
 // like a coin flurry rather than a sample-rate hash.
 const MIN_TICK_INTERVAL_MS = 30;
 
 // Match Dashboard XP bar — overshoot easing for the cubic-bezier "snap-fit".
 const SURGE_EASE: [number, number, number, number] = [0.34, 1.56, 0.64, 1];
+// Smooth ease for the Gold counter — no overshoot, since the number is the
+// focal point and a bezier overshoot would briefly show > newGold.
+const GOLD_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 const STAT_KEYS = [
   "strength",
@@ -153,7 +158,6 @@ export function GlobalCeremonyWatcher() {
 
       stopActive();
       setPayload(captured);
-      setPhase("gathering");
 
       // Initial values — bar starts wherever XP was sitting before the
       // breakthrough; gold counter starts at the previous balance.
@@ -165,72 +169,83 @@ export function GlobalCeremonyWatcher() {
       goldVal.set(captured.prevGold);
       setDisplayGold(captured.prevGold);
 
-      // Impact haptic at the moment the gathering begins.
+      // Impact haptic at the moment the ceremony begins.
       triggerHapticThud();
 
-      // Reduced-motion path: skip the whole gathering animation, jump
-      // straight to ASCENDED with no audio ticks.
+      // Reduced-motion path: skip every phase, jump straight to ASCENDED
+      // with the full payload locked in and the breakthrough cues fired.
       if (reduced) {
         xpFill.set(100);
         goldVal.set(captured.newGold);
         setDisplayGold(captured.newGold);
         setPhase("ascended");
         triggerBoom(0.5);
+        triggerLevelUpMelody();
         return;
       }
 
-      // Shared throttle so both XP and Gold can't double-fire on the same
-      // animation frame.
-      let lastXpInt = Math.floor(startPct);
-      let lastGoldInt = captured.prevGold;
-      let lastTickAt = 0;
+      // ── PHASE A — XP Surge ────────────────────────────────────────────
+      // Drive the XP bar from its current % to 100% over XP_SURGE_MS.
+      // No gold ticks fire during this phase — the audio focus is the surge.
+      setPhase("xp-surge");
 
-      const tickIfReady = () => {
-        const now = performance.now();
-        if (now - lastTickAt < MIN_TICK_INTERVAL_MS) return;
-        lastTickAt = now;
-        triggerGoldTick();
-      };
+      let goldAnim: ReturnType<typeof animate> | null = null;
+      let goldFlurryTimer: number | null = null;
+      let breakthroughTimer: number | null = null;
 
       const xpAnim = animate(xpFill, 100, {
-        duration: GATHERING_MS / 1000,
+        duration: XP_SURGE_MS / 1000,
         ease: SURGE_EASE,
-        onUpdate: (v) => {
-          const intV = Math.floor(v);
-          if (intV !== lastXpInt) {
-            lastXpInt = intV;
-            tickIfReady();
-          }
-        },
       });
 
-      const goldAnim = animate(goldVal, captured.newGold, {
-        duration: GATHERING_MS / 1000,
-        ease: SURGE_EASE,
-        onUpdate: (v) => {
-          const intV = Math.floor(v);
-          if (intV !== lastGoldInt) {
-            lastGoldInt = intV;
-            tickIfReady();
-          }
-        },
-      });
-
-      // Phase shift — 'GATHERING' -> 'ASCENDED' at the level-up threshold.
-      const ascendTimer = window.setTimeout(() => {
-        // Lock visuals to their final values so the colour swap doesn't
-        // catch a mid-bezier overshoot frame.
+      // ── PHASE B — Gold Flurry ─────────────────────────────────────────
+      // Only after the XP bar hits 100% do we begin the Gold counter
+      // animation, with a "tick" SFX flurry throttled to ~33Hz.
+      const goldFlurryStart = () => {
+        // Lock the bar to 100% in case the spring eased past the edge.
         xpFill.set(100);
-        goldVal.set(captured.newGold);
-        setDisplayGold(captured.newGold);
-        setPhase("ascended");
-        triggerBoom(0.5);
-      }, GATHERING_MS);
+        setPhase("gold-flurry");
+
+        let lastGoldInt = captured.prevGold;
+        let lastTickAt = 0;
+        const tickIfReady = () => {
+          const now = performance.now();
+          if (now - lastTickAt < MIN_TICK_INTERVAL_MS) return;
+          lastTickAt = now;
+          triggerGoldTick();
+        };
+
+        goldAnim = animate(goldVal, captured.newGold, {
+          duration: GOLD_FLURRY_MS / 1000,
+          ease: GOLD_EASE,
+          onUpdate: (v) => {
+            const intV = Math.floor(v);
+            if (intV !== lastGoldInt) {
+              lastGoldInt = intV;
+              tickIfReady();
+            }
+          },
+        });
+
+        // ── PHASE C — Breakthrough ─────────────────────────────────────
+        // Only after the Gold counter finishes, trigger the golden-yellow
+        // theme shift, the screen flash, and the Victory Fanfare melody.
+        breakthroughTimer = window.setTimeout(() => {
+          goldVal.set(captured.newGold);
+          setDisplayGold(captured.newGold);
+          setPhase("ascended");
+          triggerBoom(0.5);
+          triggerLevelUpMelody();
+        }, GOLD_FLURRY_MS);
+      };
+
+      goldFlurryTimer = window.setTimeout(goldFlurryStart, XP_SURGE_MS);
 
       cleanupRef.current = () => {
         xpAnim.stop();
-        goldAnim.stop();
-        window.clearTimeout(ascendTimer);
+        if (goldAnim) goldAnim.stop();
+        if (goldFlurryTimer !== null) window.clearTimeout(goldFlurryTimer);
+        if (breakthroughTimer !== null) window.clearTimeout(breakthroughTimer);
       };
     }
 
