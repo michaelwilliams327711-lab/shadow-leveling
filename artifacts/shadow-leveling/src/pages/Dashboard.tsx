@@ -583,23 +583,6 @@ export default function Dashboard() {
             </motion.div>
           </InfoTooltip>
           <InfoTooltip
-            what="Discipline — willpower, consistency, and self-control."
-            fn="Hardens against fracture penalties and unlocks higher-tier rewards."
-            usage="Maintain a daily streak and clear quests consistently to raise Discipline."
-          >
-            <motion.div
-              className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3"
-              variants={PILL_HIT_VARIANTS}
-              animate={disciplineHit}
-              initial="idle"
-            >
-              <Target className="text-purple-400 w-5 h-5" />
-              <span className="text-purple-300 font-stat font-bold text-xl">
-                {character.discipline.toLocaleString()} DISC
-              </span>
-            </motion.div>
-          </InfoTooltip>
-          <InfoTooltip
             what="Daily check-in streak — consecutive days you've logged in and checked in."
             fn="Builds a multiplier (up to 3×) that boosts XP and Gold rewards for completed quests. Tiers: 3 days → 1.5×, 7 days → 2×, 14 days → 2.5×, 30+ days → 3×."
             usage="Hit the 'Daily Arise' button every day to keep your streak alive and grow your multiplier."
