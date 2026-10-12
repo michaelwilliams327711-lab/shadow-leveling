@@ -11,6 +11,7 @@ import { SettingsDrawer } from "@/components/SettingsDrawer";
 import { VisualSettingsProvider } from "@/context/VisualSettingsContext";
 import { PenaltyProvider, usePenalty } from "@/context/PenaltyContext";
 import { PenaltyModal } from "@/components/PenaltyModal";
+import { GlobalCeremonyWatcher } from "@/components/GlobalCeremonyWatcher";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
 import { initAudioContext } from "@/lib/sounds";
@@ -60,6 +61,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
       staleTime: 1000 * 60 * 5,
       // Cache must outlive the persistence window so dehydration captures it.
       gcTime: TWENTY_FOUR_HOURS,
@@ -290,6 +293,7 @@ function App() {
           <Toaster />
           <PenaltyChecker onPenalties={setPenalties} />
           <DayChangeDetector onPenalties={setPenalties} />
+          <GlobalCeremonyWatcher />
           {penalties.length > 0 && (
             <PenaltyModal
               penalties={penalties}

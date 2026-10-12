@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -13,18 +13,85 @@ import {
   getGetActivityHeatmapQueryKey,
   type QuestLogEntry,
   type Character,
+  type Quest,
   useListBadHabits,
   useRecordCleanDay,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
   useAcknowledgeAwakening,
+  useCreateQuest,
+  getListQuestsQueryKey,
 } from "@workspace/api-client-react";
+import { getListQuestsWindowedQueryKey } from "@workspace/api-client-react";
+import {
+  getTopTemplates,
+  incrementTemplateUsage,
+  getTemplateBaseRewards,
+  type QuestTemplate,
+} from "@/lib/questTemplates";
 import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 
 
 import { Flame, Coins, Shield, Brain, Dumbbell, Target, Sparkles, AlertCircle, Sword, SkullIcon, TrendingDown, ShieldAlert, KeyRound, Zap, User, MapPin, Lock } from "lucide-react";
+import { triggerGoldTick } from "@/lib/audio";
+
+// Shared 300ms spring "Hit State" variants for the top-bar status pills
+// — identical visual language to the StatRadar so every stat change
+// reads the same way no matter where it lands on screen.
+const PILL_HIT_VARIANTS = {
+  idle: {
+    scale: 1,
+    boxShadow: "0 0 0px rgba(0,0,0,0)",
+    transition: { type: "spring" as const, stiffness: 500, damping: 30 },
+  },
+  gain: {
+    scale: 1.05,
+    boxShadow: "0 0 12px #60a5fa",
+    transition: { type: "spring" as const, stiffness: 500, damping: 18 },
+  },
+  loss: {
+    scale: 0.95,
+    boxShadow: "0 0 12px #ef4444",
+    transition: { type: "spring" as const, stiffness: 500, damping: 18 },
+  },
+};
+
+// Tracks a single numeric stat and returns the current pill hit state
+// ("idle" | "gain" | "loss"), auto-resetting to "idle" 320ms after the
+// pulse begins. First-mount snapshot is silent so the user doesn't see
+// a phantom flash on initial character load.
+function usePillHitState(
+  value: number,
+  reduced: boolean | null,
+): "idle" | "gain" | "loss" {
+  const prevRef = useRef<number | null>(null);
+  const [hit, setHit] = useState<"idle" | "gain" | "loss">("idle");
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevRef.current === null) {
+      prevRef.current = value;
+      return;
+    }
+    if (value === prevRef.current) return;
+    const delta = value - prevRef.current;
+    prevRef.current = value;
+    if (reduced) return;
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    setHit(delta > 0 ? "gain" : "loss");
+    timerRef.current = window.setTimeout(() => setHit("idle"), 320);
+  }, [value, reduced]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return hit;
+}
 
 
 
@@ -37,9 +104,9 @@ import { Heatmap } from "@/components/Heatmap";
 import { useToast } from "@/hooks/use-toast";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { StreakMilestoneBanner } from "@/components/StreakMilestoneBanner";
-import { LevelUpCeremony } from "@/components/LevelUpCeremony";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playAriseClick } from "@/lib/sounds";
+import { triggerHapticTick, triggerHapticThud } from "@/lib/haptics";
 import { STAT_META } from "@workspace/shared";
 
 function formatRelativeTime(isoString: string): string {
@@ -189,9 +256,95 @@ export default function Dashboard() {
   const [ariseAnimating, setAriseAnimating] = useState(false);
   const [ariseStreakTick, setAriseStreakTick] = useState<number | null>(null);
   const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
-  const [levelUpData, setLevelUpData] = useState<{ newLevel: number } | null>(null);
+
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdRafRef = useRef<number | null>(null);
+  const holdStartRef = useRef<number | null>(null);
+  const holdLastTickRef = useRef<number>(0);
+  const HOLD_DURATION_MS = 1000;
+
   const [showAwakening, setShowAwakening] = useState(false);
   const acknowledgeAwakeningMutation = useAcknowledgeAwakening();
+
+  // ── Quest Templates — Quick Summon (Dashboard runes) ─────────────────
+  // Holds the top-3 most-used templates so the user can spawn a saved
+  // quest from the home screen without opening the Quests page first.
+  // Reload triggers: initial mount, every successful summon, and the
+  // browser-level "storage" event (so editing templates in another tab
+  // updates this list live).
+  const [topTemplates, setTopTemplates] = useState<QuestTemplate[]>([]);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const createQuestFromTemplate = useCreateQuest();
+
+  useEffect(() => {
+    setTopTemplates(getTopTemplates(3));
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "shadow-leveling.quest-templates.v1") {
+        setTopTemplates(getTopTemplates(3));
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const summonTemplate = (tpl: QuestTemplate) => {
+    if (pendingTemplateId) return; // serialize spawns; one rune at a time
+    setPendingTemplateId(tpl.id);
+    createQuestFromTemplate.mutate(
+      {
+        data: {
+          name: tpl.title,
+          category: tpl.category,
+          difficulty: tpl.difficulty,
+          durationMinutes: tpl.durationMinutes,
+          description: tpl.description || null,
+          // Dashboard one-click spawns are deliberately deadline-less &
+          // non-recurring — those fields are situational and the rune is
+          // a "fire and forget" affordance, not a planning surface.
+          deadline: null,
+          statBoost: tpl.statBoost ?? null,
+          targetAmount: null,
+          amountUnit: null,
+          recurrence: null,
+          vocationId: null,
+        },
+      },
+      {
+        onSuccess: (newQuest: Quest) => {
+          // Cache injection: paint the new quest into both quest list shapes
+          // so the Quests page reflects the spawn instantly.
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsWindowedQueryKey(),
+            (old) => (old ? [...old, newQuest] : [newQuest]),
+          );
+          queryClient.setQueryData<Quest[]>(
+            getListQuestsQueryKey(),
+            (old) => (old ? [...old, newQuest] : [newQuest]),
+          );
+          // Bump usage count so most-used ranking adapts in real time.
+          incrementTemplateUsage(tpl.id);
+          setTopTemplates(getTopTemplates(3));
+          // Background reconciliation — mirrors the Quests page pattern.
+          queryClient.invalidateQueries({ queryKey: getListQuestsWindowedQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey() });
+          triggerHapticTick();
+          toast({
+            title: "Quest Summoned",
+            description: `"${tpl.label}" is now in your active missions.`,
+          });
+        },
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error.";
+          toast({
+            title: "Summon Failed",
+            description: msg,
+            variant: "destructive",
+          });
+        },
+        onSettled: () => setPendingTemplateId(null),
+      },
+    );
+  };
 
   useEffect(() => {
     if (character && character.vocationLevel >= 1 && !character.hasSeenAwakening) {
@@ -208,11 +361,42 @@ export default function Dashboard() {
     });
   };
 
-  const goldSpring = useSpring(character?.gold ?? 0, { stiffness: 400, damping: 25 });
-  const goldDisplay = useTransform(goldSpring, (v) => Math.round(v).toLocaleString());
+  // Rolling Gold counter — deterministic 0.5s tween from the previously
+  // displayed value to the new value. Pairs with the optimistic character
+  // cache writes so the moment a relapse / repair / quest payout lands,
+  // the digits roll smoothly instead of snapping or spring-bouncing.
+  const goldMV = useMotionValue(character?.gold ?? 0);
+  const goldDisplay = useTransform(goldMV, (v) => Math.round(v).toLocaleString());
+  const lastRoundedGoldRef = useRef<number>(Math.round(character?.gold ?? 0));
   useEffect(() => {
-    goldSpring.set(character?.gold ?? 0);
-  }, [character?.gold, goldSpring]);
+    const target = character?.gold ?? 0;
+    const controls = animate(goldMV, target, {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1],
+    });
+    // Rolling-tick sync — fire a 10ms 5-6kHz "Tick" SFX every time the
+    // visible (rounded) digit changes, so the audio mirrors the on-screen
+    // counter exactly. Skips redundant sub-pixel updates within one digit.
+    const unsubscribe = goldMV.on("change", (latest) => {
+      const rounded = Math.round(latest);
+      if (rounded !== lastRoundedGoldRef.current) {
+        lastRoundedGoldRef.current = rounded;
+        if (!reduced) triggerGoldTick();
+      }
+    });
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [character?.gold, goldMV, reduced]);
+
+  // Status-pill hit state — same 300ms spring "Hit State" cadence as the
+  // StatRadar. Pulse blue (#60a5fa) on gain, red (#ef4444) on loss; snap
+  // back to idle with a sharper spring exit (damping 30) so the pill
+  // settles instantly rather than wobbling.
+  const goldHit = usePillHitState(character?.gold ?? 0, reduced);
+  const disciplineHit = usePillHitState(character?.discipline ?? 0, reduced);
+
 
   const questLog = questLogRaw?.slice(0, 10) ?? [];
 
@@ -220,6 +404,22 @@ export default function Dashboard() {
   const hasCheckedInToday = character
     ? (character.lastCheckin ? character.lastCheckin.split("T")[0] === todayLocal : false)
     : false;
+
+  const cancelHold = useCallback(() => {
+    if (holdRafRef.current !== null) {
+      cancelAnimationFrame(holdRafRef.current);
+      holdRafRef.current = null;
+    }
+    holdStartRef.current = null;
+    holdLastTickRef.current = 0;
+    setHoldProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (holdRafRef.current !== null) cancelAnimationFrame(holdRafRef.current);
+    };
+  }, []);
 
   const handleCheckin = () => {
     if (hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending) return;
@@ -248,6 +448,7 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetActivityHeatmapQueryKey() });
 
+        triggerHapticThud();
         setAriseStreakTick(res.streak);
         setTimeout(() => setAriseStreakTick(null), 2000);
 
@@ -256,10 +457,6 @@ export default function Dashboard() {
           description: `Streak: ${res.streak} | Multiplier: ${res.multiplier}x`,
           className: "bg-primary/20 border-primary text-primary-foreground",
         });
-
-        if (res.leveledUp && res.newLevel) {
-          setTimeout(() => setLevelUpData({ newLevel: res.newLevel! }), 1200);
-        }
 
         if (STREAK_MILESTONES.includes(res.streak)) {
           setTimeout(() => setStreakMilestone(res.streak), 800);
@@ -373,12 +570,17 @@ export default function Dashboard() {
             fn="Accumulates as you clear missions. Higher-rank quests award more Gold."
             usage="Spend it in the Shop to claim real-life rewards you define."
           >
-            <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3">
+            <motion.div
+              className="glass-panel px-4 py-2 rounded-xl flex items-center gap-3"
+              variants={PILL_HIT_VARIANTS}
+              animate={goldHit}
+              initial="idle"
+            >
               <Coins className="text-gold w-5 h-5" />
               <span className="text-gold font-stat font-bold text-xl">
                 <motion.span>{goldDisplay}</motion.span> G
               </span>
-            </div>
+            </motion.div>
           </InfoTooltip>
           <InfoTooltip
             what="Daily check-in streak — consecutive days you've logged in and checked in."
@@ -517,15 +719,23 @@ export default function Dashboard() {
               
               <InfoTooltip
                 what="XP Progress Bar — how close you are to the next level."
-                fn={`XP required for this level = (2×${character.level} − 1) × 10 = ${character.xpToNextLevel} XP. Formula: Level = ⌊√(TotalXP / 10)⌋ + 1.`}
+                fn={`XP required for this level = ⌊100 × 1.2^(${character.level} − 1)⌋ = ${character.xpToNextLevel} XP. Logarithmic curve — early levels are quick, late levels demand Monarch effort.`}
                 usage="Keep completing quests to push the bar to 100% and trigger a level-up."
               >
                 <div className="relative h-4 bg-secondary rounded-full overflow-hidden mb-2 border border-white/5 shadow-inner">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${xpPercent}%` }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  {/* XP bar — CSS cubic-bezier overshoot easing. The width
+                      is driven directly off the cached character.xp, so the
+                      moment an optimistic setQueryData lands (e.g. from a
+                      RESILIENT resolution on the BadHabits page), the bar
+                      surges and slightly settles like a snap-fit. */}
+                  <div
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 to-primary rounded-full shadow-[0_0_10px_rgba(124,58,237,0.8)]"
+                    style={{
+                      width: `${xpPercent}%`,
+                      transition: reduced
+                        ? "none"
+                        : "width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    }}
                   />
                 </div>
               </InfoTooltip>
@@ -555,17 +765,60 @@ export default function Dashboard() {
                   transition={{ duration: 0.4 }}
                   className="relative z-10"
                 >
-                  <Button 
-                    onClick={handleCheckin}
-                    disabled={hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending}
-                    className="w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 disabled:opacity-60"
-                  >
-                    {checkinMutation.isPending || recordCleanDayMutation.isPending
-                      ? "Connecting..."
-                      : hasCheckedInToday
-                        ? "ARISE COMPLETE"
-                        : "DAILY ARISE"}
-                  </Button>
+                  {(() => {
+                    const ariseDisabled =
+                      hasCheckedInToday || checkinMutation.isPending || recordCleanDayMutation.isPending;
+                    const startHold = () => {
+                      if (ariseDisabled) return;
+                      cancelHold();
+                      holdStartRef.current = performance.now();
+                      holdLastTickRef.current = 0;
+                      const step = (now: number) => {
+                        if (holdStartRef.current === null) return;
+                        const elapsed = now - holdStartRef.current;
+                        const pct = Math.min(1, elapsed / HOLD_DURATION_MS);
+                        setHoldProgress(pct);
+                        const tickBucket = Math.floor(pct * 10);
+                        if (tickBucket > holdLastTickRef.current && tickBucket <= 10) {
+                          holdLastTickRef.current = tickBucket;
+                          triggerHapticTick();
+                        }
+                        if (pct >= 1) {
+                          cancelHold();
+                          handleCheckin();
+                          return;
+                        }
+                        holdRafRef.current = requestAnimationFrame(step);
+                      };
+                      holdRafRef.current = requestAnimationFrame(step);
+                    };
+                    return (
+                      <Button
+                        onPointerDown={startHold}
+                        onPointerUp={cancelHold}
+                        onPointerLeave={cancelHold}
+                        onPointerCancel={cancelHold}
+                        disabled={ariseDisabled}
+                        aria-label="Hold to claim Daily Arise"
+                        className="relative w-full h-14 text-lg font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 disabled:opacity-60 overflow-hidden select-none touch-none"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 bg-white/25 pointer-events-none transition-[width] duration-75 ease-linear"
+                          style={{ width: `${holdProgress * 100}%` }}
+                        />
+                        <span className="relative z-10">
+                          {checkinMutation.isPending || recordCleanDayMutation.isPending
+                            ? "Connecting..."
+                            : hasCheckedInToday
+                              ? "ARISE COMPLETE"
+                              : holdProgress > 0
+                                ? `HOLD TO CLAIM — ${Math.round(holdProgress * 100)}%`
+                                : "HOLD TO CLAIM — DAILY ARISE"}
+                        </span>
+                      </Button>
+                    );
+                  })()}
                 </motion.div>
                 {ariseAnimating && !reduced && (
                   <motion.div
@@ -656,6 +909,64 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <StatRadar character={character} />
+
+              {/* ── Quick Summon Runes ──────────────────────────────────
+                  Top 3 most-used quest templates, rendered as compact
+                  "runes" the player can tap to instantly spawn the saved
+                  quest into their active mission queue. Only renders if
+                  the player has saved at least one template (created from
+                  the Quests page → "Save as Template"). */}
+              {topTemplates.length > 0 && (
+                <div className="mt-6 rounded-lg border border-purple-500/20 bg-[#111118]/70 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-xs font-display tracking-[0.25em] uppercase text-purple-200/80">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Quick Summon
+                    </div>
+                    <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Top {topTemplates.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {topTemplates.map((tpl) => {
+                      const rewards = getTemplateBaseRewards(tpl);
+                      const pending = pendingTemplateId === tpl.id;
+                      const disabled = pendingTemplateId !== null;
+                      return (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => summonTemplate(tpl)}
+                          disabled={disabled}
+                          className={`group relative flex flex-col items-center justify-center gap-1 rounded-lg border px-2 py-3 text-center transition-all
+                            ${pending
+                              ? "border-purple-300/70 bg-purple-500/25 animate-pulse"
+                              : disabled
+                                ? "border-purple-500/20 bg-purple-500/5 opacity-50 cursor-not-allowed"
+                                : "border-purple-500/30 bg-purple-500/10 hover:border-purple-300/70 hover:bg-purple-500/20 hover:shadow-[0_0_12px_rgba(168,85,247,0.35)] active:scale-95"}`}
+                          title={`Spawn "${tpl.title}" — Rank ${tpl.difficulty} · ${tpl.durationMinutes}m`}
+                          data-testid={`summon-rune-${tpl.id}`}
+                        >
+                          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-100 text-[11px] font-display tracking-wider">
+                            {tpl.difficulty}
+                          </div>
+                          <span className="text-[11px] font-bold text-purple-100 leading-tight line-clamp-1 w-full">
+                            {tpl.label}
+                          </span>
+                          <span className="text-[9px] tabular-nums text-purple-300/80 leading-tight">
+                            +{rewards.xp} XP · +{rewards.gold} G
+                          </span>
+                          {tpl.usageCount > 0 && (
+                            <span className="absolute top-1 right-1 text-[8px] tabular-nums text-purple-300/60">
+                              ×{tpl.usageCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-4 mt-6">
                 {stats.map((stat) => {
@@ -1016,12 +1327,6 @@ export default function Dashboard() {
         open={streakMilestone !== null}
         streak={streakMilestone ?? 0}
         onDismiss={() => setStreakMilestone(null)}
-      />
-
-      <LevelUpCeremony
-        open={levelUpData !== null}
-        newLevel={levelUpData?.newLevel ?? 0}
-        onDismiss={() => setLevelUpData(null)}
       />
 
       <AwakeningOverlay

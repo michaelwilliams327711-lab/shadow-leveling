@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { GoldSpendAnimation } from "@/components/GoldSpendAnimation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { playGoldSpend } from "@/lib/sounds";
+import { triggerHapticThud } from "@/lib/haptics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -328,7 +329,35 @@ export default function Shop() {
       });
       return;
     }
+
+
+    purchaseReward.mutate({ id }, {
+      onSuccess: (res) => {
+        setPurchasingId(id);
+        if (!reduced) playGoldSpend();
+        triggerHapticThud();
+        queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListRewardsQueryKey() });
+        toast({ 
+          title: "Item Purchased!", 
+          description: `Spent ${res.goldSpent} G. Remaining: ${res.goldRemaining} G`,
+          className: "bg-gold/20 border-gold text-gold"
+        });
+        setTimeout(() => setPurchasingId(null), 1000);
+      },
+      onError: (err) => {
+        setPurchasingId(null);
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 402) {
+          toast({ title: "Not enough Gold", description: "Complete more quests to earn Gold, Hunter.", variant: "destructive" });
+        } else {
+          toast({ title: "Purchase Failed", description: "An error occurred. Please try again.", variant: "destructive" });
+        }
+      },
+    });
+
     setPending(item);
+
   };
 
   const confirmPurchase = () => {

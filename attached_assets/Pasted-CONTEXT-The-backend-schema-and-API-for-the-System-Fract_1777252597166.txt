@@ -1,0 +1,39 @@
+CONTEXT: The backend schema and API for the "System Fracture Engine" (Bad Habits) are already successfully deployed. The bad_habits table now has isFractured, lapseMultiplier, totalExposures, and resilientCount. The endpoints POST /api/bad-habits/:id/relapse (accepting resolution: "RESILIENT" | "STAGGERED" | "COLLAPSED") and POST /api/bad-habits/:id/repair are active. The CSS for .fractured-armor is also live.
+
+MISSION: I need the complete frontend UI implementation for BadHabits.tsx and the new Analytics widget.
+
+[TASK 1: BAD HABITS UI OVERHAUL]
+
+File: artifacts/shadow-leveling/src/pages/BadHabits.tsx
+
+Action: Rewrite the UI to integrate the new Fracture engine.
+
+Card Logic: >     1. If a habit isFractured is true, apply the fractured-armor CSS class to the card wrapper and display the current lapseMultiplier (e.g., "DANGER: 3x PENALTY").
+2. If isFractured, render a dedicated "Repair Armor (250G)" button on the card. Clicking it calls the /repair endpoint.
+
+Logging Modal: When a user clicks to log an encounter, replace the old binary button with three distinct buttons:
+
+RESILIENT (Blue): Calls /relapse with resolution: "RESILIENT".
+
+STAGGERED (Orange): Calls /relapse with resolution: "STAGGERED".
+
+COLLAPSED (Red): Calls /relapse with resolution: "COLLAPSED".
+
+[TASK 2: FRACTURE ANALYTICS WIDGET]
+
+Action: Inside the Habit Card (or as a separate visual element in the BadHabits view), add a "Consistency Tracker".
+
+Logic: Display the totalExposures and calculate the Resilience Rate (resilientCount / totalExposures * 100). Render this as a small progress bar or percentage text (e.g., "Win Rate: 85% (17/20 Exposures)").
+
+Sovereign Reporting Protocol (REQUIRED):
+Upon completion, you MUST provide a report in the following format:
+
+NO SUMMARIES: Provide the raw, line-by-line source code for the modified logic.
+
+MARKDOWN HEADERS: Every file must begin with ### FILE: [Full/Path/To/File].
+
+RAW CODE BLOCKS: Wrap all code in triple-backtick blocks.
+
+THE CHUNK RULE: If the output exceeds 500 lines, stop and ask the user to say 'CONTINUE'.
+
+FINAL INVENTORY: End with a brief 'Inventory Check' confirming all files delivered.

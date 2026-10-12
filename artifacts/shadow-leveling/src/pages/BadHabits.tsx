@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldAlert, Plus, Trash2, Flame, Trophy, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, Flame, Trophy, AlertTriangle, CheckCircle2, XCircle, Shield, Zap, Skull, Wrench, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -33,14 +33,49 @@ import {
   useListBadHabits,
   useCreateBadHabit,
   useDeleteBadHabit,
-  useLogRelapse,
   useGetCorruptionConfig,
   getListBadHabitsQueryKey,
   getGetCharacterQueryKey,
+  customFetch,
   type BadHabit,
   type CorruptionConfig,
 } from "@workspace/api-client-react";
+
+type FractureResolution = "RESILIENT" | "STAGGERED" | "COLLAPSED";
+
+interface FractureBadHabit extends BadHabit {
+  isFractured?: boolean;
+  lapseMultiplier?: number;
+  totalExposures?: number;
+  resilientCount?: number;
+}
+
+interface ResolutionResult {
+  success: boolean;
+  resolution: FractureResolution;
+  xpDelta: number;
+  goldLoss: number;
+  discLoss: number;
+  corruptionDelta: number;
+  newCorruption: number;
+  newGold: number;
+  newDiscipline: number;
+  lapseMultiplier: number;
+  isFractured: boolean;
+}
+
+interface RepairResult {
+  success: boolean;
+  didRepair: boolean;
+  cost: number;
+  newGold: number;
+}
+
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { triggerShatter } from "@/lib/audio";
+import { triggerHapticThud, triggerHapticTick } from "@/lib/haptics";
+
+const REPAIR_COST = 250;
 
 const SEVERITY_CONFIG = {
   Low: { color: "text-amber-500", border: "border-amber-600/40", bg: "bg-amber-600/10", label: "Low", icon: "⚠️" },
@@ -65,88 +100,142 @@ const createHabitSchema = z.object({
 
 type CreateHabitFormValues = z.infer<typeof createHabitSchema>;
 
-function ConfirmRelapseDialog({
-  habit,
-  onConfirm,
-  isPending,
-  config,
+function ConsistencyTracker({
+  totalExposures,
+  resilientCount,
 }: {
-  habit: BadHabit;
-  onConfirm: () => void;
-  isPending: boolean;
-  config: CorruptionConfig | undefined;
+  totalExposures: number;
+  resilientCount: number;
 }) {
-  const [open, setOpen] = useState(false);
-  const cfg = SEVERITY_CONFIG[habit.severity as keyof typeof SEVERITY_CONFIG] ?? SEVERITY_CONFIG.Medium;
+  const winRate =
+    totalExposures > 0 ? Math.round((resilientCount / totalExposures) * 100) : 0;
+  const hasData = totalExposures > 0;
 
-  const sev = habit.severity as keyof CorruptionConfig["corruptionDelta"];
-  const corruptionPenalty = config?.corruptionDelta[sev] ?? { Low: 5, Medium: 15, High: 30 }[sev] ?? 15;
-  const xpPenalty = config?.xpPenalty[sev] ?? { Low: 20, Medium: 50, High: 100 }[sev] ?? 50;
+  const tierColor =
+    !hasData
+      ? "text-muted-foreground"
+      : winRate >= 80
+      ? "text-blue-300"
+      : winRate >= 50
+      ? "text-amber-300"
+      : "text-red-300";
+  const barColor =
+    !hasData
+      ? "bg-white/10"
+      : winRate >= 80
+      ? "bg-blue-400"
+      : winRate >= 50
+      ? "bg-amber-400"
+      : "bg-red-500";
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <div className="mb-4 rounded-md bg-white/3 border border-white/5 px-3 py-2">
+      <div className="flex justify-between items-center text-xs mb-1">
+        <span className="text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+          <Activity className="w-3.5 h-3.5 text-purple-400" />
+          Consistency
+        </span>
+        <span className={`font-stat font-bold ${tierColor}`}>
+          {hasData
+            ? `Win Rate: ${winRate}% (${resilientCount}/${totalExposures} Exposures)`
+            : "No exposures logged"}
+        </span>
+      </div>
+      <div className="relative h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div
+          className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${barColor}`}
+          style={{ width: `${hasData ? winRate : 0}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FractureControls({
+  habit,
+  onResolve,
+  onRepair,
+  isResolving,
+  isRepairing,
+  pendingResolution,
+  characterGold,
+}: {
+  habit: FractureBadHabit;
+  onResolve: (resolution: FractureResolution) => void;
+  onRepair: () => void;
+  isResolving: boolean;
+  isRepairing: boolean;
+  pendingResolution: FractureResolution | null;
+  characterGold: number;
+}) {
+  const lapseMultiplier = habit.lapseMultiplier ?? 1;
+  const isFractured = habit.isFractured ?? false;
+  const goldLoss = 50 * lapseMultiplier;
+  const discLoss = 1 * lapseMultiplier;
+  const canAffordRepair = characterGold >= REPAIR_COST;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
         <Button
-          variant="outline"
           size="sm"
-          className={`border ${cfg.border} ${cfg.color} hover:bg-red-500/10 text-xs font-bold tracking-widest`}
+          disabled={isResolving}
+          onClick={() => onResolve("RESILIENT")}
+          className="h-auto py-2 px-2 flex-col gap-0.5 bg-blue-700/30 hover:bg-blue-600/50 border border-blue-500/50 text-blue-200 font-bold tracking-widest text-[10px] disabled:opacity-50"
+          title="Faced the trigger and won. +25 XP."
         >
-          <XCircle className="w-3.5 h-3.5 mr-1" />
-          LOG RELAPSE
+          <Shield className="w-4 h-4 mb-0.5" />
+          <span>RESILIENT</span>
+          <span className="text-[9px] text-blue-300/80 font-stat">+25 XP</span>
+          {pendingResolution === "RESILIENT" && isResolving && (
+            <span className="text-[9px] text-blue-200">…</span>
+          )}
         </Button>
-      </DialogTrigger>
-      <DialogContent className="glass-panel border border-red-500/40 max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display text-red-400 tracking-widest text-lg">
-            RELAPSE CONFIRMATION
-          </DialogTitle>
-          <DialogDescription className="sr-only">Confirm logging a relapse for this habit</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <p className="text-sm text-muted-foreground">
-            You are about to log a relapse for:
-          </p>
-          <div className={`rounded-lg border px-4 py-3 ${cfg.border} ${cfg.bg}`}>
-            <p className={`font-bold text-base ${cfg.color}`}>{habit.name}</p>
-            <p className="text-xs text-muted-foreground">{habit.category} · {habit.severity} severity</p>
-          </div>
-          <div className="rounded-lg border border-red-900/40 bg-red-950/30 px-4 py-3 space-y-1">
-            <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-2">Consequences</p>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Corruption +</span>
-              <span className="font-bold text-red-400">+{corruptionPenalty}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">XP Penalty</span>
-              <span className="font-bold text-red-400">-{xpPenalty} XP</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Clean Streak</span>
-              <span className="font-bold text-red-400">RESET</span>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              className="flex-1 border border-white/10 text-muted-foreground"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold tracking-widest"
-              disabled={isPending}
-              onClick={() => {
-                onConfirm();
-                setOpen(false);
-              }}
-            >
-              {isPending ? "Logging..." : "CONFIRM RELAPSE"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+        <Button
+          size="sm"
+          disabled={isResolving}
+          onClick={() => onResolve("STAGGERED")}
+          className="h-auto py-2 px-2 flex-col gap-0.5 bg-orange-700/30 hover:bg-orange-600/50 border border-orange-500/50 text-orange-200 font-bold tracking-widest text-[10px] disabled:opacity-50"
+          title={`Slipped but contained. -${goldLoss}G / -${discLoss} DISC. Multiplier x3.`}
+        >
+          <Zap className="w-4 h-4 mb-0.5" />
+          <span>STAGGERED</span>
+          <span className="text-[9px] text-orange-300/80 font-stat">-{goldLoss}G ·-{discLoss}D</span>
+          {pendingResolution === "STAGGERED" && isResolving && (
+            <span className="text-[9px] text-orange-200">…</span>
+          )}
+        </Button>
+
+        <Button
+          size="sm"
+          disabled={isResolving}
+          onClick={() => onResolve("COLLAPSED")}
+          className="h-auto py-2 px-2 flex-col gap-0.5 bg-red-700/40 hover:bg-red-600/60 border border-red-500/60 text-red-100 font-bold tracking-widest text-[10px] disabled:opacity-50"
+          title={`Total relapse. Streak shattered. -${goldLoss}G / -${discLoss} DISC. Multiplier x3.`}
+        >
+          <Skull className="w-4 h-4 mb-0.5" />
+          <span>COLLAPSED</span>
+          <span className="text-[9px] text-red-300/80 font-stat">-{goldLoss}G ·STRK</span>
+          {pendingResolution === "COLLAPSED" && isResolving && (
+            <span className="text-[9px] text-red-200">…</span>
+          )}
+        </Button>
+      </div>
+
+      {isFractured && (
+        <Button
+          size="sm"
+          disabled={isRepairing || !canAffordRepair}
+          onClick={onRepair}
+          className="w-full h-9 bg-yellow-700/40 hover:bg-yellow-600/60 border border-yellow-500/60 text-yellow-100 font-bold tracking-widest text-xs disabled:opacity-50"
+          title={canAffordRepair ? `Reset multiplier to x1. Costs ${REPAIR_COST}G.` : `Need ${REPAIR_COST}G to repair.`}
+        >
+          <Wrench className="w-3.5 h-3.5 mr-2" />
+          {isRepairing ? "REPAIRING…" : `REPAIR ARMOR (${REPAIR_COST}G)`}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -269,11 +358,39 @@ function CreateHabitDialog({ onCreated, config }: { onCreated: () => void; confi
 export default function BadHabits() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: habits, isLoading } = useListBadHabits();
+  const { data: rawHabits, isLoading } = useListBadHabits();
+  const habits = rawHabits as FractureBadHabit[] | undefined;
   const { data: corruptionConfig } = useGetCorruptionConfig();
   const deleteMutation = useDeleteBadHabit();
-  const relapseMutation = useLogRelapse();
   const purificationDays = corruptionConfig?.purificationStreakDays ?? 3;
+
+  const character = queryClient.getQueryData<{ gold: number }>(getGetCharacterQueryKey());
+  const characterGold = character?.gold ?? 0;
+
+  const [pendingHabitId, setPendingHabitId] = useState<string | null>(null);
+  const [pendingResolution, setPendingResolution] = useState<FractureResolution | null>(null);
+  const [repairingHabitId, setRepairingHabitId] = useState<string | null>(null);
+
+  const resolveMutation = useMutation<
+    ResolutionResult,
+    Error,
+    { habitId: string; resolution: FractureResolution }
+  >({
+    mutationFn: ({ habitId, resolution }) =>
+      customFetch<ResolutionResult>(`/api/bad-habits/${habitId}/relapse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolution }),
+      }),
+  });
+
+  const repairMutation = useMutation<RepairResult, Error, { habitId: string }>({
+    mutationFn: ({ habitId }) =>
+      customFetch<RepairResult>(`/api/bad-habits/${habitId}/repair`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
+  });
 
   const activeHabits = habits?.filter((h) => h.isActive === 1) ?? [];
   const inactiveHabits = habits?.filter((h) => h.isActive === 0) ?? [];
@@ -282,21 +399,125 @@ export default function BadHabits() {
     queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
   };
 
-  const handleRelapse = (habit: BadHabit) => {
-    relapseMutation.mutate(
-      { id: habit.id },
+  const handleResolve = (habit: FractureBadHabit, resolution: FractureResolution) => {
+    setPendingHabitId(habit.id);
+    setPendingResolution(resolution);
+    resolveMutation.mutate(
+      { habitId: habit.id, resolution },
       {
         onSuccess: (res) => {
+          // Optimistic character cache write — push the authoritative server
+          // snapshot straight into the cache so the global Status panel
+          // (Gold, XP, Discipline, Corruption, Level) repaints THIS frame
+          // instead of waiting for the refetch round-trip.
+          queryClient.setQueryData(
+            getGetCharacterQueryKey(),
+            (old: Record<string, unknown> | undefined) =>
+              old
+                ? {
+                    ...old,
+                    gold: res.newGold,
+                    corruption: res.newCorruption,
+                    discipline: res.newDiscipline,
+                    level: res.newLevel,
+                    xp: res.newXp,
+                  }
+                : old,
+          );
+          queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
+
+          // Sensory ritual — shatter + haptic thud fire together so a streak
+          // collapse (or a fresh fracture transition) is felt and heard at once.
+          //   1. STAGGERED that flips isFractured from false -> true
+          //   2. COLLAPSED — always (a streak shatter is, by definition, a shatter)
+          const wasFractured = habit.isFractured ?? false;
+          const isNowFractured = res.isFractured;
+          const fractureTransition =
+            resolution === "STAGGERED" && !wasFractured && isNowFractured;
+          const isCollapsed = resolution === "COLLAPSED";
+          if (fractureTransition || isCollapsed) {
+            triggerShatter();
+            triggerHapticThud();
+          }
+
+          // Haptic sync — RESILIENT awards XP. The optimistic setQueryData
+          // above triggers the XP bar surge animation on the same frame,
+          // so the tick lands in lockstep with the bar's "surge & settle".
+          if (resolution === "RESILIENT") {
+            triggerHapticTick();
+          }
+
+          if (resolution === "RESILIENT") {
+            toast({
+              title: "RESILIENT — TRIGGER OVERCOME",
+              description: `+${res.xpDelta} XP. The shadow weakens.`,
+              className: "border-blue-700 bg-blue-950/80 text-blue-200",
+            });
+          } else if (resolution === "STAGGERED") {
+            toast({
+              title: "STAGGERED — ARMOR FRACTURED",
+              description: `-${res.goldLoss}G · -${res.discLoss} DISC · Multiplier now x${res.lapseMultiplier}.`,
+              className: "border-orange-700 bg-orange-950/80 text-orange-200",
+            });
+          } else {
+            toast({
+              title: "COLLAPSED — STREAK SHATTERED",
+              description: `-${res.goldLoss}G · -${res.discLoss} DISC · Streak reset · Multiplier now x${res.lapseMultiplier}.`,
+              className: "border-red-700 bg-red-950/80 text-red-200",
+            });
+          }
+        },
+        onError: (err) => {
+          toast({ title: "Error", description: err.message || "Failed to log resolution.", variant: "destructive" });
+        },
+        onSettled: () => {
+          setPendingHabitId(null);
+          setPendingResolution(null);
+        },
+      }
+    );
+  };
+
+  const handleRepair = (habit: FractureBadHabit) => {
+    setRepairingHabitId(habit.id);
+    repairMutation.mutate(
+      { habitId: habit.id },
+      {
+        onSuccess: (res) => {
+          // Optimistic character cache write — mirror the relapse path so
+          // the Gold counter drops the instant the response lands instead of
+          // waiting for the refetch round-trip. /repair now returns a full
+          // character snapshot (newGold/newCorruption/newDiscipline/newLevel/
+          // newXp); only gold actually mutates server-side, but we splat the
+          // whole snapshot to keep cache identical to the authoritative row.
+          queryClient.setQueryData(
+            getGetCharacterQueryKey(),
+            (old: Record<string, unknown> | undefined) =>
+              old
+                ? {
+                    ...old,
+                    gold: res.newGold,
+                    corruption: res.newCorruption,
+                    discipline: res.newDiscipline,
+                    level: res.newLevel,
+                    xp: res.newXp,
+                  }
+                : old,
+          );
           queryClient.invalidateQueries({ queryKey: getListBadHabitsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey() });
           toast({
-            title: "RELAPSE LOGGED",
-            description: `Corruption +${res.corruptionDelta} | XP -${res.xpPenalty} | New Corruption: ${res.newCorruption}/100`,
-            className: "border-red-700 bg-red-950/80 text-red-200",
+            title: "ARMOR REPAIRED",
+            description: `-${res.cost}G. Multiplier reset to x1.`,
+            className: "border-yellow-600 bg-yellow-950/80 text-yellow-100",
           });
         },
-        onError: () => {
-          toast({ title: "Error", description: "Failed to log relapse.", variant: "destructive" });
+        onError: (err) => {
+          toast({ title: "Repair Failed", description: err.message || "Could not repair armor.", variant: "destructive" });
+        },
+        onSettled: () => {
+          setRepairingHabitId(null);
         },
       }
     );
@@ -393,6 +614,104 @@ export default function BadHabits() {
               {activeHabits.map((habit, i) => {
                 const cfg = SEVERITY_CONFIG[habit.severity as keyof typeof SEVERITY_CONFIG] ?? SEVERITY_CONFIG.Medium;
                 const streakPercent = Math.min(100, (habit.cleanStreak / purificationDays) * 100);
+                const isFractured = habit.isFractured ?? false;
+                const lapseMultiplier = habit.lapseMultiplier ?? 1;
+                const isThisHabitResolving = pendingHabitId === habit.id && resolveMutation.isPending;
+                const isThisHabitRepairing = repairingHabitId === habit.id && repairMutation.isPending;
+
+                const totalExposures = habit.totalExposures ?? 0;
+                const resilientCount = habit.resilientCount ?? 0;
+                const winRate =
+                  totalExposures > 0
+                    ? Math.round((resilientCount / totalExposures) * 100)
+                    : null;
+                // Strict tier boundaries (per Sovereign spec):
+                //   S-RANK  (Blue):  winRate >= 80 AND !isFractured
+                //   MID-TIER (Amber): winRate >= 50 && winRate < 80 AND !isFractured
+                //   CRITICAL (Red):  winRate < 50 OR isFractured
+                //   null:            no exposures logged AND not fractured
+                const effectiveTier: "blue" | "amber" | "red" | null =
+                  isFractured
+                    ? "red"
+                    : winRate === null
+                    ? null
+                    : winRate >= 80
+                    ? "blue"
+                    : winRate >= 50
+                    ? "amber"
+                    : "red";
+
+                const TIER_THEME = {
+                  blue: {
+                    text: "text-blue-300",
+                    iconStroke: "rgb(96,165,250)",
+                    stripe: "rgba(96,165,250,0.85)",
+                    border: "border-blue-500",
+                    glowLow: "rgba(96,165,250,0.30)",
+                    glowHigh: "rgba(96,165,250,0.65)",
+                    borderLow: "rgba(96,165,250,0.55)",
+                    borderHigh: "rgba(147,197,253,1)",
+                  },
+                  amber: {
+                    text: "text-amber-300",
+                    iconStroke: "rgb(251,191,36)",
+                    stripe: "rgba(251,191,36,0.85)",
+                    border: "border-amber-500",
+                    glowLow: "rgba(251,191,36,0.30)",
+                    glowHigh: "rgba(251,191,36,0.65)",
+                    borderLow: "rgba(251,191,36,0.55)",
+                    borderHigh: "rgba(252,211,77,1)",
+                  },
+                  red: {
+                    text: "text-red-300",
+                    iconStroke: "rgb(239,68,68)",
+                    stripe: "rgba(239,68,68,0.85)",
+                    border: "border-red-500",
+                    glowLow: "rgba(239,68,68,0.35)",
+                    glowHigh: "rgba(239,68,68,0.65)",
+                    borderLow: "rgba(239,68,68,0.55)",
+                    borderHigh: "rgba(248,113,113,1)",
+                  },
+                } as const;
+
+                const tierTheme = effectiveTier ? TIER_THEME[effectiveTier] : null;
+
+                const nameColorClass = tierTheme?.text ?? cfg.color;
+                const stripeBg =
+                  tierTheme?.stripe ??
+                  (habit.severity === "High"
+                    ? "rgba(239,68,68,0.5)"
+                    : habit.severity === "Medium"
+                    ? "rgba(249,115,22,0.5)"
+                    : "rgba(234,179,8,0.5)");
+                const borderClass =
+                  tierTheme?.border ?? cfg.border;
+
+                // Animation:
+                //   - With a tier color: tier-pulse (or tier-pulse-emergency when fractured)
+                //   - No tier and not fractured: no animation
+                //   - Fractured but no tier vars: fall back to legacy fractured-armor red pulse
+                const animationClass = tierTheme
+                  ? isFractured
+                    ? "tier-pulse-emergency"
+                    : "tier-pulse"
+                  : isFractured
+                  ? "fractured-armor"
+                  : "";
+
+                const cardStyle: React.CSSProperties & Record<string, string | undefined> = {
+                  transition:
+                    "color 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease, background-color 0.7s ease",
+                };
+                if (tierTheme) {
+                  cardStyle["--tier-glow-low"] = tierTheme.glowLow;
+                  cardStyle["--tier-glow-high"] = tierTheme.glowHigh;
+                  cardStyle["--tier-border-low"] = tierTheme.borderLow;
+                  cardStyle["--tier-border-high"] = tierTheme.borderHigh;
+                }
+                if (!animationClass && habit.severity === "High") {
+                  cardStyle.boxShadow = "0 0 20px rgba(239,68,68,0.1)";
+                }
 
                 return (
                   <motion.div
@@ -403,22 +722,45 @@ export default function BadHabits() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Card
-                      className={`glass-panel border ${cfg.border} relative overflow-hidden`}
-                      style={{ boxShadow: habit.severity === "High" ? "0 0 20px rgba(239,68,68,0.1)" : undefined }}
+                      className={`glass-panel relative overflow-hidden border transition-all duration-700 ${animationClass} ${borderClass}`}
+                      style={cardStyle}
                     >
-                      <div className={`absolute top-0 left-0 w-1 h-full ${cfg.bg}`} style={{ background: habit.severity === "High" ? "rgba(239,68,68,0.5)" : habit.severity === "Medium" ? "rgba(249,115,22,0.5)" : "rgba(234,179,8,0.5)" }} />
+                      <div
+                        className="absolute top-0 left-0 w-1 h-full transition-all duration-700"
+                        style={{ background: stripeBg }}
+                      />
                       <CardContent className="p-5 pl-6">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg select-none">{cfg.icon}</span>
-                              <h3 className={`font-bold text-lg leading-tight truncate ${cfg.color}`}>{habit.name}</h3>
+                              <span
+                                className="text-lg select-none transition-all duration-700"
+                                style={{
+                                  color: tierTheme?.iconStroke,
+                                  opacity: tierTheme ? 0.5 : 1,
+                                }}
+                              >
+                                {cfg.icon}
+                              </span>
+                              <h3 className={`font-bold text-lg leading-tight truncate transition-colors duration-700 ${nameColorClass}`}>{habit.name}</h3>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className={`text-xs ${cfg.border} ${cfg.color} bg-transparent`}>
                                 {habit.severity}
                               </Badge>
                               <span className="text-xs text-muted-foreground">{habit.category}</span>
+                              {isFractured && (
+                                <Badge
+                                  className="text-[10px] tracking-widest border animate-pulse transition-colors duration-700"
+                                  style={{
+                                    color: tierTheme?.iconStroke,
+                                    borderColor: tierTheme?.borderHigh,
+                                    backgroundColor: tierTheme?.glowLow,
+                                  }}
+                                >
+                                  FRACTURED · x{lapseMultiplier}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                           <Button
@@ -457,17 +799,34 @@ export default function BadHabits() {
                           </div>
                           <div className="relative h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div
-                              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${habit.cleanStreak >= purificationDays ? "bg-green-400" : "bg-purple-500"}`}
-                              style={{ width: `${streakPercent}%` }}
+                              className="absolute top-0 left-0 h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${streakPercent}%`,
+                                backgroundColor:
+                                  habit.cleanStreak >= purificationDays
+                                    ? "rgb(74,222,128)"
+                                    : tierTheme?.iconStroke ?? "rgb(168,85,247)",
+                                boxShadow: tierTheme
+                                  ? `0 0 8px ${tierTheme.glowHigh}`
+                                  : undefined,
+                              }}
                             />
                           </div>
                         </div>
 
-                        <ConfirmRelapseDialog
+                        <ConsistencyTracker
+                          totalExposures={habit.totalExposures ?? 0}
+                          resilientCount={habit.resilientCount ?? 0}
+                        />
+
+                        <FractureControls
                           habit={habit}
-                          onConfirm={() => handleRelapse(habit)}
-                          isPending={relapseMutation.isPending}
-                          config={corruptionConfig}
+                          onResolve={(r) => handleResolve(habit, r)}
+                          onRepair={() => handleRepair(habit)}
+                          isResolving={isThisHabitResolving}
+                          isRepairing={isThisHabitRepairing}
+                          pendingResolution={isThisHabitResolving ? pendingResolution : null}
+                          characterGold={characterGold}
                         />
                       </CardContent>
                     </Card>

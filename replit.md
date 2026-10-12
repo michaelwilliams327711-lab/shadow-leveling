@@ -160,3 +160,9 @@ Equivalently: `XP_PER_LEVEL(n) = (2n - 1) × 10`
 - **CORS**: `process.exit(1)` if `CORS_ORIGIN` missing or `*` in production
 - **DB Integrity**: `characterId` required in all `quest_log` and `penalty_log` inserts
 - **Concurrency**: All XP/gold/stat mutations wrapped in transactions with `.for("update")` row locks
+
+## Quest Templates (Shadow Leveling)
+
+- **Storage** (`shadow-leveling/src/lib/questTemplates.ts`): localStorage-backed CRUD under key `shadow-leveling.quest-templates.v1`. Templates carry `id, label, title, description, category, difficulty, durationMinutes, statBoost, createdAt, usageCount`. Helpers: `loadQuestTemplates`, `saveQuestTemplate`, `deleteQuestTemplate`, `incrementTemplateUsage`, `getTopTemplates(n)`, `getTemplateBaseRewards`. Defensive `parseTemplate` drops malformed entries; `safeStorage()` no-ops in SSR / private mode.
+- **Quests page** (`shadow-leveling/src/pages/Quests.tsx`): Book-icon `DropdownMenu` next to ADD QUEST opens a list of every saved template; selecting one calls `onSummonTemplate` (pre-fills `createForm`) then opens the create dialog. "Save as Template" form sits under the Submit Mission button.
+- **Dashboard** (`shadow-leveling/src/pages/Dashboard.tsx`): Top 3 most-used templates render below `<StatRadar/>` as a 3-column "Quick Summon" rune grid. Click → `useCreateQuest.mutate(...)` with `deadline:null, recurrence:null`, then `incrementTemplateUsage` + cache injection into both `getListQuestsWindowedQueryKey()` and `getListQuestsQueryKey()`. `pendingTemplateId` serializes spawns; `storage` event keeps the list live across tabs.

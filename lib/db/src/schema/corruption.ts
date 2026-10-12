@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { characterTable } from "./character";
@@ -16,6 +16,10 @@ export const badHabitsTable = pgTable("bad_habits", {
   currentStreak: integer("current_streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),
   lastCleanDate: text("last_clean_date"),
+  isFractured: boolean("is_fractured").notNull().default(false),
+  lapseMultiplier: integer("lapse_multiplier").notNull().default(1),
+  totalExposures: integer("total_exposures").notNull().default(0),
+  resilientCount: integer("resilient_count").notNull().default(0),
 }, (table) => [
   index("bad_habits_deleted_at_idx").on(table.deletedAt),
   index("bad_habits_character_id_idx").on(table.characterId),
