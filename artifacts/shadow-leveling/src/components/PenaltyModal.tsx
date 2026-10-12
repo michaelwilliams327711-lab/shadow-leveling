@@ -22,11 +22,14 @@ export function PenaltyModal({ penalties, onDismiss }: PenaltyModalProps) {
   const totalGold = penalties.reduce((sum, p) => sum + p.goldDeducted, 0);
 
   return (
-    <Dialog open onOpenChange={() => {}}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onDismiss();
+      }}
+    >
       <DialogContent
-        className="max-w-lg border-2 border-destructive/60 bg-[#0d0608] shadow-[0_0_60px_rgba(220,38,38,0.3)] [&>button]:hidden"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain border-2 border-destructive/60 bg-[#0d0608] p-4 shadow-[0_0_60px_rgba(220,38,38,0.3)] sm:p-6"
       >
         <DialogHeader className="text-center pb-2 border-b border-destructive/30">
           <div className="flex justify-center mb-3">
