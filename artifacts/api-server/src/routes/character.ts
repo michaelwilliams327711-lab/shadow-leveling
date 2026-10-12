@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { characterTable, activityTable, penaltyLogTable, questLogTable } from "@workspace/db";
+import { characterTable, activityTable, penaltyLogTable, questLogTable, INITIAL_CHARACTER_STATS } from "@workspace/db";
 import { eq, sql, gte } from "drizzle-orm";
 import {
   GetCharacterResponse,
@@ -29,7 +29,9 @@ export async function getOrCreateCharacter(): Promise<CharacterRow> {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
     const rows = await tx.select().from(characterTable).limit(1);
     if (rows.length > 0) return rows[0];
-    const [created] = await tx.insert(characterTable).values({ name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" }).returning();
+    const [created] = await tx.insert(characterTable)
+      .values({ ...INITIAL_CHARACTER_STATS, name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" })
+      .returning();
     return created;
   });
   return char;
@@ -118,7 +120,7 @@ router.post("/character/reset", async (req, res) => {
       await tx.delete(characterTable);
       const [created] = await tx
         .insert(characterTable)
-        .values({ name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" })
+        .values({ ...INITIAL_CHARACTER_STATS, name: "Hunter", vocationId: "TECH_MONARCH", virtueCategory: "INTEGRITY" })
         .returning();
       return created;
     });
@@ -335,7 +337,9 @@ router.post("/character/login", async (req, res) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_ID})`);
       const rows = await tx.select().from(characterTable).limit(1).for("update");
       if (!rows.length) {
-        const [created] = await tx.insert(characterTable).values({ name: "Hunter" }).returning();
+        const [created] = await tx.insert(characterTable)
+          .values({ ...INITIAL_CHARACTER_STATS, name: "Hunter" })
+          .returning();
         return { updatedChar: created, penalties: [] } as LoginResult;
       }
       const char = rows[0];

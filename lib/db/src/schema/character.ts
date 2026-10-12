@@ -2,6 +2,14 @@ import { pgTable, serial, text, integer, real, timestamp, boolean } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const INITIAL_CHARACTER_STATS = {
+  strength: 0,
+  spirit: 0,
+  intellect: 0,
+  endurance: 0,
+  discipline: 0,
+} as const;
+
 export const characterTable = pgTable("character", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default("Hunter"),
@@ -10,11 +18,11 @@ export const characterTable = pgTable("character", {
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   gold: integer("gold").notNull().default(0),
-  strength: integer("strength").notNull().default(10),
-  spirit: integer("spirit").notNull().default(10),
-  intellect: integer("intellect").notNull().default(10),
-  endurance: integer("endurance").notNull().default(10),
-  discipline: integer("discipline").notNull().default(10),
+  strength: integer("strength").notNull().default(INITIAL_CHARACTER_STATS.strength),
+  spirit: integer("spirit").notNull().default(INITIAL_CHARACTER_STATS.spirit),
+  intellect: integer("intellect").notNull().default(INITIAL_CHARACTER_STATS.intellect),
+  endurance: integer("endurance").notNull().default(INITIAL_CHARACTER_STATS.endurance),
+  discipline: integer("discipline").notNull().default(INITIAL_CHARACTER_STATS.discipline),
   streak: integer("streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),
   multiplier: real("multiplier").notNull().default(1.0),

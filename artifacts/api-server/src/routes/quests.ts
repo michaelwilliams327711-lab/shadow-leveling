@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable, shadowJournalTable } from "@workspace/db";
+import { questsTable, questLogTable, characterTable, penaltyLogTable, questDailyLogTable, bossesTable, bossDamageLogTable, shadowArmyTable, shadowJournalTable, INITIAL_CHARACTER_STATS } from "@workspace/db";
 import { eq, and, isNotNull, isNull, lt, lte, or, gte, inArray, sql, asc, desc } from "drizzle-orm";
 import { CATEGORY_STAT_MAP, processLevelUp, getStreakStatMultiplier, RANK_BASE_REWARDS, DURATION_BONUS_PER_MINUTE, XP_PENALTY_RATIO, GOLD_PENALTY_RATIO, XP_PER_LEVEL, getSystemDate, getSystemDateFromReq } from "@workspace/shared";
 import { strictLimiter } from "../lib/rate-limiters.js";
@@ -217,7 +217,7 @@ export async function processOverdueQuestsLogic(localDate?: string): Promise<Pro
     const chars = await tx.select().from(characterTable).limit(1).for("update");
     const char = chars.length > 0
       ? chars[0]
-      : (await tx.insert(characterTable).values({ name: "Hunter" }).returning())[0];
+      : (await tx.insert(characterTable).values({ ...INITIAL_CHARACTER_STATS, name: "Hunter" }).returning())[0];
 
     if (overdueQuests.length === 0) {
       await tx
