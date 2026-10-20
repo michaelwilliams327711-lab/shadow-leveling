@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -697,15 +698,19 @@ export default function BossArena() {
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter className="mt-6">
-                          <Button variant="outline" className="border-white/20">RETREAT</Button>
-                          <Button 
-                            variant="destructive" 
-                            className="bg-destructive hover:bg-destructive/90 text-white font-bold tracking-widest"
-                            onClick={() => handleChallenge(boss.id)}
-                            disabled={challengeBoss.isPending}
-                          >
-                            {challengeBoss.isPending ? "FIGHTING..." : "ENTER DUNGEON"}
-                          </Button>
+                          <DialogClose asChild>
+                            <Button variant="outline" className="border-white/20">RETREAT</Button>
+                          </DialogClose>
+                          <DialogClose asChild>
+                            <Button 
+                              variant="destructive" 
+                              className="bg-destructive hover:bg-destructive/90 text-white font-bold tracking-widest"
+                              onClick={() => handleChallenge(boss.id)}
+                              disabled={challengeBoss.isPending}
+                            >
+                              {challengeBoss.isPending ? "FIGHTING..." : "ENTER DUNGEON"}
+                            </Button>
+                          </DialogClose>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>

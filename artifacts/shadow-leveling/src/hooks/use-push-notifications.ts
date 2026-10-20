@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
+import { customFetch } from "@workspace/api-client-react";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 async function getVapidPublicKey(): Promise<string> {
-  const res = await fetch(`${BASE}/api/push/vapid-public-key`);
-  const data = await res.json() as { publicKey: string };
+  const data = await customFetch<{ publicKey: string }>(`${BASE}/api/push/vapid-public-key`);
   return data.publicKey;
 }
 
@@ -68,7 +68,7 @@ export function usePushNotifications() {
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
 
-      await fetch(`${BASE}/api/push/subscribe`, {
+      await customFetch(`${BASE}/api/push/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ export function usePushNotifications() {
     if (!subscription) return;
     setLoading(true);
     try {
-      await fetch(`${BASE}/api/push/subscribe`, {
+      await customFetch(`${BASE}/api/push/subscribe`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: subscription.endpoint }),
@@ -114,7 +114,7 @@ export function usePushNotifications() {
     const merged = { ...settings, ...newSettings };
     setSettings(merged);
     if (subscription) {
-      await fetch(`${BASE}/api/push/subscribe`, {
+      await customFetch(`${BASE}/api/push/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,7 +132,7 @@ export function usePushNotifications() {
 
   const sendTest = useCallback(async () => {
     if (!subscription) return;
-    await fetch(`${BASE}/api/push/test`, {
+    await customFetch(`${BASE}/api/push/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint: subscription.endpoint }),

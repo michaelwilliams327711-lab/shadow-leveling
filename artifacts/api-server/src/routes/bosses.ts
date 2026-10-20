@@ -229,7 +229,7 @@ router.post("/bosses/:id/challenge", strictLimiter, async (req, res) => {
       const bossResult = await tx.update(bossesTable)
         .set(
           victory
-            ? { isDefeated: true, defeatRecordedAt: new Date() }
+            ? { isDefeated: true, currentHp: 0, defeatRecordedAt: new Date() }
             : { failureRecordedAt: new Date() }
         )
         .where(bossUpdateWhere)
