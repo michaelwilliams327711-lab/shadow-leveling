@@ -163,6 +163,8 @@ function OrderCard({ order, onComplete, onDelete, isCompletingId, isDeletingId }
       <button
         onClick={() => !order.completed && onComplete(order.id)}
         disabled={order.completed || isCompleting}
+        aria-label={order.completed ? `${order.name} completed` : `Complete ${order.name}`}
+        data-testid={`complete-daily-order-${order.id}`}
         className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
           order.completed
             ? "bg-purple-600/30 text-purple-400 cursor-default"
@@ -193,7 +195,10 @@ function OrderCard({ order, onComplete, onDelete, isCompletingId, isDeletingId }
         <button
           onClick={() => onDelete(order.id)}
           disabled={isDeleting}
-          className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded cursor-pointer"
+          aria-label={`Delete ${order.name}`}
+          title={`Delete ${order.name}`}
+          data-testid={`delete-daily-order-${order.id}`}
+          className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 rounded cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -238,6 +243,7 @@ export function DailyOrders() {
         onSuccess: () => {
           setInputValue("");
           queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
           inputRef.current?.focus();
         },
         onError: () => {
@@ -320,6 +326,7 @@ export function DailyOrders() {
         onSuccess: () => {
           setIsDeletingId(null);
           queryClient.invalidateQueries({ queryKey: getDailyOrdersTodayQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getPlannerDailyQueryKey() });
         },
         onError: () => {
           setIsDeletingId(null);
@@ -376,6 +383,8 @@ export function DailyOrders() {
             <select
               value={selectedStat}
               onChange={(e) => setSelectedStat(e.target.value as StatKey)}
+              aria-label="Stat reward"
+              data-testid="daily-order-stat"
               className="h-9 px-2 rounded-md text-xs font-semibold bg-black/40 border border-purple-500/30 focus:border-purple-400 focus:outline-none text-white cursor-pointer appearance-none min-w-[110px]"
               style={{
                 color: STAT_META[selectedStat].color,
@@ -392,6 +401,8 @@ export function DailyOrders() {
               size="sm"
               onClick={handleCreate}
               disabled={!inputValue.trim() || createMutation.isPending}
+              aria-label="Add daily order"
+              data-testid="add-daily-order"
               className="h-9 px-3 bg-purple-700/60 hover:bg-purple-600/70 border border-purple-500/40 text-white flex-shrink-0"
             >
               <Plus className="w-4 h-4" />

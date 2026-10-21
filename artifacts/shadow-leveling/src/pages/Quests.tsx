@@ -33,7 +33,7 @@ import type { RecurrenceConfig } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Sparkles, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins, Gem } from "lucide-react";
+import { ScrollText, Clock, Trophy, Plus, CheckCircle2, XCircle, Pencil, Trash2, Zap, Sparkles, Dumbbell, Shield, Brain, Target, ChevronsUpDown, Check, RotateCcw, Pause, Play, ChevronDown, CalendarIcon, type LucideIcon, Calendar, CalendarDays, LayoutGrid, TrendingUp, Sword, ChevronLeft, ChevronRight, Circle, AlertCircle, Skull, Star, Flame, BarChart2, Coins, Gem, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +93,7 @@ import { CATEGORY_STAT_MAP, STAT_META, RANK_BASE_REWARDS, DURATION_BONUS_PER_MIN
 import { SYSTEM_INTEL } from "@/lib/systemLore";
 import { AwakeningOverlay } from "@/components/AwakeningOverlay";
 import { QuestCompleteEffect } from "@/components/QuestCompleteEffect";
+import { DailyOrders } from "@/components/DailyOrders";
 import { RankUpNotification } from "@/components/RankUpNotification";
 import { GateFragmentDropAnimation } from "@/components/GateFragmentDropAnimation";
 import { playQuestComplete, playSystemWarning } from "@/lib/sounds";
@@ -1410,13 +1411,14 @@ function ChronicleSection() {
   );
 }
 
-type PageTab = "daily" | "weekly" | "monthly" | "yearly" | "questlog";
+type PageTab = "daily" | "weekly" | "monthly" | "yearly" | "orders" | "questlog";
 
 const ALL_TABS: { key: PageTab; label: string; icon: typeof Calendar }[] = [
   { key: "daily", label: "Daily", icon: Calendar },
   { key: "weekly", label: "Weekly", icon: CalendarDays },
   { key: "monthly", label: "Monthly", icon: LayoutGrid },
   { key: "yearly", label: "Yearly", icon: TrendingUp },
+  { key: "orders", label: "Daily Orders", icon: Package },
   { key: "questlog", label: "Quest Log", icon: ScrollText },
 ];
 
@@ -1943,6 +1945,10 @@ export default function Quests() {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
+            type="button"
+            title={label}
+            aria-label={`Show ${label}`}
+            data-testid={`quests-tab-${key}`}
             className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-bold tracking-widest transition-all ${
               activeTab === key
                 ? "bg-primary/20 text-primary border border-primary/40 shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]"
@@ -1970,6 +1976,12 @@ export default function Quests() {
           <div className="border-t border-white/10 pt-8">
             <ChronicleSection />
           </div>
+        </div>
+      )}
+
+      {activeTab === "orders" && (
+        <div className="max-w-3xl mx-auto">
+          <DailyOrders />
         </div>
       )}
 
