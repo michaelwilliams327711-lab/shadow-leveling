@@ -1,0 +1,1 @@
+- [PostgreSQL test isolation](postgresql-test-isolation.md) — A configured `search_path` did not isolate the app's database writes; verify a separate test database.
