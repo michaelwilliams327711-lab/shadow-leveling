@@ -60,7 +60,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 VAPID_PUBLIC_KEY = "BPqBrlyWCjJLeoQO2rPsr0bamWWbzo588tk-42ORNF-Dk861JYoBYcPVp-MRxrKaqdT-oqSxzRU995NbTSt0Ark"
-VAPID_PRIVATE_KEY = "zYybn5a3Nuul0MsgKyn-myC6ofHTlBk9RCsUvGDHapk"
 VAPID_SUBJECT = "mailto:admin@shadow-leveling.app"
 
 [[ports]]

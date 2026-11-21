@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type SVGProps } from "react";
 import {
   Radar,
   RadarChart,
@@ -34,7 +34,7 @@ function ColoredTick({
   x: number;
   y: number;
   payload: { value: string };
-  textAnchor: string;
+  textAnchor: NonNullable<SVGProps<SVGTextElement>["textAnchor"]>;
 }) {
   const entry = DOMAIN_POINTS.find((p) => p.subject === payload.value);
   const color = entry?.color ?? "#e2e8f0";

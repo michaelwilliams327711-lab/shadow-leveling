@@ -1,11 +1,10 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
-import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsTable, penaltyLogTable } from "@workspace/db";
+import { dailyOrdersTable, questLogTable, characterTable, dailyHiddenBoxRewardsTable } from "@workspace/db";
 import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 import { getOrCreateCharacter, XP_PER_LEVEL, upsertActivity, getLocalDateStr, invalidateCharacterCache } from "./character.js";
 import { processLevelUp } from "@workspace/shared";
 import { getActiveRngEvent } from "./rng.js";
-import { applyViceRetaliation } from "../lib/celestialPower.js";
 
 type CharacterRow = Awaited<ReturnType<typeof getOrCreateCharacter>>;
 
@@ -429,86 +428,25 @@ router.post("/daily-orders/expire-stale", async (req, res) => {
       return res.json({ success: true, expiredCount: 0, xpDeducted: 0 });
     }
 
-    const statDeductions: Record<string, number> = {
-      strength: 0,
-      spirit: 0,
-      endurance: 0,
-      intellect: 0,
-      discipline: 0,
-    };
-
-    for (const order of staleOrders) {
-      const stat = isValidStatField(order.statCategory) ? order.statCategory : "discipline";
-      statDeductions[stat] = (statDeductions[stat] ?? 0) + DAILY_ORDER_STAT_GAIN;
-    }
-
-    const totalXpDeducted = staleOrders.length * E_RANK_XP;
     const staleIds = staleOrders.map((o) => o.id);
 
-    await db.transaction(async (tx) => {
-      const deleted = await tx
+    const expired = await db.transaction(async (tx) => {
+      const markedExpired = await tx
         .update(dailyOrdersTable)
         .set({ deletedAt: new Date() })
         .where(
           and(
             eq(dailyOrdersTable.characterId, char.id),
             inArray(dailyOrdersTable.id, staleIds),
+            eq(dailyOrdersTable.completed, false),
             isNull(dailyOrdersTable.deletedAt)
           )
         )
         .returning({ id: dailyOrdersTable.id });
-
-      if (deleted.length === 0) return;
-
-      // F-007: Use GREATEST(1, ...) — stats must never fall to 0.
-      // All other penalty handlers (quests fail/overdue) use the same floor of 1.
-      await tx
-        .update(characterTable)
-        .set({
-          xp:         sql`GREATEST(0, ${characterTable.xp}         - ${totalXpDeducted})`,
-          strength:   sql`GREATEST(1, ${characterTable.strength}   - ${statDeductions.strength})`,
-          spirit:     sql`GREATEST(1, ${characterTable.spirit}     - ${statDeductions.spirit})`,
-          endurance:  sql`GREATEST(1, ${characterTable.endurance}  - ${statDeductions.endurance})`,
-          intellect:  sql`GREATEST(1, ${characterTable.intellect}  - ${statDeductions.intellect})`,
-          discipline: sql`GREATEST(1, ${characterTable.discipline} - ${statDeductions.discipline})`,
-        })
-        .where(eq(characterTable.id, char.id));
+      return markedExpired.length;
     });
 
-    invalidateCharacterCache();
-
-    // Vice Retaliation (P-ascension): each expired order with a virtueCategory
-    // increases the corresponding domain's viceScore by +10.
-    for (const order of staleOrders) {
-      if (order.virtueCategory) {
-        await applyViceRetaliation(char.id, order.virtueCategory);
-      }
-    }
-
-    const questLogEntries = staleOrders.map((order) => ({
-      characterId: char.id,
-      questName: `Daily Order: ${order.name}`,
-      category: "Daily",
-      difficulty: "E",
-      outcome: "failed",
-      xpChange: -E_RANK_XP,
-      goldChange: 0,
-      multiplierApplied: 1.0,
-      actionType: "FAILED",
-      statCategory: isValidStatField(order.statCategory) ? order.statCategory : "discipline",
-    }));
-
-    await db.insert(questLogTable).values(questLogEntries);
-
-    await db.insert(penaltyLogTable).values({
-      characterId: char.id,
-      type: "daily_order_expired",
-      description: `${staleOrders.length} uncompleted daily order(s) expired`,
-      xpDeducted: totalXpDeducted,
-      goldDeducted: 0,
-    });
-
-    res.json({ success: true, expiredCount: staleOrders.length, xpDeducted: totalXpDeducted });
+    res.json({ success: true, expiredCount: expired, xpDeducted: 0 });
   } catch (err) {
     req.log.error({ err }, "Error expiring stale daily orders");
     res.status(500).json({ error: "Internal server error" });

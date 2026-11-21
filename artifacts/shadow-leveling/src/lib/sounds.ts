@@ -168,31 +168,27 @@ export function playSystemWarning() {
   if (!ctx) return;
   const now = ctx.currentTime;
 
-  const pitchFactor = 1.2;
-  const freqs = [523.25, 659.25, 783.99, 1046.5].map(f => f * pitchFactor);
-  freqs.forEach((freq, i) => {
-
   const pulses: [number, number][] = [
     [880, now],
     [660, now + 0.18],
     [880, now + 0.36],
     [440, now + 0.54],
   ];
-  pulses.forEach(([freq, t]) => {
-
+  pulses.forEach(([freq, time]) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, now + i * 0.1);
-    gain.gain.setValueAtTime(0, now + i * 0.1);
-    gain.gain.linearRampToValueAtTime(0.18, now + i * 0.1 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
-    osc.start(now + i * 0.1);
-    osc.stop(now + i * 0.1 + 0.45);
+    osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.18, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    osc.start(time);
+    osc.stop(time + 0.18);
   });
+
   const oscGlitch = ctx.createOscillator();
   const gainGlitch = ctx.createGain();
   oscGlitch.connect(gainGlitch);
@@ -204,16 +200,6 @@ export function playSystemWarning() {
   gainGlitch.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
   oscGlitch.start(now + 0.5);
   oscGlitch.stop(now + 0.95);
-
-    osc.type = "square";
-    osc.frequency.setValueAtTime(freq, t);
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.14, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-    osc.start(t);
-    osc.stop(t + 0.18);
-  });
-
 }
 
 export function playRankUp() {
