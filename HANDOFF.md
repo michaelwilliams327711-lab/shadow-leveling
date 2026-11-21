@@ -1,17 +1,13 @@
 # Handoff
 
 ## Last Completed Action
-- Removed the tracked VAPID private-key assignment; changed stale Daily Orders to soft-expire without penalties or failure logs; fixed `playSystemWarning` oscillator timing/scope and `StatRadar` SVG anchor typing; restarted and verified the API server on port 8080.
+- Re-verified the five requested fixes: `.replit` has no VAPID private-key assignment, expired Daily Orders are soft-hidden without penalties/logs, the sound and SVG typing fixes remain present, and the API has one listener on port 8080 with a healthy endpoint. No application source files changed this turn.
 
 ## File Inventory
-- `/home/runner/workspace/.replit` (modified)
-- `/home/runner/workspace/artifacts/api-server/src/routes/daily-orders.ts` (modified)
-- `/home/runner/workspace/artifacts/shadow-leveling/src/lib/sounds.ts` (modified)
-- `/home/runner/workspace/artifacts/shadow-leveling/src/components/StatRadar.tsx` (modified)
-- `/home/runner/workspace/HANDOFF.md` (modified)
+- `/home/runner/workspace/HANDOFF.md` (modified this turn)
 
 ## Current Feature Goal
-- Complete the five requested surgical fixes. The next requested batch is Database atomicity & race conditions.
+- Keep the five surgical fixes in place. The next requested batch is Database atomicity & race conditions.
 
 ## Exact Stopping Point & Next Step
 - The five scoped fixes are complete. The API workflow listens on port 8080 with one process and `/api/healthz` returns HTTP 200.
