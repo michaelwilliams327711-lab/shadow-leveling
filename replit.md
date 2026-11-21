@@ -166,3 +166,25 @@ Equivalently: `XP_PER_LEVEL(n) = (2n - 1) × 10`
 - **Storage** (`shadow-leveling/src/lib/questTemplates.ts`): localStorage-backed CRUD under key `shadow-leveling.quest-templates.v1`. Templates carry `id, label, title, description, category, difficulty, durationMinutes, statBoost, createdAt, usageCount`. Helpers: `loadQuestTemplates`, `saveQuestTemplate`, `deleteQuestTemplate`, `incrementTemplateUsage`, `getTopTemplates(n)`, `getTemplateBaseRewards`. Defensive `parseTemplate` drops malformed entries; `safeStorage()` no-ops in SSR / private mode.
 - **Quests page** (`shadow-leveling/src/pages/Quests.tsx`): Book-icon `DropdownMenu` next to ADD QUEST opens a list of every saved template; selecting one calls `onSummonTemplate` (pre-fills `createForm`) then opens the create dialog. "Save as Template" form sits under the Submit Mission button.
 - **Dashboard** (`shadow-leveling/src/pages/Dashboard.tsx`): Top 3 most-used templates render below `<StatRadar/>` as a 3-column "Quick Summon" rune grid. Click → `useCreateQuest.mutate(...)` with `deadline:null, recurrence:null`, then `incrementTemplateUsage` + cache injection into both `getListQuestsWindowedQueryKey()` and `getListQuestsQueryKey()`. `pendingTemplateId` serializes spawns; `storage` event keeps the list live across tabs.
+
+# MANDATORY WORKFLOW RULE: CONTINUOUS CHECKPOINTING
+
+Before concluding ANY response or completing ANY task, you MUST update or overwrite the file `HANDOFF.md` in the root directory. 
+
+Never wait to be asked to update this file. Treat updating `HANDOFF.md` as the final step of every single turn so that if my usage limit cuts off suddenly, my progress is preserved.
+
+`HANDOFF.md` must always contain:
+1. **Last Completed Action:** Exactly what logic was changed in this turn.
+2. **File Inventory:** A bulleted list of the exact `[Full/Path/To/File]` paths modified or created.
+3. **Current Feature Goal:** The broader feature or bug we are currently solving.
+4. **Exact Stopping Point & Next Step:** The exact file, line/function, and next step to execute when a new session begins.
+5. **Unresolved Errors:** Any active console, TypeScript, or build errors still present.
+
+# Sovereign Reporting Protocol (REQUIRED)
+
+Upon completion of ANY code modification task, you MUST provide a report in the following format:
+1. NO SUMMARIES: Provide the raw, line-by-line source code for the modified logic.
+2. MARKDOWN HEADERS: Every file must begin with `### FILE: [Full/Path/To/File]`.
+3. RAW CODE BLOCKS: Wrap all code in triple-backtick blocks.
+4. THE CHUNK RULE: If the output exceeds 500 lines, stop and ask the user to say 'CONTINUE'.
+5. FINAL INVENTORY: End with a brief 'Inventory Check' confirming all files delivered.
